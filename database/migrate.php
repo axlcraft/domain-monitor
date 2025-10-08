@@ -83,7 +83,6 @@ try {
         __DIR__ . '/migrations/005_update_tld_import_logs.sql',
         __DIR__ . '/migrations/006_add_complete_workflow_import_type.sql',
         __DIR__ . '/migrations/007_add_app_and_email_settings.sql',
-        __DIR__ . '/migrations/008_remove_mail_driver.sql',
     ];
 
     foreach ($migrationFiles as $migrationFile) {
