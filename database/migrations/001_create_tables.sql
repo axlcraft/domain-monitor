@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS domains (
     registrar VARCHAR(255),
     expiration_date DATE,
     last_checked TIMESTAMP NULL,
-    status ENUM('active', 'expiring_soon', 'expired', 'error') DEFAULT 'active',
+    status ENUM('active', 'expiring_soon', 'expired', 'error', 'available') DEFAULT 'active',
     whois_data JSON,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

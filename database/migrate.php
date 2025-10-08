@@ -10,6 +10,16 @@ $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 try {
+    // Check if encryption key is set
+    if (empty($_ENV['APP_ENCRYPTION_KEY'])) {
+        echo "⚠️  WARNING: APP_ENCRYPTION_KEY is not set in .env\n";
+        echo "   This key is required to encrypt sensitive data (like SMTP passwords).\n\n";
+        echo "   Generate one using:\n";
+        echo "   php scripts/generate-encryption-key.php\n\n";
+        echo "   Then add it to your .env file and run migrations again.\n\n";
+        exit(1);
+    }
+
     $host = $_ENV['DB_HOST'];
     $port = $_ENV['DB_PORT'];
     $database = $_ENV['DB_DATABASE'];
@@ -36,6 +46,7 @@ try {
         __DIR__ . '/migrations/004_create_tld_registry_table.sql',
         __DIR__ . '/migrations/005_update_tld_import_logs.sql',
         __DIR__ . '/migrations/006_add_complete_workflow_import_type.sql',
+        __DIR__ . '/migrations/007_add_app_and_email_settings.sql',
     ];
 
     foreach ($migrationFiles as $migrationFile) {

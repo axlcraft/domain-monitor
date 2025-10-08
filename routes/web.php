@@ -9,6 +9,7 @@ use App\Controllers\AuthController;
 use App\Controllers\DebugController;
 use App\Controllers\SearchController;
 use App\Controllers\TldRegistryController;
+use App\Controllers\SettingsController;
 
 $router = Application::$router;
 
@@ -75,4 +76,13 @@ $router->get('/tld-registry/{id}/toggle-active', [TldRegistryController::class, 
 $router->get('/tld-registry/{id}/refresh', [TldRegistryController::class, 'refresh']);
 $router->get('/tld-registry/import-logs', [TldRegistryController::class, 'importLogs']);
 $router->get('/api/tld-info', [TldRegistryController::class, 'apiGetTldInfo']);
+
+// Settings
+$router->get('/settings', [SettingsController::class, 'index']);
+$router->post('/settings/update', [SettingsController::class, 'update']);
+$router->post('/settings/update-app', [SettingsController::class, 'updateApp']);
+$router->post('/settings/update-email', [SettingsController::class, 'updateEmail']);
+$router->post('/settings/test-email', [SettingsController::class, 'testEmail']);
+$router->post('/settings/test-cron', [SettingsController::class, 'testCron']);
+$router->post('/settings/clear-logs', [SettingsController::class, 'clearLogs']);
 

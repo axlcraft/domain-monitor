@@ -8,7 +8,7 @@
                 <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center mr-3">
                     <i class="fas fa-globe text-white text-sm"></i>
                 </div>
-                <h1 class="text-sm font-semibold text-white"><?= $_ENV['APP_NAME'] ?? 'Domain Monitor' ?></h1>
+                <h1 class="text-sm font-semibold text-white"><?= $appName ?? 'Domain Monitor' ?></h1>
             </div>
         </div>
         
@@ -46,6 +46,17 @@
                     </a>
                 </div>
             </div>
+
+            <!-- System Section -->
+            <div class="mt-4 pt-3 border-t border-gray-800">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-1">System</p>
+                <div class="space-y-0.5">
+                    <a href="/settings" class="sidebar-link flex items-center px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150 <?= strpos($_SERVER['REQUEST_URI'], '/settings') !== false ? 'bg-primary text-white' : '' ?>">
+                        <i class="fas fa-cog text-xs mr-3 w-4"></i>
+                        <span class="text-sm">Settings</span>
+                    </a>
+                </div>
+            </div>
         </nav>
 
         <!-- Quick Stats Cards - Pinned to Bottom -->
@@ -70,7 +81,7 @@
                             <div class="w-7 h-7 bg-orange-500/20 rounded flex items-center justify-center mr-2.5">
                                 <i class="fas fa-exclamation-triangle text-orange-400 text-xs"></i>
                             </div>
-                            <span class="text-gray-400 text-xs">Expiring</span>
+                            <span class="text-gray-400 text-xs" title="Within <?= $globalStats['expiring_threshold'] ?? 30 ?> days">Expiring</span>
                         </div>
                         <span class="text-orange-400 font-semibold text-sm"><?= $globalStats['expiring_soon'] ?? 0 ?></span>
                     </div>

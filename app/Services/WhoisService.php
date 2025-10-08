@@ -679,9 +679,17 @@ class WhoisService
     {
         // Check if domain is available (not registered)
         foreach ($statusArray as $status) {
-            if (stripos($status, 'AVAILABLE') !== false || stripos($status, 'FREE') !== false) {
+            if (stripos($status, 'AVAILABLE') !== false || 
+                stripos($status, 'FREE') !== false ||
+                stripos($status, 'NO MATCH') !== false ||
+                stripos($status, 'NOT FOUND') !== false) {
                 return 'available';
             }
+        }
+
+        // Also check if expiration date is null and no status indicates it's registered
+        if ($expirationDate === null && empty($statusArray)) {
+            return 'available';
         }
 
         $days = $this->daysUntilExpiration($expirationDate);

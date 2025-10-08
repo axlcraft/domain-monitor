@@ -1,0 +1,584 @@
+<?php
+$title = 'Settings';
+$pageTitle = 'System Settings';
+$pageDescription = 'Configure application, email, and monitoring settings';
+$pageIcon = 'fas fa-cog';
+ob_start();
+
+$currentNotificationDays = $settings['notification_days_before'] ?? '30,15,7,3,1';
+$currentCheckInterval = $settings['check_interval_hours'] ?? '24';
+$lastCheckRun = $settings['last_check_run'] ?? null;
+
+// Get timezone list (popular ones first)
+$popularTimezones = [
+    'UTC' => 'UTC',
+    'America/New_York' => 'Eastern Time (US)',
+    'America/Chicago' => 'Central Time (US)',
+    'America/Denver' => 'Mountain Time (US)',
+    'America/Los_Angeles' => 'Pacific Time (US)',
+    'Europe/London' => 'London',
+    'Europe/Paris' => 'Paris',
+    'Asia/Tokyo' => 'Tokyo',
+    'Australia/Sydney' => 'Sydney'
+];
+
+// Determine which preset is selected
+$selectedPreset = 'custom';
+foreach ($notificationPresets as $key => $preset) {
+    if ($preset['value'] === $currentNotificationDays) {
+        $selectedPreset = $key;
+        break;
+    }
+}
+?>
+
+<!-- Tabs Navigation -->
+<div class="bg-white rounded-lg border border-gray-200 mb-6">
+    <div class="border-b border-gray-200">
+        <nav class="flex -mb-px overflow-x-auto">
+            <button onclick="switchTab('app')" id="tab-app" class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                <i class="fas fa-cog mr-2"></i>
+                Application
+            </button>
+            <button onclick="switchTab('email')" id="tab-email" class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                <i class="fas fa-envelope mr-2"></i>
+                Email
+            </button>
+            <button onclick="switchTab('monitoring')" id="tab-monitoring" class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                <i class="fas fa-bell mr-2"></i>
+                Monitoring
+            </button>
+            <button onclick="switchTab('system')" id="tab-system" class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                <i class="fas fa-server mr-2"></i>
+                System
+            </button>
+            <button onclick="switchTab('maintenance')" id="tab-maintenance" class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                <i class="fas fa-tools mr-2"></i>
+                Maintenance
+            </button>
+        </nav>
+    </div>
+</div>
+
+<!-- Tab Content: Application Settings -->
+<div id="content-app" class="tab-content">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-lg font-semibold text-gray-900">Application Settings</h3>
+            <p class="text-sm text-gray-600 mt-1">Configure basic application information</p>
+        </div>
+
+        <form method="POST" action="/settings/update-app" class="p-6">
+            <div class="space-y-4">
+                <div>
+                    <label for="app_name" class="block text-sm font-medium text-gray-700 mb-2">
+                        Application Name
+                    </label>
+                    <input type="text" id="app_name" name="app_name" required
+                           value="<?= htmlspecialchars($appSettings['app_name']) ?>"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                    <p class="text-xs text-gray-500 mt-1">Name displayed in the interface</p>
+                </div>
+
+                <div>
+                    <label for="app_url" class="block text-sm font-medium text-gray-700 mb-2">
+                        Application URL
+                    </label>
+                    <input type="url" id="app_url" name="app_url" required
+                           value="<?= htmlspecialchars($appSettings['app_url']) ?>"
+                           placeholder="https://domains.example.com"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                    <p class="text-xs text-gray-500 mt-1">Base URL for the application (used in emails and links)</p>
+                </div>
+
+                <div>
+                    <label for="app_timezone" class="block text-sm font-medium text-gray-700 mb-2">
+                        Timezone
+                    </label>
+                    <select id="app_timezone" name="app_timezone" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                        <?php foreach ($popularTimezones as $tz => $label): ?>
+                            <option value="<?= htmlspecialchars($tz) ?>" <?= $appSettings['app_timezone'] === $tz ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($label) ?>
+                            </option>
+                        <?php endforeach; ?>
+                        <option disabled>──────────</option>
+                        <?php 
+                        $allTimezones = timezone_identifiers_list();
+                        foreach ($allTimezones as $tz): 
+                            if (!isset($popularTimezones[$tz])):
+                        ?>
+                            <option value="<?= htmlspecialchars($tz) ?>" <?= $appSettings['app_timezone'] === $tz ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($tz) ?>
+                            </option>
+                        <?php 
+                            endif;
+                        endforeach; 
+                        ?>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Application timezone for dates and times</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">
+                <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors font-medium">
+                    <i class="fas fa-save mr-2"></i>
+                    Save Application Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tab Content: Email Settings -->
+<div id="content-email" class="tab-content hidden">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-lg font-semibold text-gray-900">Email Settings</h3>
+            <p class="text-sm text-gray-600 mt-1">Configure SMTP server for sending notifications</p>
+        </div>
+
+        <form method="POST" action="/settings/update-email" class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="mail_host" class="block text-sm font-medium text-gray-700 mb-2">
+                        SMTP Host <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="mail_host" name="mail_host" required
+                           value="<?= htmlspecialchars($emailSettings['mail_host']) ?>"
+                           placeholder="smtp.mailtrap.io"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+
+                <div>
+                    <label for="mail_port" class="block text-sm font-medium text-gray-700 mb-2">
+                        SMTP Port <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" id="mail_port" name="mail_port" required
+                           value="<?= htmlspecialchars($emailSettings['mail_port']) ?>"
+                           placeholder="2525"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+
+                <div>
+                    <label for="mail_encryption" class="block text-sm font-medium text-gray-700 mb-2">
+                        Encryption
+                    </label>
+                    <select id="mail_encryption" name="mail_encryption"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                        <option value="tls" <?= $emailSettings['mail_encryption'] === 'tls' ? 'selected' : '' ?>>TLS</option>
+                        <option value="ssl" <?= $emailSettings['mail_encryption'] === 'ssl' ? 'selected' : '' ?>>SSL</option>
+                        <option value="" <?= empty($emailSettings['mail_encryption']) ? 'selected' : '' ?>>None</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-2">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <p class="text-xs text-gray-600">
+                            <i class="fas fa-info-circle text-gray-400 mr-1"></i>
+                            <strong>Protocol:</strong> This application uses SMTP (Simple Mail Transfer Protocol) for sending emails.
+                        </p>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="mail_username" class="block text-sm font-medium text-gray-700 mb-2">
+                        SMTP Username
+                    </label>
+                    <input type="text" id="mail_username" name="mail_username"
+                           value="<?= htmlspecialchars($emailSettings['mail_username']) ?>"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+
+                <div>
+                    <label for="mail_password" class="block text-sm font-medium text-gray-700 mb-2">
+                        SMTP Password
+                    </label>
+                    <input type="password" id="mail_password" name="mail_password"
+                           value="<?= htmlspecialchars($emailSettings['mail_password']) ?>"
+                           placeholder="••••••••"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-lock text-green-600 mr-1"></i>
+                        Encrypted before storing in database
+                    </p>
+                </div>
+
+                <div>
+                    <label for="mail_from_address" class="block text-sm font-medium text-gray-700 mb-2">
+                        From Email <span class="text-red-500">*</span>
+                    </label>
+                    <input type="email" id="mail_from_address" name="mail_from_address" required
+                           value="<?= htmlspecialchars($emailSettings['mail_from_address']) ?>"
+                           placeholder="noreply@domainmonitor.com"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+
+                <div>
+                    <label for="mail_from_name" class="block text-sm font-medium text-gray-700 mb-2">
+                        From Name
+                    </label>
+                    <input type="text" id="mail_from_name" name="mail_from_name"
+                           value="<?= htmlspecialchars($emailSettings['mail_from_name']) ?>"
+                           placeholder="Domain Monitor"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">
+                <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors font-medium">
+                    <i class="fas fa-save mr-2"></i>
+                    Save Email Settings
+                </button>
+            </div>
+        </form>
+
+        <!-- Test Email Section -->
+        <div class="px-6 pb-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h4 class="text-sm font-semibold text-gray-900 mb-1">Test Email Configuration</h4>
+                        <p class="text-sm text-gray-700 mb-3">
+                            Send a test email to verify your SMTP settings are configured correctly.
+                        </p>
+                        <form method="POST" action="/settings/test-email" id="testEmailForm" class="flex gap-2">
+                            <input type="email" name="test_email" id="test_email" required
+                                   placeholder="Enter email address to receive test"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm">
+                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                <i class="fas fa-paper-plane mr-2"></i>
+                                Send Test Email
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Content: Monitoring Settings -->
+<div id="content-monitoring" class="tab-content hidden">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-lg font-semibold text-gray-900">Monitoring Settings</h3>
+            <p class="text-sm text-gray-600 mt-1">Configure notification schedules and check intervals</p>
+        </div>
+
+        <form method="POST" action="/settings/update" id="settingsForm" class="p-6">
+            
+            <!-- Notification Settings -->
+            <div class="mb-6">
+                <h4 class="text-base font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-bell text-primary mr-2"></i>
+                    Notification Schedule
+                </h4>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="notification_preset" class="block text-sm font-medium text-gray-700 mb-2">
+                            Choose Preset
+                        </label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                                id="notification_preset" name="notification_preset">
+                            <?php foreach ($notificationPresets as $key => $preset): ?>
+                                <option value="<?= htmlspecialchars($key) ?>" 
+                                        data-value="<?= htmlspecialchars($preset['value']) ?>"
+                                        <?= $selectedPreset === $key ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($preset['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <input type="hidden" id="notification_days_before" name="notification_days_before" 
+                           value="<?= htmlspecialchars($currentNotificationDays) ?>">
+
+                    <!-- Custom days input -->
+                    <div id="custom_days_container" style="display: <?= $selectedPreset === 'custom' ? 'block' : 'none' ?>;">
+                        <label for="custom_notification_days" class="block text-sm font-medium text-gray-700 mb-2">
+                            Custom Days
+                        </label>
+                        <input type="text" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                               id="custom_notification_days" 
+                               name="custom_notification_days" 
+                               value="<?= $selectedPreset === 'custom' ? htmlspecialchars($currentNotificationDays) : '' ?>"
+                               placeholder="e.g., 90,60,30,14,7,3,1">
+                        <p class="text-xs text-gray-500 mt-1">Comma-separated numbers (will be sorted automatically)</p>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p class="text-sm text-gray-700">
+                            <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+                            Alerts at: <span id="days_preview" class="font-semibold text-primary"><?= htmlspecialchars($currentNotificationDays) ?></span> days
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 my-6"></div>
+
+            <!-- Check Interval -->
+            <div class="mb-6">
+                <h4 class="text-base font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-clock text-primary mr-2"></i>
+                    Domain Check Interval
+                </h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="check_interval_hours" class="block text-sm font-medium text-gray-700 mb-2">
+                            Check Every
+                        </label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                                id="check_interval_hours" name="check_interval_hours">
+                            <?php foreach ($checkIntervalPresets as $preset): ?>
+                                <option value="<?= $preset['value'] ?>" 
+                                        <?= $currentCheckInterval == $preset['value'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($preset['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Last Check Run
+                        </label>
+                        <div class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                            <?php if ($lastCheckRun): ?>
+                                <div class="flex items-center text-sm">
+                                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                    <span class="text-gray-700"><?= date('M d, Y H:i', strtotime($lastCheckRun)) ?></span>
+                                </div>
+                            <?php else: ?>
+                                <div class="flex items-center text-sm">
+                                    <i class="fas fa-minus-circle text-gray-400 mr-2"></i>
+                                    <span class="text-gray-500">Never run</span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors font-medium">
+                    <i class="fas fa-save mr-2"></i>
+                    Save Monitoring Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tab Content: System Information -->
+<div id="content-system" class="tab-content hidden">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-lg font-semibold text-gray-900">System Information</h3>
+            <p class="text-sm text-gray-600 mt-1">Cron job configuration and log file locations</p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Cron Command -->
+            <div>
+                <h4 class="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                    <i class="fas fa-terminal text-blue-500 mr-2"></i>
+                    Cron Job Command
+                </h4>
+                <div class="bg-gray-900 text-gray-100 px-4 py-3 rounded-lg font-mono text-sm">
+                    <code>php cron/check_domains.php</code>
+                </div>
+            </div>
+
+            <!-- Crontab Entry -->
+            <div>
+                <h4 class="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                    <i class="fas fa-calendar-alt text-green-500 mr-2"></i>
+                    Recommended Crontab Entry
+                </h4>
+                <div class="bg-gray-900 text-gray-100 px-4 py-3 rounded-lg font-mono text-sm break-all">
+                    <code>0 */<?= $currentCheckInterval ?> * * * php /path/to/cron/check_domains.php</code>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Update the path to match your server installation</p>
+            </div>
+
+            <!-- Log Files -->
+            <div>
+                <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                    <i class="fas fa-file-alt text-orange-500 mr-2"></i>
+                    Log Files
+                </h4>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Cron Log</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Domain check execution logs</p>
+                        </div>
+                        <code class="text-xs bg-gray-900 text-gray-100 px-2 py-1 rounded">logs/cron.log</code>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">TLD Import Log</p>
+                            <p class="text-xs text-gray-500 mt-0.5">TLD registry import logs</p>
+                        </div>
+                        <code class="text-xs bg-gray-900 text-gray-100 px-2 py-1 rounded">logs/tld_import_*.log</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Content: Maintenance -->
+<div id="content-maintenance" class="tab-content hidden">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-lg font-semibold text-gray-900">Maintenance Tools</h3>
+            <p class="text-sm text-gray-600 mt-1">Database cleanup and system maintenance</p>
+        </div>
+
+        <div class="p-6">
+            <!-- Clear Logs -->
+            <div class="mb-6">
+                <h4 class="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                    <i class="fas fa-trash-alt text-red-500 mr-2"></i>
+                    Clear Old Notification Logs
+                </h4>
+                
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div class="flex">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 mt-0.5 mr-3"></i>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Warning</p>
+                            <p class="text-sm text-gray-700 mt-1">
+                                This will permanently delete all notification logs older than 30 days. This action cannot be undone.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" action="/settings/clear-logs" onsubmit="return confirm('Are you sure you want to clear logs older than 30 days? This action cannot be undone.')">
+                    <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
+                        <i class="fas fa-trash-alt mr-2"></i>
+                        Clear Old Logs
+                    </button>
+                </form>
+            </div>
+
+            <!-- Future maintenance tools can be added here -->
+            <div class="border-t border-gray-200 pt-6 mt-6">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex">
+                        <i class="fas fa-lightbulb text-blue-500 mt-0.5 mr-3"></i>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Database Optimization</p>
+                            <p class="text-sm text-gray-700 mt-1">
+                                Regular maintenance keeps your system running smoothly. Consider clearing old logs monthly.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Tab switching
+function switchTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active', 'border-primary', 'text-primary');
+        btn.classList.add('border-transparent', 'text-gray-500');
+    });
+    
+    // Show selected tab
+    document.getElementById('content-' + tabName).classList.remove('hidden');
+    const activeBtn = document.getElementById('tab-' + tabName);
+    activeBtn.classList.add('active', 'border-primary', 'text-primary');
+    activeBtn.classList.remove('border-transparent', 'text-gray-500');
+    
+    // Update URL hash without scrolling
+    history.replaceState(null, null, '#' + tabName);
+}
+
+// Load tab from URL hash on page load
+window.addEventListener('DOMContentLoaded', function() {
+    const hash = window.location.hash.substring(1); // Remove the #
+    const validTabs = ['app', 'email', 'monitoring', 'system', 'maintenance'];
+    
+    if (hash && validTabs.includes(hash)) {
+        switchTab(hash);
+    } else {
+        // Default to first tab
+        switchTab('app');
+    }
+});
+
+// Settings form logic
+document.addEventListener('DOMContentLoaded', function() {
+    const presetSelect = document.getElementById('notification_preset');
+    if (!presetSelect) return;
+    
+    const customContainer = document.getElementById('custom_days_container');
+    const customInput = document.getElementById('custom_notification_days');
+    const hiddenInput = document.getElementById('notification_days_before');
+    const daysPreview = document.getElementById('days_preview');
+
+    presetSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const value = selectedOption.dataset.value;
+        
+        if (this.value === 'custom') {
+            customContainer.style.display = 'block';
+            customInput.required = true;
+            if (customInput.value) {
+                daysPreview.textContent = customInput.value;
+            }
+        } else {
+            customContainer.style.display = 'none';
+            customInput.required = false;
+            hiddenInput.value = value;
+            daysPreview.textContent = value;
+        }
+    });
+
+    customInput.addEventListener('input', function() {
+        if (presetSelect.value === 'custom') {
+            daysPreview.textContent = this.value || 'Not set';
+        }
+    });
+
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+        if (presetSelect.value === 'custom') {
+            const customValue = customInput.value.trim();
+            
+            if (!customValue) {
+                e.preventDefault();
+                alert('Please enter custom notification days');
+                customInput.focus();
+                return false;
+            }
+
+            if (!/^[\d,\s]+$/.test(customValue)) {
+                e.preventDefault();
+                alert('Custom days must contain only numbers and commas');
+                customInput.focus();
+                return false;
+            }
+        }
+    });
+});
+</script>
+
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/../layout/base.php';
+?>

@@ -93,6 +93,7 @@ class NotificationService
                 $message,
                 [
                     'domain' => $domain['domain_name'],
+                    'domain_id' => $domain['id'],
                     'days_left' => $daysLeft,
                     'expiration_date' => $domain['expiration_date'],
                     'registrar' => $domain['registrar']

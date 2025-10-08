@@ -4,6 +4,7 @@ namespace App\Services\Channels;
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use App\Models\Setting;
 
 class EmailChannel implements NotificationChannelInterface
 {
@@ -12,23 +13,28 @@ class EmailChannel implements NotificationChannelInterface
         $mail = new PHPMailer(true);
 
         try {
+            // Get email settings from database
+            $settingModel = new Setting();
+            $emailSettings = $settingModel->getEmailSettings();
+            $appSettings = $settingModel->getAppSettings();
+
             // Server settings
             $mail->isSMTP();
-            $mail->Host = $_ENV['MAIL_HOST'];
-            $mail->SMTPAuth = true;
-            $mail->Username = $_ENV['MAIL_USERNAME'];
-            $mail->Password = $_ENV['MAIL_PASSWORD'];
-            $mail->SMTPSecure = $_ENV['MAIL_ENCRYPTION'];
-            $mail->Port = $_ENV['MAIL_PORT'];
+            $mail->Host = $emailSettings['mail_host'];
+            $mail->SMTPAuth = !empty($emailSettings['mail_username']);
+            $mail->Username = $emailSettings['mail_username'];
+            $mail->Password = $emailSettings['mail_password'];
+            $mail->SMTPSecure = $emailSettings['mail_encryption'];
+            $mail->Port = $emailSettings['mail_port'];
 
             // Recipients
-            $mail->setFrom($_ENV['MAIL_FROM_ADDRESS'], $_ENV['MAIL_FROM_NAME']);
+            $mail->setFrom($emailSettings['mail_from_address'], $emailSettings['mail_from_name']);
             $mail->addAddress($config['email']);
 
             // Content
             $mail->isHTML(true);
             $mail->Subject = $this->getSubject($data);
-            $mail->Body = $this->formatHtmlBody($message, $data);
+            $mail->Body = $this->formatHtmlBody($message, $data, $appSettings);
             $mail->AltBody = strip_tags($message);
 
             $mail->send();
@@ -55,9 +61,18 @@ class EmailChannel implements NotificationChannelInterface
         return "Domain Monitor Alert";
     }
 
-    private function formatHtmlBody(string $message, array $data): string
+    private function formatHtmlBody(string $message, array $data, array $appSettings): string
     {
         $messageHtml = nl2br(htmlspecialchars($message));
+        $appName = htmlspecialchars($appSettings['app_name']);
+        $appUrl = htmlspecialchars($appSettings['app_url']);
+        
+        // Build domain link if domain ID is available
+        $domainLink = '';
+        if (isset($data['domain_id'])) {
+            $domainUrl = rtrim($appUrl, '/') . '/domains/' . $data['domain_id'];
+            $domainLink = "<p style='margin-top: 15px;'><a href='$domainUrl' class='button'>View Domain Details</a></p>";
+        }
 
         return "
         <html>
@@ -74,13 +89,15 @@ class EmailChannel implements NotificationChannelInterface
         <body>
             <div class='container'>
                 <div class='header'>
-                    <h2>🔔 Domain Monitor Alert</h2>
+                    <h2>🔔 {$appName} Alert</h2>
                 </div>
                 <div class='content'>
                     <p>$messageHtml</p>
+                    $domainLink
                 </div>
                 <div class='footer'>
-                    <p>This is an automated message from Domain Monitor</p>
+                    <p>This is an automated message from {$appName}</p>
+                    <p style='margin-top: 5px;'><a href='$appUrl' style='color: #4A90E2;'>Visit Dashboard</a></p>
                 </div>
             </div>
         </body>

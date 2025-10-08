@@ -31,6 +31,11 @@ class DomainController extends Controller
         $page = max(1, (int)($_GET['page'] ?? 1));
         $perPage = max(10, min(100, (int)($_GET['per_page'] ?? 25))); // Between 10 and 100
 
+        // Get expiring threshold from settings
+        $settingModel = new \App\Models\Setting();
+        $notificationDays = $settingModel->getNotificationDays();
+        $expiringThreshold = !empty($notificationDays) ? max($notificationDays) : 30;
+
         // Get all domains with groups
         $domains = $this->domainModel->getAllWithGroups();
 
@@ -43,12 +48,12 @@ class DomainController extends Controller
         }
 
         if (!empty($status)) {
-            $domains = array_filter($domains, function($domain) use ($status) {
+            $domains = array_filter($domains, function($domain) use ($status, $expiringThreshold) {
                 if ($status === 'expiring_soon') {
-                    // Check if domain expires within 30 days
+                    // Check if domain expires within configured threshold
                     if (!empty($domain['expiration_date'])) {
                         $daysLeft = floor((strtotime($domain['expiration_date']) - time()) / 86400);
-                        return $daysLeft <= 30 && $daysLeft >= 0;
+                        return $daysLeft <= $expiringThreshold && $daysLeft >= 0;
                     }
                     return false;
                 }

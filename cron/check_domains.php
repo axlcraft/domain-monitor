@@ -17,6 +17,7 @@ use Dotenv\Dotenv;
 use App\Models\Domain;
 use App\Models\NotificationChannel;
 use App\Models\NotificationLog;
+use App\Models\Setting;
 use App\Services\WhoisService;
 use App\Services\NotificationService;
 use Core\Database;
@@ -32,8 +33,17 @@ new Database();
 $domainModel = new Domain();
 $channelModel = new NotificationChannel();
 $logModel = new NotificationLog();
+$settingModel = new Setting();
 $whoisService = new WhoisService();
 $notificationService = new NotificationService();
+
+// Set timezone from settings
+try {
+    $appSettings = $settingModel->getAppSettings();
+    date_default_timezone_set($appSettings['app_timezone']);
+} catch (\Exception $e) {
+    date_default_timezone_set('UTC');
+}
 
 // Log file
 $logFile = __DIR__ . '/../logs/cron.log';
@@ -45,11 +55,28 @@ function logMessage(string $message) {
     echo "[$timestamp] $message\n";
 }
 
+function formatElapsedTime(float $seconds): string {
+    if ($seconds < 60) {
+        return sprintf("%.2f seconds", $seconds);
+    } elseif ($seconds < 3600) {
+        $minutes = floor($seconds / 60);
+        $remainingSeconds = $seconds - ($minutes * 60);
+        return sprintf("%d minute%s %.2f seconds", $minutes, $minutes != 1 ? 's' : '', $remainingSeconds);
+    } else {
+        $hours = floor($seconds / 3600);
+        $remainingMinutes = floor(($seconds - ($hours * 3600)) / 60);
+        $remainingSeconds = $seconds - ($hours * 3600) - ($remainingMinutes * 60);
+        return sprintf("%d hour%s %d minute%s %.2f seconds", $hours, $hours != 1 ? 's' : '', $remainingMinutes, $remainingMinutes != 1 ? 's' : '', $remainingSeconds);
+    }
+}
+
+// Record start time
+$startTime = microtime(true);
+
 logMessage("=== Starting domain check cron job ===");
 
-// Get notification days from settings
-$notificationDays = explode(',', $_ENV['NOTIFICATION_DAYS_BEFORE'] ?? '30,15,7,3,1');
-$notificationDays = array_map('intval', $notificationDays);
+// Get notification days from database settings
+$notificationDays = $settingModel->getNotificationDays();
 
 logMessage("Notification thresholds (days): " . implode(', ', $notificationDays));
 
@@ -180,12 +207,21 @@ foreach ($domains as $domain) {
     }
 }
 
+// Update last check run timestamp
+$settingModel->updateLastCheckRun();
+
+// Calculate elapsed time
+$endTime = microtime(true);
+$elapsedTime = $endTime - $startTime;
+$formattedTime = formatElapsedTime($elapsedTime);
+
 // Summary
 logMessage("\n=== Cron job completed ===");
 logMessage("Domains checked: {$stats['checked']}");
 logMessage("Domains updated: {$stats['updated']}");
 logMessage("Notifications sent: {$stats['notifications_sent']}");
 logMessage("Errors: {$stats['errors']}");
+logMessage("Execution time: $formattedTime");
 logMessage("==========================\n");
 
 exit(0);

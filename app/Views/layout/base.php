@@ -19,22 +19,45 @@ if (!isset($globalStats)) {
         $activeResult = $activeStmt->fetch(\PDO::FETCH_ASSOC);
         $active = $activeResult['count'] ?? 0;
         
-        // Get expiring soon (within 30 days)
-        $expiringSoonStmt = $pdo->query("SELECT COUNT(*) as count FROM domains WHERE expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(NOW(), INTERVAL 30 DAY) AND expiration_date >= NOW()");
+        // Get expiring soon - use the first notification threshold from settings
+        $settingModel = new \App\Models\Setting();
+        $notificationDays = $settingModel->getNotificationDays();
+        $expiringThreshold = !empty($notificationDays) ? max($notificationDays) : 30; // Use the largest notification day
+        
+        $expiringSoonStmt = $pdo->prepare("SELECT COUNT(*) as count FROM domains WHERE is_active = 1 AND expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(NOW(), INTERVAL ? DAY) AND expiration_date >= NOW()");
+        $expiringSoonStmt->execute([$expiringThreshold]);
         $expiringSoonResult = $expiringSoonStmt->fetch(\PDO::FETCH_ASSOC);
         $expiringSoon = $expiringSoonResult['count'] ?? 0;
         
         $globalStats = [
             'total' => $total,
             'active' => $active,
-            'expiring_soon' => $expiringSoon
+            'expiring_soon' => $expiringSoon,
+            'expiring_threshold' => $expiringThreshold
         ];
     } catch (\Exception $e) {
         $globalStats = [
             'total' => 0,
             'active' => 0,
-            'expiring_soon' => 0
+            'expiring_soon' => 0,
+            'expiring_threshold' => 30
         ];
+    }
+}
+
+// Get application settings from database
+if (!isset($appName)) {
+    try {
+        $settingModel = new \App\Models\Setting();
+        $appSettings = $settingModel->getAppSettings();
+        $appName = $appSettings['app_name'];
+        $appTimezone = $appSettings['app_timezone'];
+        
+        // Set PHP timezone
+        date_default_timezone_set($appTimezone);
+    } catch (\Exception $e) {
+        $appName = 'Domain Monitor';
+        date_default_timezone_set('UTC');
     }
 }
 ?>
@@ -49,7 +72,7 @@ if (!isset($globalStats)) {
     <meta name="robots" content="noindex, nofollow">
     
     <!-- Title -->
-    <title><?= $title ?? 'Domain Monitor' ?> - <?= $_ENV['APP_NAME'] ?? 'Domain Monitor' ?></title>
+    <title><?= $title ?? 'Domain Monitor' ?> - <?= $appName ?></title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">

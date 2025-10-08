@@ -39,7 +39,8 @@ ob_start();
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Expiring Soon</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['expiring_soon'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $globalStats['expiring_soon'] ?? 0 ?></p>
+                <p class="text-xs text-gray-400 mt-1">within <?= $globalStats['expiring_threshold'] ?? 30 ?> days</p>
             </div>
             <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-exclamation-triangle text-orange-600 text-lg"></i>
@@ -64,25 +65,26 @@ ob_start();
 <!-- Content Grid -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <!-- Recent Domains -->
-    <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900 flex items-center">
-                <i class="fas fa-clock text-gray-400 mr-2 text-sm"></i>
-                Recent Domains
-            </h2>
-        </div>
-        <div class="p-6">
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-200">
+                <h2 class="text-sm font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-clock text-gray-400 mr-2 text-xs"></i>
+                    Recent Domains
+                </h2>
+            </div>
+            <div class="p-4">
             <?php if (!empty($recentDomains)): ?>
-                <div class="space-y-3">
+                <div class="space-y-2">
                     <?php foreach ($recentDomains as $domain): ?>
                         <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200">
                             <div class="flex items-center space-x-3 flex-1 min-w-0">
-                                <div class="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-globe text-gray-400"></i>
+                                <div class="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-globe text-gray-400 text-sm"></i>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <h3 class="font-medium text-gray-900 truncate"><?= htmlspecialchars($domain['domain_name']) ?></h3>
-                                    <div class="flex items-center space-x-3 text-xs text-gray-500 mt-1">
+                                    <h3 class="text-sm font-medium text-gray-900 truncate"><?= htmlspecialchars($domain['domain_name']) ?></h3>
+                                    <div class="flex items-center space-x-3 text-xs text-gray-500 mt-0.5">
                                         <span class="flex items-center">
                                             <i class="far fa-calendar mr-1"></i>
                                             <?php if ($domain['expiration_date']): ?>
@@ -102,10 +104,19 @@ ob_start();
                             </div>
                             <div class="flex items-center space-x-2 flex-shrink-0">
                                 <?php
-                                $statusClass = $domain['status'] === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700';
+                                $status = $domain['status'] ?? 'active';
+                                $statusClasses = [
+                                    'active' => 'bg-green-100 text-green-700',
+                                    'expiring_soon' => 'bg-orange-100 text-orange-700',
+                                    'expired' => 'bg-red-100 text-red-700',
+                                    'error' => 'bg-red-100 text-red-700',
+                                    'available' => 'bg-blue-100 text-blue-700'
+                                ];
+                                $statusClass = $statusClasses[$status] ?? 'bg-gray-100 text-gray-700';
+                                $statusLabel = $status === 'expiring_soon' ? 'Expiring Soon' : ($status === 'available' ? 'Available' : ucfirst($status));
                                 ?>
                                 <span class="px-2 py-1 rounded text-xs font-medium <?= $statusClass ?>">
-                                    <?= ucfirst($domain['status']) ?>
+                                    <?= $statusLabel ?>
                                 </span>
                                 <a href="/domains/<?= $domain['id'] ?>" class="text-gray-400 hover:text-primary">
                                     <i class="fas fa-chevron-right text-sm"></i>
@@ -114,22 +125,23 @@ ob_start();
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <div class="mt-4 pt-4 border-t border-gray-100 text-center">
+                <div class="mt-3 pt-3 border-t border-gray-100 text-center">
                     <a href="/domains" class="text-sm text-primary hover:text-primary-dark font-medium inline-flex items-center">
                         View All Domains
                         <i class="fas fa-arrow-right ml-2 text-xs"></i>
                     </a>
                 </div>
             <?php else: ?>
-                <div class="text-center py-10">
-                    <i class="fas fa-globe text-gray-300 text-5xl mb-3"></i>
-                    <p class="text-gray-500">No domains added yet</p>
-                    <a href="/domains/create" class="mt-3 inline-flex items-center px-5 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors duration-200">
+                <div class="text-center py-8">
+                    <i class="fas fa-globe text-gray-300 text-4xl mb-3"></i>
+                    <p class="text-sm text-gray-600">No domains added yet</p>
+                    <a href="/domains/create" class="mt-3 inline-flex items-center px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors duration-200">
                         <i class="fas fa-plus mr-2"></i>
                         Add Your First Domain
                     </a>
                 </div>
             <?php endif; ?>
+            </div>
         </div>
     </div>
 
@@ -174,54 +186,85 @@ ob_start();
                 </h2>
             </div>
             <div class="p-4 space-y-3">
+                <?php
+                $statusColors = [
+                    'green' => 'text-green-600',
+                    'yellow' => 'text-yellow-600',
+                    'red' => 'text-red-600',
+                    'gray' => 'text-gray-600'
+                ];
+                ?>
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-gray-600">Database</span>
-                    <span class="flex items-center text-green-600 font-medium">
+                    <span class="flex items-center <?= $statusColors[$systemStatus['database']['color']] ?> font-medium">
                         <i class="fas fa-circle text-xs mr-1.5"></i>
-                        Online
+                        <?= ucfirst($systemStatus['database']['status']) ?>
                     </span>
                 </div>
                 <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-600">WHOIS Service</span>
-                    <span class="flex items-center text-green-600 font-medium">
+                    <span class="text-gray-600">TLD Registry</span>
+                    <span class="flex items-center <?= $statusColors[$systemStatus['whois']['color']] ?> font-medium">
                         <i class="fas fa-circle text-xs mr-1.5"></i>
-                        Active
+                        <?= ucfirst($systemStatus['whois']['status']) ?>
                     </span>
                 </div>
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-gray-600">Notifications</span>
-                    <span class="flex items-center text-green-600 font-medium">
+                    <span class="flex items-center <?= $statusColors[$systemStatus['notifications']['color']] ?> font-medium">
                         <i class="fas fa-circle text-xs mr-1.5"></i>
-                        Enabled
+                        <?= ucfirst($systemStatus['notifications']['status']) ?>
                     </span>
                 </div>
             </div>
         </div>
 
-        <!-- Expiring This Month -->
-        <?php if (!empty($expiringThisMonth)): ?>
-        <div class="bg-white rounded-lg border-l-4 border-orange-500 border-t border-r border-b border-gray-200 overflow-hidden">
-            <div class="bg-orange-50 px-5 py-3 border-b border-orange-100">
-                <h2 class="text-sm font-semibold text-orange-900 flex items-center">
-                    <i class="fas fa-exclamation-triangle mr-2 text-xs"></i>
-                    Expiring This Month
-                </h2>
-            </div>
-            <div class="p-4 space-y-2.5">
-                <?php foreach ($expiringThisMonth as $domain): ?>
-                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors duration-150">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-900 truncate"><?= htmlspecialchars($domain['domain_name']) ?></p>
-                            <p class="text-xs text-gray-500"><?= date('M d, Y', strtotime($domain['expiration_date'])) ?></p>
-                        </div>
-                        <a href="/domains/<?= $domain['id'] ?>" class="ml-2 text-gray-400 hover:text-primary flex-shrink-0">
-                            <i class="fas fa-chevron-right text-xs"></i>
+        <!-- Expiring Soon -->
+        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-exclamation-triangle text-orange-500 mr-2 text-xs"></i>
+                        Expiring Soon
+                    </h2>
+                    <?php if (($expiringCount ?? 0) > 5): ?>
+                        <a href="/domains?status=expiring_soon" class="text-xs text-primary hover:text-primary-dark font-medium">
+                            View all <?= $expiringCount ?>
+                            <i class="fas fa-arrow-right ml-1"></i>
                         </a>
-                    </div>
-                <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
             </div>
+            <?php if (!empty($expiringThisMonth)): ?>
+                <div class="p-4 space-y-2">
+                    <?php foreach ($expiringThisMonth as $domain): ?>
+                        <?php 
+                            $daysLeft = floor((strtotime($domain['expiration_date']) - time()) / 86400);
+                            $urgencyClass = $daysLeft <= 7 ? 'text-red-600' : ($daysLeft <= 30 ? 'text-orange-600' : 'text-yellow-600');
+                        ?>
+                        <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate"><?= htmlspecialchars($domain['domain_name']) ?></p>
+                                <p class="text-xs text-gray-500 mt-0.5">
+                                    <?= date('M d, Y', strtotime($domain['expiration_date'])) ?>
+                                    <span class="<?= $urgencyClass ?> font-semibold ml-2">
+                                        <?= $daysLeft ?> days
+                                    </span>
+                                </p>
+                            </div>
+                            <a href="/domains/<?= $domain['id'] ?>" class="text-gray-400 hover:text-primary">
+                                <i class="fas fa-chevron-right text-sm"></i>
+                            </a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="p-6 text-center">
+                    <i class="fas fa-check-circle text-green-500 text-3xl mb-2"></i>
+                    <p class="text-sm text-gray-600">No domains expiring soon</p>
+                    <p class="text-xs text-gray-400 mt-1">within <?= $globalStats['expiring_threshold'] ?? 30 ?> days</p>
+                </div>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
     </div>
 </div>
 
