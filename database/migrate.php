@@ -83,6 +83,7 @@ try {
         __DIR__ . '/migrations/005_update_tld_import_logs.sql',
         __DIR__ . '/migrations/006_add_complete_workflow_import_type.sql',
         __DIR__ . '/migrations/007_add_app_and_email_settings.sql',
+        __DIR__ . '/migrations/008_add_notes_to_domains.sql',
     ];
 
     foreach ($migrationFiles as $migrationFile) {
@@ -108,10 +109,11 @@ try {
                 try {
                     $pdo->exec($statement);
                 } catch (PDOException $e) {
-                    // Check if it's a "column already exists" error for migrations 003 and 005
+                    // Check if it's a "column already exists" error for migrations 003, 005, and 008
                     if (strpos($e->getMessage(), 'Duplicate column name') !== false && 
                         (basename($migrationFile) === '003_add_whois_fields.sql' || 
-                         basename($migrationFile) === '005_update_tld_import_logs.sql')) {
+                         basename($migrationFile) === '005_update_tld_import_logs.sql' ||
+                         basename($migrationFile) === '008_add_notes_to_domains.sql')) {
                         echo "  ⚠ Column already exists, skipping: " . $e->getMessage() . "\n";
                         continue;
                     }

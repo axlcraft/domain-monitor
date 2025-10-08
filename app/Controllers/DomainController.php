@@ -570,5 +570,31 @@ class DomainController extends Controller
         $_SESSION['success'] = "Monitoring $status for $updated domain(s)";
         $this->redirect('/domains');
     }
+
+    public function updateNotes($params = [])
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/domains');
+            return;
+        }
+
+        $id = (int)($params['id'] ?? 0);
+        $domain = $this->domainModel->find($id);
+        
+        if (!$domain) {
+            $_SESSION['error'] = 'Domain not found';
+            $this->redirect('/domains');
+            return;
+        }
+
+        $notes = $_POST['notes'] ?? '';
+
+        $this->domainModel->update($id, [
+            'notes' => $notes
+        ]);
+
+        $_SESSION['success'] = 'Notes updated successfully';
+        $this->redirect('/domains/' . $id);
+    }
 }
 

@@ -372,6 +372,42 @@ ob_start();
         </div>
         <?php endif; ?>
 
+        <!-- Notes Section -->
+        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wider flex items-center">
+                    <i class="fas fa-sticky-note text-gray-400 mr-2" style="font-size: 10px;"></i>
+                    Notes
+                </h3>
+            </div>
+            <div class="p-4">
+                <form method="POST" action="/domains/<?= $domain['id'] ?>/update-notes" id="notes-form">
+                    <textarea 
+                        name="notes" 
+                        id="notes-textarea"
+                        rows="6" 
+                        class="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        placeholder="Add notes about this domain..."><?= htmlspecialchars($domain['notes'] ?? '') ?></textarea>
+                    
+                    <div class="flex gap-2 mt-3">
+                        <button 
+                            type="submit" 
+                            class="flex-1 inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                            <i class="fas fa-save mr-1.5"></i>
+                            Update Notes
+                        </button>
+                        <button 
+                            type="button" 
+                            onclick="resetNotes()" 
+                            class="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-gray-700 text-xs rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                            <i class="fas fa-times mr-1.5"></i>
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Notification History -->
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
@@ -452,6 +488,11 @@ function toggleWhoisData() {
     const chevron = document.getElementById('whois-chevron');
     dataDiv.classList.toggle('hidden');
     chevron.classList.toggle('rotate-180');
+}
+
+function resetNotes() {
+    const originalNotes = <?= json_encode($domain['notes'] ?? '') ?>;
+    document.getElementById('notes-textarea').value = originalNotes;
 }
 </script>
 
