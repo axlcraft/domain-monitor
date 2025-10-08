@@ -1,0 +1,61 @@
+# Environment & Configuration
+.env
+.env.local
+.env.*.local
+
+# Composer
+/vendor/
+composer.lock
+
+# Logs
+/logs/*.log
+/logs/*.txt
+!/logs/README.md
+!/logs/QUICK_START.md
+
+# Cache
+/cache/*
+!/cache/.gitkeep
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.tmp
+
+# Sensitive data
+*.pem
+*.key
+*.crt
+/database/backups/
+
+# Development
+/tests/coverage/
+.phpunit.result.cache
+
+# Node modules (if ever added)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build artifacts
+dist/
+build/
