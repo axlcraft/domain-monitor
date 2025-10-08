@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed emojis from UI elements
 - Improved navigation flow (edit page returns to detail view)
 - Enhanced cron job logging with threshold display
+- Streamlined installation process
+  - Encryption key auto-generation during migration
+  - No separate script needed for encryption key setup
 
 ### Fixed
 - Notification channel type display error in domain view

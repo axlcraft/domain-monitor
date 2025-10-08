@@ -10,14 +10,50 @@ $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 try {
-    // Check if encryption key is set
+    // Check if encryption key is set, if not generate and save it
     if (empty($_ENV['APP_ENCRYPTION_KEY'])) {
-        echo "⚠️  WARNING: APP_ENCRYPTION_KEY is not set in .env\n";
-        echo "   This key is required to encrypt sensitive data (like SMTP passwords).\n\n";
-        echo "   Generate one using:\n";
-        echo "   php scripts/generate-encryption-key.php\n\n";
-        echo "   Then add it to your .env file and run migrations again.\n\n";
-        exit(1);
+        echo "🔑 Generating encryption key...\n";
+        
+        // Generate a secure 32-byte (256-bit) key
+        $encryptionKey = base64_encode(random_bytes(32));
+        
+        // Path to .env file
+        $envFile = __DIR__ . '/../.env';
+        
+        if (!file_exists($envFile)) {
+            echo "✗ Error: .env file not found. Please create it first.\n";
+            exit(1);
+        }
+        
+        // Read current .env content
+        $envContent = file_get_contents($envFile);
+        
+        // Check if APP_ENCRYPTION_KEY line exists
+        if (strpos($envContent, 'APP_ENCRYPTION_KEY=') !== false) {
+            // Replace empty value with generated key
+            $envContent = preg_replace(
+                '/APP_ENCRYPTION_KEY=.*$/m',
+                "APP_ENCRYPTION_KEY=$encryptionKey",
+                $envContent
+            );
+        } else {
+            // Append the key to the file
+            $envContent .= "\nAPP_ENCRYPTION_KEY=$encryptionKey\n";
+        }
+        
+        // Write updated content back to .env
+        if (!file_put_contents($envFile, $envContent)) {
+            echo "✗ Error: Could not write to .env file.\n";
+            exit(1);
+        }
+        
+        // Reload environment variables
+        $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+        $dotenv->load();
+        
+        echo "✓ Encryption key generated and saved to .env\n";
+        echo "   Key: $encryptionKey\n";
+        echo "   ⚠️  Keep this key secret and backup securely!\n\n";
     }
 
     $host = $_ENV['DB_HOST'];
@@ -47,6 +83,7 @@ try {
         __DIR__ . '/migrations/005_update_tld_import_logs.sql',
         __DIR__ . '/migrations/006_add_complete_workflow_import_type.sql',
         __DIR__ . '/migrations/007_add_app_and_email_settings.sql',
+        __DIR__ . '/migrations/008_remove_mail_driver.sql',
     ];
 
     foreach ($migrationFiles as $migrationFile) {

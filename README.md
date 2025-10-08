@@ -85,14 +85,11 @@ DB_PORT=3306
 DB_DATABASE=domain_monitor
 DB_USERNAME=root
 DB_PASSWORD=your_password
-
-# Email (if using email notifications)
-MAIL_HOST=smtp.mailtrap.io
-MAIL_PORT=2525
-MAIL_USERNAME=your_username
-MAIL_PASSWORD=your_password
-MAIL_FROM_ADDRESS=noreply@domainmonitor.com
 ```
+
+**Note:** 
+- The encryption key (APP_ENCRYPTION_KEY) will be automatically generated during migration
+- Application name, URL, timezone, email settings, and monitoring schedules are configured through the web interface in **Settings** (not .env)
 
 ### 4. Create Database
 
@@ -108,9 +105,19 @@ CREATE DATABASE domain_monitor CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 php database/migrate.php
 ```
 
-**⚠️ IMPORTANT:** The migration will generate a random admin password and display it **only once**:
+**⚠️ IMPORTANT:** The migration will:
+1. **Generate an encryption key** (if not already set) and save it to `.env`
+2. **Generate a random admin password** and display it **only once**
 
+Example output:
 ```
+🔑 Generating encryption key...
+✓ Encryption key generated and saved to .env
+   Key: base64_encoded_key_here
+   ⚠️  Keep this key secret and backup securely!
+
+...
+
 🔑 Admin credentials (SAVE THESE!):
    ═══════════════════════════════════════
    Username: admin
@@ -120,7 +127,9 @@ php database/migrate.php
    💾 Save it to a secure password manager.
 ```
 
-**Save this password immediately** - you'll need it to access the dashboard!
+**Save these immediately:**
+- The encryption key is needed to decrypt sensitive data (backup securely!)
+- The admin password is needed to access the dashboard
 
 ### 6. Import TLD Registry Data (Optional but Recommended)
 
@@ -162,19 +171,26 @@ Then visit: `http://localhost:8000`
 
 ## 🔧 Configuration
 
+### Application & Email Settings
+
+All application and email settings are now managed through the **Settings** page in the web interface:
+
+1. Navigate to **Settings** → **Application** tab
+   - Set application name, URL, and timezone
+
+2. Navigate to **Settings** → **Email** tab
+   - Configure SMTP server (host, port, encryption)
+   - Set authentication credentials
+   - Configure from address and name
+
+**Example Email Settings:**
+- SMTP Host: `smtp.gmail.com`
+- SMTP Port: `587`
+- Encryption: `TLS`
+- Username: `your-email@gmail.com`
+- Password: `your-app-password`
+
 ### Notification Channels
-
-#### 📧 Email
-
-Configure SMTP settings in `.env`:
-
-```ini
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-MAIL_ENCRYPTION=tls
-```
 
 #### ✈️ Telegram
 
@@ -274,23 +290,36 @@ By default, notifications are sent at these intervals before expiration:
 - 1 day (tomorrow!)
 - When expired (immediate alert)
 
-Configure this in `.env`:
+### Configure Settings
 
-```ini
-NOTIFICATION_DAYS_BEFORE=60,30,21,14,7,5,3,2,1
-```
+All system settings are managed through the **Settings** page (`/settings`) in your browser:
 
-**Customization Examples:**
-```ini
-# Minimal alerts
-NOTIFICATION_DAYS_BEFORE=30,7,1
+#### Application Settings
+- **Application Name**: Customize the display name
+- **Application URL**: Base URL for links in emails
+- **Timezone**: Set your preferred timezone
 
-# More frequent alerts
-NOTIFICATION_DAYS_BEFORE=90,60,45,30,21,14,10,7,5,3,2,1
+#### Email Settings
+- **SMTP Configuration**: Host, port, encryption
+- **Authentication**: Username and password
+- **From Address**: Email sender details
 
-# Business-focused (weekday planning)
-NOTIFICATION_DAYS_BEFORE=60,30,14,7,3,1
-```
+#### Monitoring Settings
+- **Notification Schedule**: Choose from presets or create custom
+  - **Minimal**: 30, 7, 1 days
+  - **Standard**: 60, 30, 21, 14, 7, 5, 3, 2, 1 days
+  - **Frequent**: 90, 60, 45, 30, 21, 14, 10, 7, 5, 3, 2, 1 days
+  - **Business Focused**: 60, 30, 14, 7, 3, 1 days
+  - **Custom**: Enter your own comma-separated days
+
+- **Check Interval**: How often to check domains
+  - Every 6 hours
+  - Every 12 hours  
+  - Daily (24 hours)
+  - Every 2 days
+  - Weekly
+
+All settings are stored in the database and can be updated at any time through the web interface.
 
 ## 📁 Project Structure
 
