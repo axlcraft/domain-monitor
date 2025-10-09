@@ -196,9 +196,12 @@ class TldRegistryService
             
             $stats['total_tlds'] = count($tlds);
             
+            // Normalize last updated date to UTC format
+            $normalizedLastUpdated = $this->normalizeDate($lastUpdated);
+            
             // Update log with version and timestamp
             $this->importLogModel->update($logId, [
-                'iana_publication_date' => $lastUpdated,
+                'iana_publication_date' => $normalizedLastUpdated,
                 'version' => $version
             ]);
             
@@ -260,8 +263,11 @@ class TldRegistryService
             $publicationDate = $data['publication'] ?? null;
             $services = $data['services'] ?? [];
 
+            // Normalize publication date to UTC format before saving
+            $normalizedPublicationDate = $this->normalizeDate($publicationDate);
+
             // Update log with publication date
-            $this->importLogModel->update($logId, ['iana_publication_date' => $publicationDate]);
+            $this->importLogModel->update($logId, ['iana_publication_date' => $normalizedPublicationDate]);
 
             foreach ($services as $service) {
                 $tlds = $service[0] ?? []; // TLD patterns
@@ -271,7 +277,7 @@ class TldRegistryService
                     $stats['total_tlds']++;
                     
                     try {
-                        $result = $this->processTldRdapData($tld, $rdapServers, $publicationDate);
+                        $result = $this->processTldRdapData($tld, $rdapServers, $normalizedPublicationDate);
                         
                         if ($result['is_new']) {
                             $stats['new_tlds']++;
@@ -911,8 +917,28 @@ class TldRegistryService
                 'failed_tlds' => 0
             ]);
             
-            $message = $updateInfo['overall_needs_update'] ? 
-                'Updates available' : 'TLD registry is up to date';
+            // Build detailed message
+            $messages = [];
+            
+            if ($updateInfo['tld_list']['needs_update'] ?? false) {
+                $current = $updateInfo['tld_list']['current_version'] ?? 'Unknown';
+                $last = $updateInfo['tld_list']['last_version'] ?? 'None';
+                $messages[] = "TLD List: New version available (current: $current, previous: $last)";
+            }
+            
+            if ($updateInfo['rdap']['needs_update'] ?? false) {
+                $current = $updateInfo['rdap']['current_publication'] ?? 'Unknown';
+                $last = $updateInfo['rdap']['last_publication'] ?? 'None';
+                $messages[] = "RDAP Data: New publication available (current: $current, previous: $last)";
+            }
+            
+            if ($updateInfo['overall_needs_update']) {
+                $message = "🔔 Updates Available! " . implode(' • ', $messages) . " Click 'Import TLDs' to update your database.";
+            } else {
+                $tldVersion = $updateInfo['tld_list']['current_version'] ?? 'N/A';
+                $rdapDate = $updateInfo['rdap']['current_publication'] ?? 'N/A';
+                $message = "✅ TLD Registry is Up to Date! (TLD List version: $tldVersion, RDAP publication: $rdapDate)";
+            }
             
             return [
                 'status' => 'complete',
@@ -921,7 +947,8 @@ class TldRegistryService
                 'processed' => 2,
                 'failed' => 0,
                 'remaining' => 0,
-                'message' => $message
+                'message' => $message,
+                'update_info' => $updateInfo
             ];
         } catch (\Exception $e) {
             $this->importLogModel->completeImport($logId, [
@@ -1692,21 +1719,28 @@ class TldRegistryService
             $data = json_decode($response->getBody()->getContents(), true);
             $currentPublication = $data['publication'] ?? null;
             
-            // Get last RDAP import
-            $lastRdapImport = $this->importLogModel->query(
+            // Get last RDAP import using database directly
+            $db = \Core\Database::getConnection();
+            $stmt = $db->prepare(
                 "SELECT iana_publication_date FROM tld_import_logs 
                  WHERE import_type = 'rdap' AND status = 'completed' 
                  ORDER BY started_at DESC LIMIT 1"
             );
+            $stmt->execute();
+            $lastRdapImport = $stmt->fetch();
             
-            $lastPublication = $lastRdapImport[0]['iana_publication_date'] ?? null;
+            $lastPublication = $lastRdapImport['iana_publication_date'] ?? null;
             
-            $needsUpdate = $currentPublication !== $lastPublication;
+            // Normalize date formats for comparison (ISO 8601 vs MySQL datetime)
+            $currentNormalized = $this->normalizeDate($currentPublication);
+            $lastNormalized = $this->normalizeDate($lastPublication);
+            
+            $needsUpdate = ($currentNormalized !== $lastNormalized) && ($currentNormalized !== null);
             
             return [
                 'needs_update' => $needsUpdate,
-                'current_publication' => $currentPublication,
-                'last_publication' => $lastPublication
+                'current_publication' => $currentNormalized ?: $currentPublication,
+                'last_publication' => $lastNormalized ?: $lastPublication
             ];
             
         } catch (\Exception $e) {
@@ -1862,5 +1896,33 @@ class TldRegistryService
         }
 
         return $stats;
+    }
+
+    /**
+     * Normalize date string for comparison
+     * Converts both ISO 8601 and MySQL datetime to same format (UTC)
+     *
+     * @param string|null $date Date string to normalize
+     * @return string|null Normalized date in UTC (Y-m-d H:i:s) or null
+     */
+    private function normalizeDate(?string $date): ?string
+    {
+        if (empty($date)) {
+            return null;
+        }
+
+        try {
+            // Create DateTime object (handles both ISO 8601 and MySQL datetime)
+            $dateTime = new \DateTime($date);
+            
+            // Convert to UTC to ensure consistent comparison
+            $dateTime->setTimezone(new \DateTimeZone('UTC'));
+            
+            // Return in MySQL datetime format (Y-m-d H:i:s) in UTC
+            return $dateTime->format('Y-m-d H:i:s');
+        } catch (\Exception $e) {
+            // Fallback to null if date parsing fails
+            return null;
+        }
     }
 }

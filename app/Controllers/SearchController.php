@@ -19,7 +19,7 @@ class SearchController extends Controller
 
     public function index()
     {
-        $query = trim($_GET['q'] ?? '');
+        $query = \App\Helpers\InputValidator::sanitizeSearch($_GET['q'] ?? '', 100);
 
         if (empty($query)) {
             $_SESSION['error'] = 'Please enter a search term';
@@ -86,7 +86,7 @@ class SearchController extends Controller
     {
         header('Content-Type: application/json');
         
-        $query = trim($_GET['q'] ?? '');
+        $query = \App\Helpers\InputValidator::sanitizeSearch($_GET['q'] ?? '', 100);
         
         if (empty($query)) {
             echo json_encode(['domains' => [], 'isDomainLike' => false]);

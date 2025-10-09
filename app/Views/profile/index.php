@@ -82,6 +82,7 @@ ob_start();
                 </div>
 
                 <form method="POST" action="/profile/update" class="p-6">
+                    <?= csrf_field() ?>
                     <div class="space-y-5">
                         <!-- Full Name -->
                         <div>
@@ -180,6 +181,7 @@ ob_start();
                 </div>
 
                 <form method="POST" action="/profile/change-password" class="p-6">
+                    <?= csrf_field() ?>
                     <div class="space-y-4">
                         <!-- Current Password -->
                         <div>
@@ -242,6 +244,7 @@ ob_start();
                         </div>
                         <?php if (count($sessions ?? []) > 1): ?>
                         <form method="POST" action="/profile/logout-other-sessions" onsubmit="return confirm('Logout all other sessions?')" class="inline">
+                            <?= csrf_field() ?>
                             <button type="submit" class="inline-flex items-center px-3 py-2 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition-colors font-medium">
                                 <i class="fas fa-sign-out-alt mr-1.5"></i>
                                 Logout Others
@@ -332,6 +335,7 @@ ob_start();
                                     <!-- Delete Button (only for non-current sessions) -->
                                     <?php if (!$isCurrent): ?>
                                         <form method="POST" action="/profile/logout-session/<?= htmlspecialchars($session['id']) ?>" onsubmit="return confirm('Terminate this session?\n\nThat device will be logged out immediately.')" class="ml-3">
+                                            <?= csrf_field() ?>
                                             <button type="submit" class="flex items-center justify-center w-8 h-8 bg-red-100 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors" title="Terminate session">
                                                 <i class="fas fa-times text-sm"></i>
                                             </button>

@@ -7,6 +7,7 @@ ob_start();
 ?>
 
 <form method="POST" action="/users/update" class="max-w-2xl">
+    <?= csrf_field() ?>
     <input type="hidden" name="id" value="<?= $user['id'] ?>">
     
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">

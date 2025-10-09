@@ -39,6 +39,7 @@ ob_start();
     </div>
     <div class="flex gap-2 items-center">
         <form method="POST" action="/domains/<?= $domain['id'] ?>/refresh" class="inline">
+            <?= csrf_field() ?>
             <button type="submit" class="inline-flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors font-medium min-w-[80px] h-[32px]">
                 <i class="fas fa-sync-alt mr-1.5"></i>
                 Refresh
@@ -49,6 +50,7 @@ ob_start();
             Edit
         </a>
         <form method="POST" action="/domains/<?= $domain['id'] ?>/delete" onsubmit="return confirm('Delete this domain?')" class="inline">
+            <?= csrf_field() ?>
             <button type="submit" class="inline-flex items-center justify-center px-3 py-2 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition-colors font-medium min-w-[80px] h-[32px]">
                 <i class="fas fa-trash mr-1.5"></i>
                 Delete
@@ -293,6 +295,7 @@ ob_start();
             </div>
             <div class="p-4">
                 <form method="POST" action="/domains/<?= $domain['id'] ?>/update-notes" id="notes-form">
+                    <?= csrf_field() ?>
                     <textarea 
                         name="notes" 
                         id="notes-textarea"

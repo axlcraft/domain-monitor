@@ -29,5 +29,26 @@ abstract class Controller
         header("Location: $path");
         exit;
     }
+
+    /**
+     * Verify CSRF token and redirect with error if invalid
+     *
+     * @param string $redirectUrl URL to redirect to on failure
+     * @return bool True if valid, redirects on failure
+     */
+    protected function verifyCsrf(string $redirectUrl = '/'): bool
+    {
+        return Csrf::verifyOrFail($redirectUrl);
+    }
+
+    /**
+     * Get CSRF token for forms
+     *
+     * @return string The CSRF token
+     */
+    protected function getCsrfToken(): string
+    {
+        return Csrf::getToken();
+    }
 }
 

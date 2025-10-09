@@ -152,4 +152,13 @@ class TldImportLog extends Model
             ]
         ];
     }
+
+    /**
+     * Execute a custom SQL query
+     */
+    public function query(string $sql): array
+    {
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchAll();
+    }
 }

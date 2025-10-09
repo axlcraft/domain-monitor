@@ -28,7 +28,7 @@ class UserController extends Controller
     public function index()
     {
         // Get filter parameters
-        $search = trim($_GET['search'] ?? '');
+        $search = \App\Helpers\InputValidator::sanitizeSearch($_GET['search'] ?? '', 100);
         $roleFilter = $_GET['role'] ?? '';
         $statusFilter = $_GET['status'] ?? '';
         $sort = $_GET['sort'] ?? 'username';
@@ -97,6 +97,9 @@ class UserController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/users/create');
+
         $username = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $fullName = trim($_POST['full_name'] ?? '');
@@ -111,8 +114,24 @@ class UserController extends Controller
             return;
         }
 
+        // Validate username format and length
+        $usernameError = \App\Helpers\InputValidator::validateUsername($username, 3, 50);
+        if ($usernameError) {
+            $_SESSION['error'] = $usernameError;
+            $this->redirect('/users/create');
+            return;
+        }
+
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $_SESSION['error'] = 'Invalid email address';
+            $this->redirect('/users/create');
+            return;
+        }
+
+        // Validate full name length
+        $nameError = \App\Helpers\InputValidator::validateLength($fullName, 255, 'Full name');
+        if ($nameError) {
+            $_SESSION['error'] = $nameError;
             $this->redirect('/users/create');
             return;
         }
@@ -208,6 +227,9 @@ class UserController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/users');
+
         $userId = (int)($_POST['id'] ?? 0);
         $user = $this->userModel->find($userId);
 
@@ -232,6 +254,14 @@ class UserController extends Controller
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $_SESSION['error'] = 'Invalid email address';
+            $this->redirect('/users/edit?id=' . $userId);
+            return;
+        }
+
+        // Validate full name length
+        $nameError = \App\Helpers\InputValidator::validateLength($fullName, 255, 'Full name');
+        if ($nameError) {
+            $_SESSION['error'] = $nameError;
             $this->redirect('/users/edit?id=' . $userId);
             return;
         }

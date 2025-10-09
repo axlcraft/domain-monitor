@@ -248,7 +248,13 @@ INSERT INTO settings (setting_key, setting_value, `type`, `description`) VALUES
 
 -- Authentication settings
 ('registration_enabled', '0', 'boolean', 'Enable user registration'),
-('require_email_verification', '1', 'boolean', 'Require email verification for new users')
+('require_email_verification', '1', 'boolean', 'Require email verification for new users'),
+
+-- CAPTCHA settings
+('captcha_provider', 'disabled', 'string', 'CAPTCHA provider (disabled, recaptcha_v2, recaptcha_v3, turnstile)'),
+('captcha_site_key', '', 'string', 'CAPTCHA site/public key'),
+('captcha_secret_key', '', 'encrypted', 'CAPTCHA secret key (encrypted)'),
+('recaptcha_v3_score_threshold', '0.5', 'string', 'reCAPTCHA v3 minimum score threshold (0.0 to 1.0)')
 
 ON DUPLICATE KEY UPDATE setting_key=setting_key;
 

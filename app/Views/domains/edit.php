@@ -18,6 +18,7 @@ ob_start();
         
         <div class="p-6">
             <form method="POST" action="/domains/<?= $domain['id'] ?>/update" class="space-y-5">
+                <?= csrf_field() ?>
 
                 <!-- Domain Name (Read-only) -->
                 <div>
@@ -98,6 +99,7 @@ ob_start();
             <span class="text-sm font-medium text-gray-700">View Details</span>
         </a>
         <form method="POST" action="/domains/<?= $domain['id'] ?>/refresh" class="m-0">
+            <?= csrf_field() ?>
             <button type="submit" 
                     class="w-full flex items-center justify-center p-3 bg-white border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors group">
                 <i class="fas fa-sync-alt text-green-600 mr-2 text-sm"></i>
@@ -105,6 +107,7 @@ ob_start();
             </button>
         </form>
         <form method="POST" action="/domains/<?= $domain['id'] ?>/delete" onsubmit="return confirm('Delete this domain permanently?')" class="m-0">
+            <?= csrf_field() ?>
             <button type="submit" 
                     class="w-full flex items-center justify-center p-3 bg-white border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors group">
                 <i class="fas fa-trash text-red-600 mr-2 text-sm"></i>

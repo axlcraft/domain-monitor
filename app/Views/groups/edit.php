@@ -18,6 +18,7 @@ ob_start();
         
         <div class="p-6">
             <form method="POST" action="/groups/update" class="space-y-5">
+                <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= $group['id'] ?>">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -129,6 +130,7 @@ ob_start();
                 </h3>
 
                 <form method="POST" action="/channels/add" id="channelForm" class="space-y-5">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="group_id" value="<?= $group['id'] ?>">
 
                     <!-- Channel Type -->

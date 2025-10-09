@@ -22,6 +22,10 @@ If upgrading from v1.0.0, these incremental migrations will be applied:
 - `008_add_notes_to_domains.sql` - Domain notes field
 - `009_add_authentication_features.sql` - Authentication system
 - `010_add_app_version_setting.sql` - Version setting
+- `011_create_sessions_table.sql` - Session management table
+- `012_link_remember_tokens_to_sessions.sql` - Remember token session linking
+- `013_create_user_notifications_table.sql` - User notifications table
+- `014_add_captcha_settings.sql` - CAPTCHA settings (v2, v3, Turnstile)
 
 **Upgrade via:** Web updater at `/install/update`
 

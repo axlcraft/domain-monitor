@@ -47,6 +47,7 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                 </button>
                 <div id="assign-group-dropdown" class="hidden absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                     <form method="POST" action="/domains/bulk-assign-group" id="bulk-assign-form">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="domain_ids" id="bulk-assign-ids">
                         <div class="p-3">
                             <select name="group_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
@@ -83,6 +84,7 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
     <div class="flex gap-2">
         <?php if (!empty($domains)): ?>
         <form method="POST" action="/domains/bulk-refresh" id="refresh-all-form">
+            <?= csrf_field() ?>
             <?php foreach ($domains as $domain): ?>
                 <input type="hidden" name="domain_ids[]" value="<?= $domain['id'] ?>">
             <?php endforeach; ?>
@@ -299,6 +301,7 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     <form method="POST" action="/domains/<?= $domain['id'] ?>/refresh" class="inline">
+                                        <?= csrf_field() ?>
                                         <button type="submit" class="text-green-600 hover:text-green-800" title="Refresh WHOIS">
                                             <i class="fas fa-sync-alt"></i>
                                         </button>
@@ -307,6 +310,7 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <form method="POST" action="/domains/<?= $domain['id'] ?>/delete" class="inline" onsubmit="return confirm('Delete this domain?')">
+                                        <?= csrf_field() ?>
                                         <button type="submit" class="text-red-600 hover:text-red-800" title="Delete">
                                             <i class="fas fa-trash"></i>
                                         </button>

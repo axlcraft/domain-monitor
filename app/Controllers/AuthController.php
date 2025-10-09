@@ -33,10 +33,14 @@ class AuthController extends Controller
         
         // Check if registration is enabled
         $registrationEnabled = $this->settingModel->getValue('registration_enabled');
+        
+        // Get CAPTCHA settings
+        $captchaSettings = $this->settingModel->getCaptchaSettings();
 
         $this->view('auth/login', [
             'title' => 'Login',
-            'registrationEnabled' => $registrationEnabled
+            'registrationEnabled' => $registrationEnabled,
+            'captchaSettings' => $captchaSettings
         ]);
     }
 
@@ -50,9 +54,24 @@ class AuthController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/login');
+
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? ''; // Don't trim - passwords may have intentional spaces
         $remember = isset($_POST['remember']);
+
+        // Verify CAPTCHA
+        $captchaService = new \App\Services\CaptchaService();
+        $captchaResponse = $_POST['captcha_response'] ?? '';
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        $captchaResult = $captchaService->verifyCaptcha($captchaResponse, $remoteIp);
+        
+        if (!$captchaResult['success']) {
+            $_SESSION['error'] = $captchaResult['error'] ?? 'CAPTCHA verification failed';
+            $this->redirect('/login');
+            return;
+        }
 
         // Validate input
         if (empty($username) || empty($password)) {
@@ -140,8 +159,12 @@ class AuthController extends Controller
             return;
         }
 
+        // Get CAPTCHA settings
+        $captchaSettings = $this->settingModel->getCaptchaSettings();
+
         $this->view('auth/register', [
-            'title' => 'Register'
+            'title' => 'Register',
+            'captchaSettings' => $captchaSettings
         ]);
     }
 
@@ -155,11 +178,26 @@ class AuthController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/register');
+
         // Check if registration is enabled
         $registrationEnabled = $this->settingModel->getValue('registration_enabled');
         if (!$registrationEnabled) {
             $_SESSION['error'] = 'Registration is currently disabled';
             $this->redirect('/login');
+            return;
+        }
+
+        // Verify CAPTCHA
+        $captchaService = new \App\Services\CaptchaService();
+        $captchaResponse = $_POST['captcha_response'] ?? '';
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        $captchaResult = $captchaService->verifyCaptcha($captchaResponse, $remoteIp);
+        
+        if (!$captchaResult['success']) {
+            $_SESSION['error'] = $captchaResult['error'] ?? 'CAPTCHA verification failed';
+            $this->redirect('/register');
             return;
         }
 
@@ -172,6 +210,22 @@ class AuthController extends Controller
         // Validate inputs
         if (empty($username) || empty($email) || empty($fullName) || empty($password)) {
             $_SESSION['error'] = 'All fields are required';
+            $this->redirect('/register');
+            return;
+        }
+
+        // Validate username format and length
+        $usernameError = \App\Helpers\InputValidator::validateUsername($username, 3, 50);
+        if ($usernameError) {
+            $_SESSION['error'] = $usernameError;
+            $this->redirect('/register');
+            return;
+        }
+
+        // Validate full name length
+        $nameError = \App\Helpers\InputValidator::validateLength($fullName, 255, 'Full name');
+        if ($nameError) {
+            $_SESSION['error'] = $nameError;
             $this->redirect('/register');
             return;
         }
@@ -398,8 +452,12 @@ class AuthController extends Controller
             return;
         }
 
+        // Get CAPTCHA settings
+        $captchaSettings = $this->settingModel->getCaptchaSettings();
+
         $this->view('auth/forgot-password', [
-            'title' => 'Forgot Password'
+            'title' => 'Forgot Password',
+            'captchaSettings' => $captchaSettings
         ]);
     }
 
@@ -409,6 +467,21 @@ class AuthController extends Controller
     public function forgotPassword()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/forgot-password');
+            return;
+        }
+
+        // CSRF Protection
+        $this->verifyCsrf('/forgot-password');
+
+        // Verify CAPTCHA
+        $captchaService = new \App\Services\CaptchaService();
+        $captchaResponse = $_POST['captcha_response'] ?? '';
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        $captchaResult = $captchaService->verifyCaptcha($captchaResponse, $remoteIp);
+        
+        if (!$captchaResult['success']) {
+            $_SESSION['error'] = $captchaResult['error'] ?? 'CAPTCHA verification failed';
             $this->redirect('/forgot-password');
             return;
         }
@@ -478,9 +551,13 @@ class AuthController extends Controller
             return;
         }
 
+        // Get CAPTCHA settings
+        $captchaSettings = $this->settingModel->getCaptchaSettings();
+
         $this->view('auth/reset-password', [
             'title' => 'Reset Password',
-            'token' => $token
+            'token' => $token,
+            'captchaSettings' => $captchaSettings
         ]);
     }
 
@@ -491,6 +568,23 @@ class AuthController extends Controller
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/login');
+            return;
+        }
+
+        // CSRF Protection
+        $token = $_POST['token'] ?? '';
+        $this->verifyCsrf('/reset-password?token=' . urlencode($token));
+
+        // Verify CAPTCHA
+        $captchaService = new \App\Services\CaptchaService();
+        $captchaResponse = $_POST['captcha_response'] ?? '';
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        $captchaResult = $captchaService->verifyCaptcha($captchaResponse, $remoteIp);
+        
+        if (!$captchaResult['success']) {
+            $token = $_POST['token'] ?? '';
+            $_SESSION['error'] = $captchaResult['error'] ?? 'CAPTCHA verification failed';
+            $this->redirect('/reset-password?token=' . urlencode($token));
             return;
         }
 

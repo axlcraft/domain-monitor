@@ -12,34 +12,12 @@ define('PATH_ROOT', __DIR__ . '/../');
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
-// Configure database session handler
-try {
-    // Only use database sessions if sessions table exists
-    $pdo = new PDO(
-        "mysql:host={$_ENV['DB_HOST']};dbname={$_ENV['DB_DATABASE']}",
-        $_ENV['DB_USERNAME'],
-        $_ENV['DB_PASSWORD']
-    );
-    
-    // Check if sessions table exists
-    $stmt = $pdo->query("SHOW TABLES LIKE 'sessions'");
-    if ($stmt->rowCount() > 0) {
-        // Use database session handler
-        $sessionLifetime = (int)($_ENV['SESSION_LIFETIME'] ?? 1440);
-        $handler = new Core\DatabaseSessionHandler($sessionLifetime);
-        session_set_save_handler($handler, true);
-    }
-} catch (\Exception $e) {
-    // Fall back to default file-based sessions
-    error_log("Database session handler not available, using file sessions: " . $e->getMessage());
-}
+// Configure and start session (with database sessions if available)
+Core\SessionConfig::configure();
+Core\SessionConfig::start();
 
-// Start session
-session_start();
-
-// Validate session exists in database (for database-backed sessions)
-// This ensures deleted sessions are immediately invalidated
-Core\SessionValidator::validate();
+// Load CSRF helper functions
+require_once __DIR__ . '/../app/Helpers/CsrfHelper.php';
 
 // Check if system is installed (using flag file - no DB queries!)
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);

@@ -18,6 +18,7 @@ ob_start();
         
         <div class="p-6">
             <form method="POST" action="/domains/store" class="space-y-5">
+                <?= csrf_field() ?>
                 <!-- Domain Name -->
                 <div>
                     <label for="domain_name" class="block text-sm font-medium text-gray-700 mb-1.5">

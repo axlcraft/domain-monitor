@@ -25,6 +25,7 @@ ob_start();
 
 <!-- Reset Password Form -->
 <form method="POST" action="/reset-password" class="space-y-4">
+    <?= csrf_field() ?>
     <!-- Hidden token field -->
     <input type="hidden" name="token" value="<?= htmlspecialchars($token ?? '') ?>">
 
@@ -94,6 +95,9 @@ ob_start();
             <li>Include numbers and special characters for extra security</li>
         </ul>
     </div>
+
+    <!-- CAPTCHA Widget -->
+    <?php include __DIR__ . '/captcha-widget.php'; ?>
 
     <!-- Submit Button -->
     <button 

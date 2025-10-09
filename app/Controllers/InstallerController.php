@@ -45,6 +45,7 @@ class InstallerController extends Controller
             '011_create_sessions_table.sql',
             '012_link_remember_tokens_to_sessions.sql',
             '013_create_user_notifications_table.sql',
+            '014_add_captcha_settings.sql',
         ];
         
         try {
@@ -103,7 +104,8 @@ class InstallerController extends Controller
                     '010_add_app_version_setting.sql', 
                     '011_create_sessions_table.sql',
                     '012_link_remember_tokens_to_sessions.sql',
-                    '013_create_user_notifications_table.sql'
+                    '013_create_user_notifications_table.sql',
+                    '014_add_captcha_settings.sql'
                 ];
             }
             
@@ -179,9 +181,10 @@ class InstallerController extends Controller
         $adminPassword = trim($_POST['admin_password'] ?? '');
         $adminEmail = trim($_POST['admin_email'] ?? '');
         
-        // Validate
-        if (empty($adminUsername) || !preg_match('/^[a-zA-Z0-9_]+$/', $adminUsername)) {
-            $_SESSION['error'] = 'Username can only contain letters, numbers, and underscores';
+        // Validate username format and length
+        $usernameError = \App\Helpers\InputValidator::validateUsername($adminUsername, 3, 50);
+        if ($usernameError) {
+            $_SESSION['error'] = $usernameError;
             $this->redirect('/install');
             return;
         }
@@ -257,7 +260,8 @@ class InstallerController extends Controller
                     '010_add_app_version_setting.sql',
                     '011_create_sessions_table.sql',
                     '012_link_remember_tokens_to_sessions.sql',
-                    '013_create_user_notifications_table.sql'
+                    '013_create_user_notifications_table.sql',
+                    '014_add_captcha_settings.sql'
                 ];
                 
                 $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (?) ON DUPLICATE KEY UPDATE migration=migration");

@@ -35,6 +35,7 @@ ob_start();
 
 <!-- Forgot Password Form -->
 <form method="POST" action="/forgot-password" class="space-y-5">
+    <?= csrf_field() ?>
     <!-- Email Field -->
     <div>
         <label for="email" class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -55,6 +56,9 @@ ob_start();
         </div>
         <p class="text-xs text-gray-500 mt-1">Enter the email associated with your account</p>
     </div>
+
+    <!-- CAPTCHA Widget -->
+    <?php include __DIR__ . '/captcha-widget.php'; ?>
 
     <!-- Submit Button -->
     <button 

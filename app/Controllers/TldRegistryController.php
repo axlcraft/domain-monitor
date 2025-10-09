@@ -6,18 +6,21 @@ use Core\Controller;
 use App\Models\TldRegistry;
 use App\Models\TldImportLog;
 use App\Services\TldRegistryService;
+use App\Services\Logger;
 
 class TldRegistryController extends Controller
 {
     private TldRegistry $tldModel;
     private TldImportLog $importLogModel;
     private TldRegistryService $tldService;
+    private Logger $logger;
 
     public function __construct()
     {
         $this->tldModel = new TldRegistry();
         $this->importLogModel = new TldImportLog();
         $this->tldService = new TldRegistryService();
+        $this->logger = new Logger('tld_registry_controller');
     }
     
     /**
@@ -37,7 +40,7 @@ class TldRegistryController extends Controller
      */
     public function index()
     {
-        $search = $_GET['search'] ?? '';
+        $search = \App\Helpers\InputValidator::sanitizeSearch($_GET['search'] ?? '', 100);
         $status = $_GET['status'] ?? '';
         $dataType = $_GET['data_type'] ?? '';
         $page = max(1, (int)($_GET['page'] ?? 1));
@@ -95,6 +98,9 @@ class TldRegistryController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/tld-registry');
+
         try {
             $stats = $this->tldService->importTldList();
             
@@ -130,6 +136,9 @@ class TldRegistryController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/tld-registry');
+
         try {
             $stats = $this->tldService->importRdapData();
             
@@ -164,6 +173,9 @@ class TldRegistryController extends Controller
             $this->redirect('/tld-registry');
             return;
         }
+
+        // CSRF Protection
+        $this->verifyCsrf('/tld-registry');
 
         try {
             $stats = $this->tldService->importWhoisDataForMissingTlds();
@@ -246,9 +258,20 @@ class TldRegistryController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/tld-registry');
+
         $importType = $_POST['import_type'] ?? '';
         
+        $this->logger->separator('Start Progressive Import');
+        $this->logger->info('Import requested', [
+            'type' => $importType,
+            'user_id' => $_SESSION['user_id'] ?? 'unknown',
+            'username' => $_SESSION['username'] ?? 'unknown'
+        ]);
+        
         if (!in_array($importType, ['tld_list', 'rdap', 'whois', 'check_updates', 'complete_workflow'])) {
+            $this->logger->warning('Invalid import type provided', ['type' => $importType]);
             $_SESSION['error'] = 'Invalid import type';
             $this->redirect('/tld-registry');
             return;
@@ -257,15 +280,27 @@ class TldRegistryController extends Controller
         try {
             $result = $this->tldService->startProgressiveImport($importType);
             
+            $this->logger->info('Import started', [
+                'status' => $result['status'],
+                'log_id' => $result['log_id'] ?? null,
+                'message' => $result['message'] ?? ''
+            ]);
+            
             if ($result['status'] === 'complete') {
                 $_SESSION['success'] = $result['message'];
                 $this->redirect('/tld-registry');
             } else {
                 // Redirect to progress page
+                $this->logger->info('Redirecting to progress page', ['log_id' => $result['log_id']]);
                 $this->redirect('/tld-registry/import-progress/' . $result['log_id']);
             }
             
         } catch (\Exception $e) {
+            $this->logger->error('Failed to start import', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
             $_SESSION['error'] = 'Failed to start import: ' . $e->getMessage();
             $this->redirect('/tld-registry');
         }
@@ -278,7 +313,10 @@ class TldRegistryController extends Controller
     {
         $logId = $params['log_id'] ?? 0;
         
+        $this->logger->info('Import progress page requested', ['log_id' => $logId]);
+        
         if (!$logId) {
+            $this->logger->warning('Progress page requested with no log_id');
             $_SESSION['error'] = 'Invalid import session';
             $this->redirect('/tld-registry');
             return;
@@ -287,17 +325,25 @@ class TldRegistryController extends Controller
         // Get import type from log
         $log = $this->importLogModel->find($logId);
         if (!$log) {
+            $this->logger->error('Import log not found', ['log_id' => $logId]);
             $_SESSION['error'] = 'Import log not found';
             $this->redirect('/tld-registry');
             return;
         }
 
         $importType = $log['import_type'];
+        $this->logger->info('Showing progress page', [
+            'log_id' => $logId,
+            'import_type' => $importType,
+            'status' => $log['status']
+        ]);
+        
         $titles = [
             'tld_list' => 'TLD List Import Progress',
             'rdap' => 'RDAP Import Progress',
             'whois' => 'WHOIS Import Progress',
-            'check_updates' => 'Update Check Progress'
+            'check_updates' => 'Update Check Progress',
+            'complete_workflow' => 'Complete TLD Import Workflow'
         ];
 
         $this->view('tld-registry/import-progress', [
@@ -312,20 +358,104 @@ class TldRegistryController extends Controller
      */
     public function apiGetImportProgress()
     {
-        $logId = $_GET['log_id'] ?? 0;
+        // Start detailed logging
+        $this->logger->separator('API Import Progress Request');
+        $this->logger->info('API called', [
+            'log_id' => $_GET['log_id'] ?? 'none',
+            'user_id' => $_SESSION['user_id'] ?? 'not set',
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+        ]);
         
-        if (!$logId) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Log ID required']);
-            return;
-        }
-
+        // Start output buffering to catch any accidental output
+        ob_start();
+        
         try {
-            $result = $this->tldService->processNextBatch($logId);
-            echo json_encode($result);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+            // Clear any previous output
+            ob_clean();
+            
+            // Set JSON header immediately
+            header('Content-Type: application/json');
+            
+            $logId = $_GET['log_id'] ?? 0;
+            
+            if (!$logId) {
+                $this->logger->warning('API call with missing log_id');
+                ob_end_clean();
+                $this->json(['error' => 'Log ID required'], 400);
+                return;
+            }
+
+            // Ensure user is authenticated
+            if (!isset($_SESSION['user_id'])) {
+                $this->logger->warning('Unauthenticated API call attempt', ['log_id' => $logId]);
+                ob_end_clean();
+                $this->json(['error' => 'Authentication required'], 401);
+                return;
+            }
+
+            $this->logger->info('Processing batch', ['log_id' => $logId]);
+            
+            // Add detailed logging around the service call
+            $this->logger->info('About to call TldRegistryService::processNextBatch', [
+                'log_id' => $logId,
+                'service_class' => get_class($this->tldService)
+            ]);
+            
+            try {
+                $result = $this->tldService->processNextBatch($logId);
+                $this->logger->info('processNextBatch returned successfully');
+            } catch (\Throwable $e) {
+                $this->logger->critical('processNextBatch threw exception', [
+                    'type' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]);
+                throw $e;
+            }
+            
+            $this->logger->info('Batch processing result', [
+                'status' => $result['status'] ?? 'unknown',
+                'processed' => $result['processed'] ?? 0,
+                'remaining' => $result['remaining'] ?? 0
+            ]);
+            
+            // Clean output buffer before sending JSON
+            ob_end_clean();
+            $this->json($result);
+            
+        } catch (\Throwable $e) {
+            // Catch ALL errors including fatal errors
+            // Clean any buffered output
+            if (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            
+            // Detailed error logging
+            $this->logger->critical('API Import Progress Fatal Error', [
+                'type' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'log_id' => $_GET['log_id'] ?? 'none'
+            ]);
+            $this->logger->error('Stack trace', ['trace' => $e->getTraceAsString()]);
+            $this->logger->separator('API Error End');
+            
+            // Ensure we always send JSON
+            if (!headers_sent()) {
+                http_response_code(500);
+                header('Content-Type: application/json');
+            }
+            
+            echo json_encode([
+                'error' => 'An error occurred while processing the import',
+                'message' => $e->getMessage(),
+                'status' => 'error',
+                'log_id' => $_GET['log_id'] ?? null,
+                'error_type' => get_class($e)
+            ]);
+            exit;
         }
     }
 
@@ -341,10 +471,21 @@ class TldRegistryController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/tld-registry');
+
         $tldIds = $_POST['tld_ids'] ?? [];
         
         if (empty($tldIds)) {
             $_SESSION['error'] = 'No TLDs selected for deletion';
+            $this->redirect('/tld-registry');
+            return;
+        }
+
+        // Validate bulk operation size
+        $sizeError = \App\Helpers\InputValidator::validateArraySize($tldIds, 500, 'TLD selection');
+        if ($sizeError) {
+            $_SESSION['error'] = $sizeError;
             $this->redirect('/tld-registry');
             return;
         }
@@ -468,8 +609,7 @@ class TldRegistryController extends Controller
         $domain = $_GET['domain'] ?? '';
         
         if (empty($domain)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Domain parameter is required']);
+            $this->json(['error' => 'Domain parameter is required'], 400);
             return;
         }
 
@@ -477,23 +617,22 @@ class TldRegistryController extends Controller
             $tldInfo = $this->tldService->getTldInfo($domain);
             
             if ($tldInfo) {
-                echo json_encode([
+                $this->json([
                     'success' => true,
                     'data' => $tldInfo
                 ]);
             } else {
-                echo json_encode([
+                $this->json([
                     'success' => false,
                     'message' => 'TLD information not found'
                 ]);
             }
             
         } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode([
+            $this->json([
                 'success' => false,
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 

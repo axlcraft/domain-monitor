@@ -33,6 +33,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
         <div class="flex flex-wrap gap-2">
             <form method="POST" action="/tld-registry/start-progressive-import" class="inline">
+                <?= csrf_field() ?>
                 <input type="hidden" name="import_type" value="complete_workflow">
                 <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium" title="Complete TLD import workflow: TLD List → RDAP → WHOIS → Registry URLs">
                     <i class="fas fa-rocket mr-2"></i>
@@ -40,6 +41,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
                 </button>
             </form>
             <form method="POST" action="/tld-registry/start-progressive-import" class="inline">
+                <?= csrf_field() ?>
                 <input type="hidden" name="import_type" value="check_updates">
                 <button type="submit" <?= $stats['total'] == 0 ? 'disabled' : '' ?> class="inline-flex items-center px-4 py-2.5 <?= $stats['total'] == 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700' ?> text-white text-sm rounded-lg transition-colors font-medium" title="<?= $stats['total'] == 0 ? 'Import TLDs first' : 'Check for IANA updates' ?>">
                     <i class="fas fa-sync-alt mr-2"></i>
@@ -205,6 +207,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
         <div class="flex items-center space-x-4">
             <span class="text-sm text-gray-600">Bulk Actions:</span>
             <form method="POST" action="/tld-registry/bulk-delete" id="bulk-delete-form" class="inline">
+                <?= csrf_field() ?>
                 <button type="button" onclick="confirmBulkDelete()" class="inline-flex items-center px-3 py-2 border border-red-300 text-red-700 text-sm rounded-lg hover:bg-red-50 transition-colors font-medium">
                     <i class="fas fa-trash mr-2"></i>
                     Delete Selected

@@ -23,7 +23,7 @@ class DomainController extends Controller
     public function index()
     {
         // Get filter parameters
-        $search = $_GET['search'] ?? '';
+        $search = \App\Helpers\InputValidator::sanitizeSearch($_GET['search'] ?? '', 100);
         $status = $_GET['status'] ?? '';
         $groupId = $_GET['group'] ?? '';
         $sortBy = $_GET['sort'] ?? 'domain_name';
@@ -131,12 +131,22 @@ class DomainController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/domains/create');
+
         $domainName = trim($_POST['domain_name'] ?? '');
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
 
         // Validate
         if (empty($domainName)) {
             $_SESSION['error'] = 'Domain name is required';
+            $this->redirect('/domains/create');
+            return;
+        }
+
+        // Validate domain format
+        if (!\App\Helpers\InputValidator::validateDomain($domainName)) {
+            $_SESSION['error'] = 'Invalid domain name format (e.g., example.com)';
             $this->redirect('/domains/create');
             return;
         }
@@ -211,6 +221,9 @@ class DomainController extends Controller
             $this->redirect('/domains');
             return;
         }
+
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
 
         $id = (int)($params['id'] ?? 0);
         $domain = $this->domainModel->find($id);
@@ -391,6 +404,9 @@ class DomainController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/domains/bulk-add');
+
         // POST - Process bulk add
         $domainsText = trim($_POST['domains'] ?? '');
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
@@ -467,10 +483,21 @@ class DomainController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
+
         $domainIds = $_POST['domain_ids'] ?? [];
         
         if (empty($domainIds)) {
             $_SESSION['error'] = 'No domains selected';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Validate bulk operation size
+        $sizeError = \App\Helpers\InputValidator::validateArraySize($domainIds, 1000, 'Domain selection');
+        if ($sizeError) {
+            $_SESSION['error'] = $sizeError;
             $this->redirect('/domains');
             return;
         }
@@ -516,10 +543,21 @@ class DomainController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
+
         $domainIds = $_POST['domain_ids'] ?? [];
         
         if (empty($domainIds)) {
             $_SESSION['error'] = 'No domains selected';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Validate bulk operation size
+        $sizeError = \App\Helpers\InputValidator::validateArraySize($domainIds, 1000, 'Domain selection');
+        if ($sizeError) {
+            $_SESSION['error'] = $sizeError;
             $this->redirect('/domains');
             return;
         }
@@ -542,11 +580,22 @@ class DomainController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
+
         $domainIds = $_POST['domain_ids'] ?? [];
         $groupId = !empty($_POST['group_id']) ? (int)$_POST['group_id'] : null;
         
         if (empty($domainIds)) {
             $_SESSION['error'] = 'No domains selected';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Validate bulk operation size
+        $sizeError = \App\Helpers\InputValidator::validateArraySize($domainIds, 1000, 'Domain selection');
+        if ($sizeError) {
+            $_SESSION['error'] = $sizeError;
             $this->redirect('/domains');
             return;
         }
@@ -569,11 +618,22 @@ class DomainController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
+
         $domainIds = $_POST['domain_ids'] ?? [];
         $isActive = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
         
         if (empty($domainIds)) {
             $_SESSION['error'] = 'No domains selected';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Validate bulk operation size
+        $sizeError = \App\Helpers\InputValidator::validateArraySize($domainIds, 1000, 'Domain selection');
+        if ($sizeError) {
+            $_SESSION['error'] = $sizeError;
             $this->redirect('/domains');
             return;
         }
@@ -597,6 +657,9 @@ class DomainController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
+
         $id = (int)($params['id'] ?? 0);
         $domain = $this->domainModel->find($id);
         
@@ -607,6 +670,14 @@ class DomainController extends Controller
         }
 
         $notes = $_POST['notes'] ?? '';
+
+        // Validate notes length
+        $lengthError = \App\Helpers\InputValidator::validateLength($notes, 5000, 'Notes');
+        if ($lengthError) {
+            $_SESSION['error'] = $lengthError;
+            $this->redirect('/domains/' . $id);
+            return;
+        }
 
         $this->domainModel->update($id, [
             'notes' => $notes

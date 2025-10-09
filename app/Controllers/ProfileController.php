@@ -80,6 +80,9 @@ class ProfileController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/profile');
+
         $userId = Auth::id();
         $fullName = trim($_POST['full_name'] ?? '');
         $email = trim($_POST['email'] ?? '');
@@ -87,6 +90,14 @@ class ProfileController extends Controller
         // Validate
         if (empty($fullName) || empty($email)) {
             $_SESSION['error'] = 'Full name and email are required';
+            $this->redirect('/profile');
+            return;
+        }
+
+        // Validate full name length
+        $nameError = \App\Helpers\InputValidator::validateLength($fullName, 255, 'Full name');
+        if ($nameError) {
+            $_SESSION['error'] = $nameError;
             $this->redirect('/profile');
             return;
         }
@@ -130,6 +141,9 @@ class ProfileController extends Controller
             $this->redirect('/profile');
             return;
         }
+
+        // CSRF Protection
+        $this->verifyCsrf('/profile');
 
         $userId = Auth::id();
         $currentPassword = $_POST['current_password'] ?? '';
@@ -226,6 +240,14 @@ class ProfileController extends Controller
      */
     public function logoutOtherSessions()
     {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/profile');
+            return;
+        }
+
+        // CSRF Protection
+        $this->verifyCsrf('/profile');
+
         $userId = Auth::id();
         $currentSessionId = session_id();
 
@@ -272,6 +294,9 @@ class ProfileController extends Controller
             $this->redirect('/profile');
             return;
         }
+
+        // CSRF Protection
+        $this->verifyCsrf('/profile');
 
         $sessionId = $params['sessionId'] ?? '';
         $userId = Auth::id();

@@ -41,11 +41,29 @@ class NotificationGroupController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/groups/create');
+
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
 
         if (empty($name)) {
             $_SESSION['error'] = 'Group name is required';
+            $this->redirect('/groups/create');
+            return;
+        }
+
+        // Validate length
+        $nameError = \App\Helpers\InputValidator::validateLength($name, 255, 'Group name');
+        if ($nameError) {
+            $_SESSION['error'] = $nameError;
+            $this->redirect('/groups/create');
+            return;
+        }
+
+        $descError = \App\Helpers\InputValidator::validateLength($description, 1000, 'Description');
+        if ($descError) {
+            $_SESSION['error'] = $descError;
             $this->redirect('/groups/create');
             return;
         }
@@ -83,12 +101,30 @@ class NotificationGroupController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/groups');
+
         $id = (int)$_POST['id'];
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
 
         if (empty($name)) {
             $_SESSION['error'] = 'Group name is required';
+            $this->redirect("/groups/edit?id=$id");
+            return;
+        }
+
+        // Validate length
+        $nameError = \App\Helpers\InputValidator::validateLength($name, 255, 'Group name');
+        if ($nameError) {
+            $_SESSION['error'] = $nameError;
+            $this->redirect("/groups/edit?id=$id");
+            return;
+        }
+
+        $descError = \App\Helpers\InputValidator::validateLength($description, 1000, 'Description');
+        if ($descError) {
+            $_SESSION['error'] = $descError;
             $this->redirect("/groups/edit?id=$id");
             return;
         }
@@ -124,6 +160,9 @@ class NotificationGroupController extends Controller
             $this->redirect('/groups');
             return;
         }
+
+        // CSRF Protection
+        $this->verifyCsrf('/groups');
 
         $groupId = (int)$_POST['group_id'];
         $channelType = $_POST['channel_type'] ?? '';

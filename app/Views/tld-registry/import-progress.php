@@ -21,7 +21,7 @@ ob_start();
                         'check_updates' => 'Checking for IANA updates',
                         'complete_workflow' => 'Complete TLD import workflow (TLD List → RDAP → WHOIS & Registry Data)'
                     ];
-                    echo $descriptions[$import_type] ?? 'Processing import';
+                    echo htmlspecialchars($descriptions[$import_type] ?? 'Processing import');
                     ?>
                 </p>
             </div>
@@ -194,7 +194,10 @@ function updateProgress(data) {
         statusBadge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
         statusText.innerHTML = '<i class="fas fa-check mr-2"></i>Complete';
         isComplete = true;
-        addLogMessage('Import completed successfully!', 'success');
+        
+        // Show the actual completion message from API
+        const completionMessage = data.message || 'Import completed successfully!';
+        addLogMessage(completionMessage, 'success');
         
         // Mark all steps as completed for complete workflow
         if (importType === 'complete_workflow') {

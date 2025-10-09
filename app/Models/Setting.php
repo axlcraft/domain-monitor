@@ -201,5 +201,60 @@ class Setting extends Model
         }
         return $result;
     }
+
+    /**
+     * Get CAPTCHA settings
+     */
+    public function getCaptchaSettings(): array
+    {
+        $encryptedSecret = $this->getValue('captcha_secret_key', '');
+        
+        // Decrypt secret key if it's encrypted
+        $decryptedSecret = '';
+        if (!empty($encryptedSecret)) {
+            try {
+                $encryption = new \Core\Encryption();
+                $decryptedSecret = $encryption->decrypt($encryptedSecret);
+            } catch (\Exception $e) {
+                // If decryption fails, it might be plaintext (migration scenario)
+                error_log("Failed to decrypt captcha_secret_key: " . $e->getMessage());
+                $decryptedSecret = $encryptedSecret;
+            }
+        }
+        
+        return [
+            'provider' => $this->getValue('captcha_provider', 'disabled'),
+            'site_key' => $this->getValue('captcha_site_key', ''),
+            'secret_key' => $decryptedSecret,
+            'score_threshold' => $this->getValue('recaptcha_v3_score_threshold', '0.5')
+        ];
+    }
+
+    /**
+     * Update CAPTCHA settings
+     */
+    public function updateCaptchaSettings(array $settings): bool
+    {
+        $result = true;
+        
+        // Encrypt secret key before storing
+        if (isset($settings['captcha_secret_key']) && !empty($settings['captcha_secret_key'])) {
+            try {
+                $encryption = new \Core\Encryption();
+                $settings['captcha_secret_key'] = $encryption->encrypt($settings['captcha_secret_key']);
+            } catch (\Exception $e) {
+                error_log("Failed to encrypt captcha_secret_key: " . $e->getMessage());
+                return false;
+            }
+        }
+        
+        foreach ($settings as $key => $value) {
+            if (!$this->setValue($key, $value)) {
+                $result = false;
+            }
+        }
+        
+        return $result;
+    }
 }
 

@@ -48,6 +48,10 @@ foreach ($notificationPresets as $key => $preset) {
                 <i class="fas fa-bell mr-2"></i>
                 Monitoring
             </button>
+            <button onclick="switchTab('security')" id="tab-security" class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                <i class="fas fa-shield-alt mr-2"></i>
+                Security
+            </button>
             <button onclick="switchTab('system')" id="tab-system" class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
                 <i class="fas fa-server mr-2"></i>
                 System
@@ -69,6 +73,7 @@ foreach ($notificationPresets as $key => $preset) {
         </div>
 
         <form method="POST" action="/settings/update-app" class="p-6">
+            <?= csrf_field() ?>
             <div class="space-y-4">
                 <div>
                     <label for="app_name" class="block text-sm font-medium text-gray-700 mb-2">
@@ -174,6 +179,7 @@ foreach ($notificationPresets as $key => $preset) {
         </div>
 
         <form method="POST" action="/settings/update-email" class="p-6">
+            <?= csrf_field() ?>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="mail_host" class="block text-sm font-medium text-gray-700 mb-2">
@@ -278,6 +284,7 @@ foreach ($notificationPresets as $key => $preset) {
                             Send a test email to verify your SMTP settings are configured correctly.
                         </p>
                         <form method="POST" action="/settings/test-email" id="testEmailForm" class="flex gap-2">
+                            <?= csrf_field() ?>
                             <input type="email" name="test_email" id="test_email" required
                                    placeholder="Enter email address to receive test"
                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm">
@@ -302,6 +309,7 @@ foreach ($notificationPresets as $key => $preset) {
         </div>
 
         <form method="POST" action="/settings/update" id="settingsForm" class="p-6">
+            <?= csrf_field() ?>
             
             <!-- Notification Settings -->
             <div class="mb-6">
@@ -411,6 +419,120 @@ foreach ($notificationPresets as $key => $preset) {
     </div>
 </div>
 
+<!-- Tab Content: Security Settings -->
+<div id="content-security" class="tab-content hidden">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-lg font-semibold text-gray-900">Security Settings</h3>
+            <p class="text-sm text-gray-600 mt-1">Configure CAPTCHA protection for authentication forms</p>
+        </div>
+
+        <form method="POST" action="/settings/update-captcha" class="p-6">
+            <?= csrf_field() ?>
+            <div class="space-y-4">
+                <!-- CAPTCHA Provider Selection -->
+                <div>
+                    <label for="captcha_provider" class="block text-sm font-medium text-gray-700 mb-2">
+                        CAPTCHA Provider
+                    </label>
+                    <select id="captcha_provider" name="captcha_provider" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                        <option value="disabled" <?= ($captchaSettings['provider'] ?? 'disabled') === 'disabled' ? 'selected' : '' ?>>
+                            Disabled (No CAPTCHA)
+                        </option>
+                        <option value="recaptcha_v2" <?= ($captchaSettings['provider'] ?? '') === 'recaptcha_v2' ? 'selected' : '' ?>>
+                            Google reCAPTCHA v2 (Checkbox)
+                        </option>
+                        <option value="recaptcha_v3" <?= ($captchaSettings['provider'] ?? '') === 'recaptcha_v3' ? 'selected' : '' ?>>
+                            Google reCAPTCHA v3 (Invisible)
+                        </option>
+                        <option value="turnstile" <?= ($captchaSettings['provider'] ?? '') === 'turnstile' ? 'selected' : '' ?>>
+                            Cloudflare Turnstile
+                        </option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">CAPTCHA protects login, registration, and password reset forms</p>
+                </div>
+
+                <!-- CAPTCHA Configuration Fields (shown when enabled) -->
+                <div id="captcha_config" style="display: <?= ($captchaSettings['provider'] ?? 'disabled') !== 'disabled' ? 'block' : 'none' ?>;">
+                    <div class="border-t border-gray-200 pt-4 mt-4">
+                        <!-- Site Key -->
+                        <div class="mb-4">
+                            <label for="captcha_site_key" class="block text-sm font-medium text-gray-700 mb-2">
+                                Site Key (Public Key)
+                            </label>
+                            <input type="text" id="captcha_site_key" name="captcha_site_key"
+                                   value="<?= htmlspecialchars($captchaSettings['site_key'] ?? '') ?>"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                   placeholder="Enter your site/public key">
+                            <p class="text-xs text-gray-500 mt-1">Public key visible in HTML source</p>
+                        </div>
+
+                        <!-- Secret Key -->
+                        <div class="mb-4">
+                            <label for="captcha_secret_key" class="block text-sm font-medium text-gray-700 mb-2">
+                                Secret Key
+                            </label>
+                            <input type="password" id="captcha_secret_key" name="captcha_secret_key"
+                                   value=""
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                   placeholder="<?= !empty($captchaSettings['secret_key']) ? '••••••••••••••••' : 'Enter your secret key' ?>">
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-lock text-green-600 mr-1"></i>
+                                Encrypted before storing in database. Leave blank to keep existing key.
+                            </p>
+                        </div>
+
+                        <!-- reCAPTCHA v3 Score Threshold (only for v3) -->
+                        <div id="recaptcha_v3_threshold" style="display: <?= ($captchaSettings['provider'] ?? '') === 'recaptcha_v3' ? 'block' : 'none' ?>;">
+                            <label for="recaptcha_v3_score_threshold" class="block text-sm font-medium text-gray-700 mb-2">
+                                reCAPTCHA v3 Score Threshold
+                            </label>
+                            <input type="number" id="recaptcha_v3_score_threshold" name="recaptcha_v3_score_threshold"
+                                   value="<?= htmlspecialchars($captchaSettings['score_threshold'] ?? '0.5') ?>"
+                                   min="0.0" max="1.0" step="0.1"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                            <p class="text-xs text-gray-500 mt-1">Minimum score required (0.0 to 1.0). Default: 0.5. Lower = more permissive.</p>
+                        </div>
+                    </div>
+
+                    <!-- Provider-specific Documentation -->
+                    <div id="captcha_docs" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                        <p class="text-sm font-medium text-gray-900 mb-2">
+                            <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+                            <span id="captcha_docs_title">Setup Instructions</span>
+                        </p>
+                        <div id="docs_recaptcha_v2" class="text-sm text-gray-700" style="display: none;">
+                            <p class="mb-1">1. Visit <a href="https://www.google.com/recaptcha/admin" target="_blank" class="text-primary hover:underline">Google reCAPTCHA Admin Console</a></p>
+                            <p class="mb-1">2. Register a new site with reCAPTCHA v2 "I'm not a robot" Checkbox</p>
+                            <p>3. Copy the Site Key and Secret Key to the fields above</p>
+                        </div>
+                        <div id="docs_recaptcha_v3" class="text-sm text-gray-700" style="display: none;">
+                            <p class="mb-1">1. Visit <a href="https://www.google.com/recaptcha/admin" target="_blank" class="text-primary hover:underline">Google reCAPTCHA Admin Console</a></p>
+                            <p class="mb-1">2. Register a new site with reCAPTCHA v3</p>
+                            <p class="mb-1">3. Copy the Site Key and Secret Key to the fields above</p>
+                            <p>4. Adjust the score threshold based on your security needs (0.5 is recommended)</p>
+                        </div>
+                        <div id="docs_turnstile" class="text-sm text-gray-700" style="display: none;">
+                            <p class="mb-1">1. Visit <a href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank" class="text-primary hover:underline">Cloudflare Turnstile Dashboard</a></p>
+                            <p class="mb-1">2. Create a new Turnstile widget</p>
+                            <p class="mb-1">3. Choose "Managed" mode for best user experience</p>
+                            <p>4. Copy the Site Key and Secret Key to the fields above</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">
+                <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors font-medium">
+                    <i class="fas fa-save mr-2"></i>
+                    Save Security Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Tab Content: System Information -->
 <div id="content-system" class="tab-content hidden">
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -499,6 +621,7 @@ foreach ($notificationPresets as $key => $preset) {
                 </div>
 
                 <form method="POST" action="/settings/clear-logs" onsubmit="return confirm('Are you sure you want to clear logs older than 30 days? This action cannot be undone.')">
+                    <?= csrf_field() ?>
                     <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
                         <i class="fas fa-trash-alt mr-2"></i>
                         Clear Old Logs
@@ -547,7 +670,7 @@ function switchTab(tabName) {
 // Load tab from URL hash on page load
 window.addEventListener('DOMContentLoaded', function() {
     const hash = window.location.hash.substring(1); // Remove the #
-    const validTabs = ['app', 'email', 'monitoring', 'system', 'maintenance'];
+    const validTabs = ['app', 'email', 'monitoring', 'security', 'system', 'maintenance'];
     
     if (hash && validTabs.includes(hash)) {
         switchTab(hash);
@@ -610,6 +733,51 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    // CAPTCHA provider selection logic
+    const captchaProvider = document.getElementById('captcha_provider');
+    if (captchaProvider) {
+        const captchaConfig = document.getElementById('captcha_config');
+        const v3Threshold = document.getElementById('recaptcha_v3_threshold');
+        const docsV2 = document.getElementById('docs_recaptcha_v2');
+        const docsV3 = document.getElementById('docs_recaptcha_v3');
+        const docsTurnstile = document.getElementById('docs_turnstile');
+
+        function updateCaptchaUI() {
+            const selectedProvider = captchaProvider.value;
+            
+            // Show/hide configuration section
+            if (selectedProvider === 'disabled') {
+                captchaConfig.style.display = 'none';
+            } else {
+                captchaConfig.style.display = 'block';
+            }
+
+            // Show/hide v3 threshold field
+            if (selectedProvider === 'recaptcha_v3') {
+                v3Threshold.style.display = 'block';
+            } else {
+                v3Threshold.style.display = 'none';
+            }
+
+            // Update documentation
+            docsV2.style.display = 'none';
+            docsV3.style.display = 'none';
+            docsTurnstile.style.display = 'none';
+
+            if (selectedProvider === 'recaptcha_v2') {
+                docsV2.style.display = 'block';
+            } else if (selectedProvider === 'recaptcha_v3') {
+                docsV3.style.display = 'block';
+            } else if (selectedProvider === 'turnstile') {
+                docsTurnstile.style.display = 'block';
+            }
+        }
+
+        captchaProvider.addEventListener('change', updateCaptchaUI);
+        // Initialize on page load
+        updateCaptchaUI();
+    }
 });
 </script>
 

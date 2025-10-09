@@ -26,6 +26,7 @@ class SettingsController extends Controller
         $settings = $this->settingModel->getAllAsKeyValue();
         $appSettings = $this->settingModel->getAppSettings();
         $emailSettings = $this->settingModel->getEmailSettings();
+        $captchaSettings = $this->settingModel->getCaptchaSettings();
         
         // Predefined notification day options
         $notificationPresets = [
@@ -68,6 +69,7 @@ class SettingsController extends Controller
             'settings' => $settings,
             'appSettings' => $appSettings,
             'emailSettings' => $emailSettings,
+            'captchaSettings' => $captchaSettings,
             'notificationPresets' => $notificationPresets,
             'checkIntervalPresets' => $checkIntervalPresets,
             'title' => 'Settings'
@@ -80,6 +82,9 @@ class SettingsController extends Controller
             $this->redirect('/settings');
             return;
         }
+
+        // CSRF Protection
+        $this->verifyCsrf('/settings#monitoring');
 
         try {
             // Update notification days
@@ -144,6 +149,9 @@ class SettingsController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/settings');
+
         // Update last check run time to show the test worked
         $this->settingModel->updateLastCheckRun();
         
@@ -157,6 +165,9 @@ class SettingsController extends Controller
             $this->redirect('/settings');
             return;
         }
+
+        // CSRF Protection
+        $this->verifyCsrf('/settings#maintenance');
 
         try {
             // Clear notification logs older than 30 days
@@ -181,6 +192,9 @@ class SettingsController extends Controller
             $this->redirect('/settings');
             return;
         }
+
+        // CSRF Protection
+        $this->verifyCsrf('/settings#app');
 
         try {
             $appSettings = [
@@ -237,6 +251,9 @@ class SettingsController extends Controller
             return;
         }
 
+        // CSRF Protection
+        $this->verifyCsrf('/settings#email');
+
         try {
             $emailSettings = [
                 'mail_host' => trim($_POST['mail_host'] ?? ''),
@@ -278,12 +295,88 @@ class SettingsController extends Controller
         }
     }
 
+    public function updateCaptcha()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/settings');
+            return;
+        }
+
+        // CSRF Protection
+        $this->verifyCsrf('/settings#security');
+
+        try {
+            $captchaProvider = trim($_POST['captcha_provider'] ?? 'disabled');
+            $captchaSiteKey = trim($_POST['captcha_site_key'] ?? '');
+            $captchaSecretKey = trim($_POST['captcha_secret_key'] ?? '');
+            $recaptchaV3Threshold = trim($_POST['recaptcha_v3_score_threshold'] ?? '0.5');
+
+            // Validate provider
+            $validProviders = ['disabled', 'recaptcha_v2', 'recaptcha_v3', 'turnstile'];
+            if (!in_array($captchaProvider, $validProviders)) {
+                $_SESSION['error'] = 'Invalid CAPTCHA provider selected';
+                $this->redirect('/settings#security');
+                return;
+            }
+
+            // If CAPTCHA is enabled, validate keys
+            if ($captchaProvider !== 'disabled') {
+                if (empty($captchaSiteKey)) {
+                    $_SESSION['error'] = 'Site key is required when CAPTCHA is enabled';
+                    $this->redirect('/settings#security');
+                    return;
+                }
+
+                if (empty($captchaSecretKey)) {
+                    $_SESSION['error'] = 'Secret key is required when CAPTCHA is enabled';
+                    $this->redirect('/settings#security');
+                    return;
+                }
+            }
+
+            // Validate v3 score threshold
+            if ($captchaProvider === 'recaptcha_v3') {
+                $threshold = floatval($recaptchaV3Threshold);
+                if ($threshold < 0.0 || $threshold > 1.0) {
+                    $_SESSION['error'] = 'reCAPTCHA v3 score threshold must be between 0.0 and 1.0';
+                    $this->redirect('/settings#security');
+                    return;
+                }
+            }
+
+            // Prepare settings array
+            $captchaSettings = [
+                'captcha_provider' => $captchaProvider,
+                'captcha_site_key' => $captchaSiteKey,
+                'recaptcha_v3_score_threshold' => $recaptchaV3Threshold
+            ];
+
+            // Only update secret key if provided (to allow updating other settings without re-entering secret)
+            if (!empty($captchaSecretKey)) {
+                $captchaSettings['captcha_secret_key'] = $captchaSecretKey;
+            }
+
+            // Update CAPTCHA settings
+            $this->settingModel->updateCaptchaSettings($captchaSettings);
+
+            $_SESSION['success'] = 'CAPTCHA settings updated successfully';
+            $this->redirect('/settings#security');
+
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to update CAPTCHA settings: ' . $e->getMessage();
+            $this->redirect('/settings#security');
+        }
+    }
+
     public function testEmail()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/settings');
             return;
         }
+
+        // CSRF Protection
+        $this->verifyCsrf('/settings#email');
 
         $testEmail = trim($_POST['test_email'] ?? '');
 

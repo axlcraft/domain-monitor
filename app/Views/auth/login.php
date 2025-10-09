@@ -25,6 +25,7 @@ ob_start();
 
 <!-- Login Form -->
 <form method="POST" action="/login" class="space-y-5">
+    <?= csrf_field() ?>
     <!-- Username Field -->
     <div>
         <label for="username" class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -84,6 +85,9 @@ ob_start();
             Forgot password?
         </a>
     </div>
+
+    <!-- CAPTCHA Widget -->
+    <?php include __DIR__ . '/captcha-widget.php'; ?>
 
     <!-- Submit Button -->
     <button 

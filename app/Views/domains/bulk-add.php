@@ -18,6 +18,7 @@ ob_start();
         
         <div class="p-6">
             <form method="POST" action="/domains/bulk-add" class="space-y-5">
+                <?= csrf_field() ?>
                 <!-- Domains Textarea -->
                 <div>
                     <label for="domains" class="block text-sm font-medium text-gray-700 mb-1.5">

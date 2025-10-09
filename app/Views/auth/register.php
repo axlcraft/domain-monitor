@@ -35,6 +35,7 @@ ob_start();
 
 <!-- Registration Form -->
 <form method="POST" action="/register" class="space-y-4">
+    <?= csrf_field() ?>
     <!-- Full Name Field -->
     <div>
         <label for="full_name" class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -162,6 +163,9 @@ ob_start();
             I agree to the Terms of Service and Privacy Policy
         </label>
     </div>
+
+    <!-- CAPTCHA Widget -->
+    <?php include __DIR__ . '/captcha-widget.php'; ?>
 
     <!-- Submit Button -->
     <button 

@@ -103,6 +103,7 @@ $router->get('/settings', [SettingsController::class, 'index']);
 $router->post('/settings/update', [SettingsController::class, 'update']);
 $router->post('/settings/update-app', [SettingsController::class, 'updateApp']);
 $router->post('/settings/update-email', [SettingsController::class, 'updateEmail']);
+$router->post('/settings/update-captcha', [SettingsController::class, 'updateCaptcha']);
 $router->post('/settings/test-email', [SettingsController::class, 'testEmail']);
 $router->post('/settings/test-cron', [SettingsController::class, 'testCron']);
 $router->post('/settings/clear-logs', [SettingsController::class, 'clearLogs']);
