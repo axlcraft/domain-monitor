@@ -5,6 +5,15 @@
 -- CORE TABLES
 -- =====================================================
 
+-- Notification groups table (must be created first - referenced by domains)
+CREATE TABLE IF NOT EXISTS notification_groups (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Domains table
 CREATE TABLE IF NOT EXISTS domains (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -28,15 +37,6 @@ CREATE TABLE IF NOT EXISTS domains (
     INDEX idx_expiration_date (expiration_date),
     INDEX idx_status (status),
     INDEX idx_is_active (is_active)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Notification groups table
-CREATE TABLE IF NOT EXISTS notification_groups (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Notification channels table
@@ -92,9 +92,9 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert default admin user (password will be set during installation)
+-- Insert default admin user (credentials will be set during installation)
 INSERT INTO users (username, password, email, full_name, is_active, role, email_verified) VALUES
-('admin', '{{ADMIN_PASSWORD_HASH}}', 'admin@domainmonitor.local', 'Administrator', 1, 'admin', 1)
+('{{ADMIN_USERNAME}}', '{{ADMIN_PASSWORD_HASH}}', '{{ADMIN_EMAIL}}', 'Administrator', 1, 'admin', 1)
 ON DUPLICATE KEY UPDATE username=username;
 
 -- Password reset tokens table

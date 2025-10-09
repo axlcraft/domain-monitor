@@ -79,6 +79,21 @@
                     
                     <div class="space-y-4">
                         <div>
+                            <label for="admin_username" class="block text-sm font-medium text-gray-700 mb-2">
+                                Username <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-user text-gray-400 text-sm"></i>
+                                </div>
+                                <input type="text" id="admin_username" name="admin_username" required pattern="[a-zA-Z0-9_]+"
+                                       class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                       placeholder="admin" value="admin">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Letters, numbers, and underscores only</p>
+                        </div>
+                        
+                        <div>
                             <label for="admin_email" class="block text-sm font-medium text-gray-700 mb-2">
                                 Email Address <span class="text-red-500">*</span>
                             </label>

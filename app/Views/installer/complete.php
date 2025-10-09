@@ -45,7 +45,7 @@
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-medium text-gray-600">Username:</span>
-                                    <span class="text-sm font-mono font-bold text-gray-900">admin</span>
+                                    <span class="text-sm font-mono font-bold text-gray-900 select-all"><?= htmlspecialchars($adminUsername ?? 'admin') ?></span>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-medium text-gray-600">Password:</span>

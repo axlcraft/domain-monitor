@@ -175,10 +175,17 @@ class InstallerController extends Controller
             return;
         }
         
+        $adminUsername = trim($_POST['admin_username'] ?? '');
         $adminPassword = trim($_POST['admin_password'] ?? '');
         $adminEmail = trim($_POST['admin_email'] ?? '');
         
         // Validate
+        if (empty($adminUsername) || !preg_match('/^[a-zA-Z0-9_]+$/', $adminUsername)) {
+            $_SESSION['error'] = 'Username can only contain letters, numbers, and underscores';
+            $this->redirect('/install');
+            return;
+        }
+        
         if (empty($adminPassword) || strlen($adminPassword) < 8) {
             $_SESSION['error'] = 'Admin password must be at least 8 characters';
             $this->redirect('/install');
@@ -204,10 +211,12 @@ class InstallerController extends Controller
                 
                 $sql = file_get_contents($file);
                 
-                // Replace password placeholder for user migration
-                if ($migration === '002_create_users_table.sql') {
+                // Replace placeholders for user migration or consolidated schema
+                if ($migration === '002_create_users_table.sql' || $migration === '000_initial_schema_v1.1.0.sql') {
                     $passwordHash = password_hash($adminPassword, PASSWORD_BCRYPT);
                     $sql = str_replace('{{ADMIN_PASSWORD_HASH}}', $passwordHash, $sql);
+                    $sql = str_replace('{{ADMIN_USERNAME}}', $adminUsername, $sql);
+                    $sql = str_replace('{{ADMIN_EMAIL}}', $adminEmail, $sql);
                 }
                 
                 // Execute SQL
@@ -233,9 +242,33 @@ class InstallerController extends Controller
                 $results[] = $migration;
             }
             
-            // Update admin email and ensure admin role and verified status
-            $stmt = $pdo->prepare("UPDATE users SET email = ?, role = 'admin', email_verified = 1 WHERE username = 'admin'");
-            $stmt->execute([$adminEmail]);
+            // If using consolidated schema, mark all individual migrations as executed too
+            if (in_array('000_initial_schema_v1.1.0.sql', $migrations)) {
+                $allMigrations = [
+                    '001_create_tables.sql',
+                    '002_create_users_table.sql',
+                    '003_add_whois_fields.sql',
+                    '004_create_tld_registry_table.sql',
+                    '005_update_tld_import_logs.sql',
+                    '006_add_complete_workflow_import_type.sql',
+                    '007_add_app_and_email_settings.sql',
+                    '008_add_notes_to_domains.sql',
+                    '009_add_authentication_features.sql',
+                    '010_add_app_version_setting.sql',
+                    '011_create_sessions_table.sql',
+                    '012_link_remember_tokens_to_sessions.sql',
+                    '013_create_user_notifications_table.sql'
+                ];
+                
+                $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (?) ON DUPLICATE KEY UPDATE migration=migration");
+                foreach ($allMigrations as $individualMigration) {
+                    $stmt->execute([$individualMigration]);
+                }
+            }
+            
+            // Update admin user to ensure role and verified status (in case migration already had defaults)
+            $stmt = $pdo->prepare("UPDATE users SET role = 'admin', email_verified = 1 WHERE username = ?");
+            $stmt->execute([$adminUsername]);
             
             // Generate encryption key if not exists
             if (empty($_ENV['APP_ENCRYPTION_KEY'])) {
@@ -249,12 +282,13 @@ class InstallerController extends Controller
             // Create welcome notification for admin
             try {
                 // Get the admin user ID
-                $stmt = $pdo->query("SELECT id FROM users WHERE username = 'admin' LIMIT 1");
+                $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? LIMIT 1");
+                $stmt->execute([$adminUsername]);
                 $adminUser = $stmt->fetch(\PDO::FETCH_ASSOC);
                 
                 if ($adminUser) {
                     $notificationService = new \App\Services\NotificationService();
-                    $notificationService->notifyWelcome($adminUser['id'], 'admin');
+                    $notificationService->notifyWelcome($adminUser['id'], $adminUsername);
                 }
             } catch (\Exception $e) {
                 // Don't fail install if notification fails
@@ -263,6 +297,7 @@ class InstallerController extends Controller
             
             // Redirect to complete page
             $_SESSION['install_complete'] = true;
+            $_SESSION['admin_username'] = $adminUsername;
             $_SESSION['admin_password'] = $adminPassword;
             $this->redirect('/install/complete');
             
@@ -385,12 +420,15 @@ class InstallerController extends Controller
             return;
         }
         
+        $adminUsername = $_SESSION['admin_username'] ?? 'admin';
         $adminPassword = $_SESSION['admin_password'] ?? null;
+        unset($_SESSION['admin_username']);
         unset($_SESSION['admin_password']);
         unset($_SESSION['install_complete']);
         
         $this->view('installer/complete', [
             'title' => 'Installation Complete',
+            'adminUsername' => $adminUsername,
             'adminPassword' => $adminPassword
         ]);
     }

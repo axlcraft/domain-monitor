@@ -28,7 +28,7 @@ ob_start();
     <!-- Username Field -->
     <div>
         <label for="username" class="block text-sm font-medium text-gray-700 mb-1.5">
-            Username
+            Username or Email
         </label>
         <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -41,7 +41,7 @@ ob_start();
                 required 
                 autofocus
                 class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm"
-                placeholder="Enter your username">
+                placeholder="Enter your username or email">
         </div>
     </div>
 

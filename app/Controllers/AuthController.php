@@ -51,7 +51,7 @@ class AuthController extends Controller
         }
 
         $username = trim($_POST['username'] ?? '');
-        $password = $_POST['password'] ?? '';
+        $password = $_POST['password'] ?? ''; // Don't trim - passwords may have intentional spaces
         $remember = isset($_POST['remember']);
 
         // Validate input
@@ -61,10 +61,19 @@ class AuthController extends Controller
             return;
         }
 
-        // Find user
+        // Find user by username or email
         $user = $this->userModel->findByUsername($username);
+        
+        // If not found by username, try email
+        if (!$user && filter_var($username, FILTER_VALIDATE_EMAIL)) {
+            $users = $this->userModel->where('email', $username);
+            if (!empty($users) && $users[0]['is_active']) {
+                $user = $users[0];
+            }
+        }
 
         if (!$user) {
+            error_log("Login failed: User '$username' not found or not active");
             $_SESSION['error'] = 'Invalid username or password';
             $this->redirect('/login');
             return;
@@ -72,10 +81,14 @@ class AuthController extends Controller
 
         // Verify password
         if (!$this->userModel->verifyPassword($password, $user['password'])) {
+            error_log("Login failed: Password verification failed for user '$username'");
+            error_log("Stored hash: {$user['password']}");
             $_SESSION['error'] = 'Invalid username or password';
             $this->redirect('/login');
             return;
         }
+        
+        error_log("Login successful for user '$username'");
 
         // Check if email verification is required
         $requireVerification = $this->settingModel->getValue('require_email_verification');
