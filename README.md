@@ -152,9 +152,9 @@ Example configuration:
 ```apache
 <VirtualHost *:80>
     ServerName domainmonitor.local
-    DocumentRoot "D:/Cursor/Domain Monitor/public"
+    DocumentRoot "/path/to/domain-monitor/public"
     
-    <Directory "D:/Cursor/Domain Monitor/public">
+    <Directory "/path/to/domain-monitor/public">
         AllowOverride All
         Require all granted
     </Directory>
@@ -238,7 +238,7 @@ Use Task Scheduler:
 3. Set trigger (e.g., Daily at 9:00 AM)
 4. Action: Start a program
 5. Program: `C:\php\php.exe`
-6. Arguments: `D:\Cursor\Domain Monitor\cron\check_domains.php`
+6. Arguments: `C:\path\to\domain-monitor\cron\check_domains.php`
 
 ## 🧪 Testing Notifications
 
