@@ -50,7 +50,7 @@ if (!isset($appName)) {
     try {
         $settingModel = new \App\Models\Setting();
         $appSettings = $settingModel->getAppSettings();
-        $appName = $appSettings['app_name'];
+        $appName = htmlspecialchars($appSettings['app_name']);
         $appTimezone = $appSettings['app_timezone'];
         
         // Set PHP timezone
