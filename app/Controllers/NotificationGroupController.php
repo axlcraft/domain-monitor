@@ -131,7 +131,21 @@ class NotificationGroupController extends Controller
         $config = $this->buildChannelConfig($channelType, $_POST);
 
         if (!$config) {
-            $_SESSION['error'] = 'Invalid channel configuration';
+            $missingField = '';
+            switch ($channelType) {
+                case 'email':
+                    $missingField = 'email address';
+                    break;
+                case 'telegram':
+                    $missingField = empty($_POST['bot_token']) ? 'bot token' : 'chat ID';
+                    break;
+                case 'discord':
+                case 'slack':
+                    $missingField = 'webhook URL';
+                    break;
+            }
+            
+            $_SESSION['error'] = "Invalid channel configuration: Missing {$missingField}";
             $this->redirect("/groups/edit?id=$groupId");
             return;
         }
@@ -179,12 +193,14 @@ class NotificationGroupController extends Controller
                 ];
 
             case 'discord':
-                if (empty($data['webhook_url'])) return null;
-                return ['webhook_url' => $data['webhook_url']];
+                $webhookUrl = $data['discord_webhook_url'] ?? '';
+                if (empty($webhookUrl)) return null;
+                return ['webhook_url' => $webhookUrl];
 
             case 'slack':
-                if (empty($data['webhook_url'])) return null;
-                return ['webhook_url' => $data['webhook_url']];
+                $webhookUrl = $data['slack_webhook_url'] ?? '';
+                if (empty($webhookUrl)) return null;
+                return ['webhook_url' => $webhookUrl];
 
             default:
                 return null;

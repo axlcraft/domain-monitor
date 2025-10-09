@@ -194,15 +194,17 @@ ob_start();
                     <div id="discord_fields" class="hidden space-y-4">
                         <div>
                             <label for="discord_webhook" class="block text-sm font-medium text-gray-700 mb-1.5">
-                                Webhook URL
+                                Webhook URL <span class="text-red-500">*</span>
                             </label>
-                            <input type="url" 
+                            <input type="text" 
                                    id="discord_webhook" 
-                                   name="webhook_url" 
-                                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm" 
-                                   placeholder="https://discord.com/api/webhooks/...">
+                                   name="discord_webhook_url" 
+                                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm font-mono" 
+                                   placeholder="https://discord.com/api/webhooks/1234567890/abcdefg..."
+                                   autocomplete="off">
                             <p class="mt-1.5 text-xs text-gray-500">
-                                Create in Discord Server Settings → Integrations → Webhooks
+                                <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+                                Paste the complete webhook URL from Discord Server Settings → Integrations → Webhooks
                             </p>
                         </div>
                     </div>
@@ -213,11 +215,12 @@ ob_start();
                             <label for="slack_webhook" class="block text-sm font-medium text-gray-700 mb-1.5">
                                 Webhook URL
                             </label>
-                            <input type="url" 
+                            <input type="text" 
                                    id="slack_webhook" 
-                                   name="webhook_url" 
-                                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm" 
-                                   placeholder="https://hooks.slack.com/services/...">
+                                   name="slack_webhook_url" 
+                                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm font-mono" 
+                                   placeholder="https://hooks.slack.com/services/..."
+                                   autocomplete="off">
                             <p class="mt-1.5 text-xs text-gray-500">
                                 Create in Slack App Settings → Incoming Webhooks
                             </p>
@@ -285,16 +288,95 @@ ob_start();
 function toggleChannelFields() {
     const channelType = document.getElementById('channel_type').value;
     
+    // Get all input fields
+    const emailField = document.getElementById('email');
+    const botTokenField = document.getElementById('bot_token');
+    const chatIdField = document.getElementById('chat_id');
+    const discordWebhook = document.getElementById('discord_webhook');
+    const slackWebhook = document.getElementById('slack_webhook');
+    
+    // Remove required from all
+    emailField.removeAttribute('required');
+    botTokenField.removeAttribute('required');
+    chatIdField.removeAttribute('required');
+    discordWebhook.removeAttribute('required');
+    slackWebhook.removeAttribute('required');
+    
     // Hide all fields
     document.getElementById('email_fields').classList.add('hidden');
     document.getElementById('telegram_fields').classList.add('hidden');
     document.getElementById('discord_fields').classList.add('hidden');
     document.getElementById('slack_fields').classList.add('hidden');
     
-    // Show selected field
+    // Show selected field and make required
     if (channelType) {
         document.getElementById(channelType + '_fields').classList.remove('hidden');
+        
+        // Set required based on type
+        switch(channelType) {
+            case 'email':
+                emailField.setAttribute('required', 'required');
+                break;
+            case 'telegram':
+                botTokenField.setAttribute('required', 'required');
+                chatIdField.setAttribute('required', 'required');
+                break;
+            case 'discord':
+                discordWebhook.setAttribute('required', 'required');
+                discordWebhook.focus(); // Auto-focus for easy paste
+                break;
+            case 'slack':
+                slackWebhook.setAttribute('required', 'required');
+                slackWebhook.focus();
+                break;
+        }
     }
+}
+
+// Form validation before submit
+const addChannelForm = document.querySelector('form[action="/channels/add"]');
+if (addChannelForm) {
+    addChannelForm.addEventListener('submit', function(e) {
+    const channelType = document.getElementById('channel_type').value;
+    
+    if (!channelType) {
+        e.preventDefault();
+        alert('Please select a channel type');
+        return false;
+    }
+    
+    // Validate Discord webhook
+    if (channelType === 'discord') {
+        const webhookField = document.getElementById('discord_webhook');
+        const webhookUrl = webhookField.value.trim();
+        
+        if (!webhookUrl) {
+            e.preventDefault();
+            alert('Please enter the Discord webhook URL');
+            webhookField.focus();
+            return false;
+        }
+        if (!webhookUrl.includes('discord.com/api/webhooks/')) {
+            e.preventDefault();
+            alert('Invalid Discord webhook URL. It should start with:\nhttps://discord.com/api/webhooks/');
+            webhookField.focus();
+            return false;
+        }
+    }
+    
+    // Validate Slack webhook
+    if (channelType === 'slack') {
+        const webhookUrl = document.getElementById('slack_webhook').value.trim();
+        if (!webhookUrl) {
+            e.preventDefault();
+            alert('Please enter the Slack webhook URL');
+            document.getElementById('slack_webhook').focus();
+            return false;
+        }
+    }
+    
+    return true;
+    });
 }
 </script>
 
