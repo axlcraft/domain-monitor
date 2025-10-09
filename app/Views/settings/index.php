@@ -403,7 +403,7 @@ foreach ($notificationPresets as $key => $preset) {
                     Recommended Crontab Entry
                 </h4>
                 <div class="bg-gray-900 text-gray-100 px-4 py-3 rounded-lg font-mono text-sm break-all">
-                    <code>0 */<?= $currentCheckInterval ?> * * * php /path/to/cron/check_domains.php</code>
+                    <code>0 */<?= $currentCheckInterval ?> * * * php <?= realpath(PATH_ROOT . 'cron/check_domains.php') ?></code>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">Update the path to match your server installation</p>
             </div>
