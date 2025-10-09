@@ -6,6 +6,8 @@ use Core\Application;
 use Core\Router;
 use Dotenv\Dotenv;
 
+define('PATH_ROOT', __DIR__ . '/../');
+
 // Load environment variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
