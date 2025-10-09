@@ -10,13 +10,33 @@ use App\Controllers\DebugController;
 use App\Controllers\SearchController;
 use App\Controllers\TldRegistryController;
 use App\Controllers\SettingsController;
+use App\Controllers\ProfileController;
+use App\Controllers\UserController;
+use App\Controllers\InstallerController;
+use App\Controllers\NotificationController;
 
 $router = Application::$router;
+
+// Installer routes (public - before auth)
+$router->get('/install', [InstallerController::class, 'index']);
+$router->get('/install/check-database', [InstallerController::class, 'checkDatabase']);
+$router->post('/install/run', [InstallerController::class, 'install']);
+$router->get('/install/complete', [InstallerController::class, 'complete']);
+$router->get('/install/update', [InstallerController::class, 'showUpdate']);
+$router->post('/install/update', [InstallerController::class, 'runUpdate']);
 
 // Authentication routes (public)
 $router->get('/login', [AuthController::class, 'showLogin']);
 $router->post('/login', [AuthController::class, 'login']);
 $router->get('/logout', [AuthController::class, 'logout']);
+$router->get('/register', [AuthController::class, 'showRegister']);
+$router->post('/register', [AuthController::class, 'register']);
+$router->get('/verify-email', [AuthController::class, 'showVerifyEmail']);
+$router->get('/resend-verification', [AuthController::class, 'resendVerification']);
+$router->get('/forgot-password', [AuthController::class, 'showForgotPassword']);
+$router->post('/forgot-password', [AuthController::class, 'forgotPassword']);
+$router->get('/reset-password', [AuthController::class, 'showResetPassword']);
+$router->post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Debug route (public - remove in production!)
 $router->get('/debug/whois', [DebugController::class, 'whois']);
@@ -86,4 +106,31 @@ $router->post('/settings/update-email', [SettingsController::class, 'updateEmail
 $router->post('/settings/test-email', [SettingsController::class, 'testEmail']);
 $router->post('/settings/test-cron', [SettingsController::class, 'testCron']);
 $router->post('/settings/clear-logs', [SettingsController::class, 'clearLogs']);
+
+// Profile
+$router->get('/profile', [ProfileController::class, 'index']);
+$router->post('/profile/update', [ProfileController::class, 'update']);
+$router->post('/profile/change-password', [ProfileController::class, 'changePassword']);
+$router->get('/profile/delete', [ProfileController::class, 'delete']);
+$router->get('/profile/resend-verification', [ProfileController::class, 'resendVerification']);
+$router->post('/profile/logout-other-sessions', [ProfileController::class, 'logoutOtherSessions']);
+$router->post('/profile/logout-session/{sessionId}', [ProfileController::class, 'logoutSession']);
+
+// Notifications
+$router->get('/notifications', [NotificationController::class, 'index']);
+$router->get('/notifications/{id}/mark-read', [NotificationController::class, 'markAsRead']);
+$router->get('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+$router->get('/notifications/{id}/delete', [NotificationController::class, 'delete']);
+$router->get('/notifications/clear-all', [NotificationController::class, 'clearAll']);
+$router->get('/api/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
+$router->get('/api/notifications/recent', [NotificationController::class, 'getRecent']);
+
+// User Management (Admin Only)
+$router->get('/users', [UserController::class, 'index']);
+$router->get('/users/create', [UserController::class, 'create']);
+$router->post('/users/store', [UserController::class, 'store']);
+$router->get('/users/edit', [UserController::class, 'edit']);
+$router->post('/users/update', [UserController::class, 'update']);
+$router->get('/users/delete', [UserController::class, 'delete']);
+$router->get('/users/toggle-status', [UserController::class, 'toggleStatus']);
 

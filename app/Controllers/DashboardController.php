@@ -39,11 +39,15 @@ class DashboardController extends Controller
         
         // Check system status
         $systemStatus = $this->checkSystemStatus();
+        
+        // Format domains for display
+        $formattedRecentDomains = \App\Helpers\DomainHelper::formatMultiple($recentDomains);
+        $formattedExpiringDomains = \App\Helpers\DomainHelper::formatMultiple($expiringThisMonth);
 
         $this->view('dashboard/index', [
             'stats' => $stats,
-            'recentDomains' => $recentDomains,
-            'expiringThisMonth' => $expiringThisMonth,
+            'recentDomains' => $formattedRecentDomains,
+            'expiringThisMonth' => $formattedExpiringDomains,
             'expiringCount' => count($allExpiringDomains),
             'recentLogs' => $recentLogs,
             'groups' => $groups,

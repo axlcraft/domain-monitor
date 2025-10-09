@@ -58,9 +58,12 @@ class SearchController extends Controller
             }
         }
 
+        // Format existing domains for display
+        $formattedDomains = \App\Helpers\DomainHelper::formatMultiple($existingDomains);
+        
         $this->view('search/results', [
             'query' => $query,
-            'existingDomains' => $existingDomains,
+            'existingDomains' => $formattedDomains,
             'whoisData' => $whoisData,
             'whoisError' => $whoisError,
             'isDomainLike' => $isDomainLike,

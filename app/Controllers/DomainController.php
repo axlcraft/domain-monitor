@@ -88,9 +88,12 @@ class DomainController extends Controller
         $paginatedDomains = array_slice($domains, $offset, $perPage);
 
         $groups = $this->groupModel->all();
+        
+        // Format domains for display
+        $formattedDomains = \App\Helpers\DomainHelper::formatMultiple($paginatedDomains);
 
         $this->view('domains/index', [
-            'domains' => $paginatedDomains,
+            'domains' => $formattedDomains,
             'groups' => $groups,
             'filters' => [
                 'search' => $search,
@@ -353,9 +356,25 @@ class DomainController extends Controller
 
         $logModel = new \App\Models\NotificationLog();
         $logs = $logModel->getByDomain($id, 20);
+        
+        // Format domain for display
+        $formattedDomain = \App\Helpers\DomainHelper::formatForDisplay($domain);
+        
+        // Parse WHOIS data for display
+        $whoisData = json_decode($domain['whois_data'] ?? '{}', true);
+        if (!empty($whoisData['status']) && is_array($whoisData['status'])) {
+            $formattedDomain['parsedStatuses'] = \App\Helpers\DomainHelper::parseWhoisStatuses($whoisData['status']);
+        } else {
+            $formattedDomain['parsedStatuses'] = [];
+        }
+        
+        // Calculate active channel count
+        if (!empty($domain['channels'])) {
+            $formattedDomain['activeChannelCount'] = \App\Helpers\DomainHelper::getActiveChannelCount($domain['channels']);
+        }
 
         $this->view('domains/view', [
-            'domain' => $domain,
+            'domain' => $formattedDomain,
             'logs' => $logs,
             'title' => $domain['domain_name']
         ]);

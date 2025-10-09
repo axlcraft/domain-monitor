@@ -1,0 +1,423 @@
+<?php
+
+namespace App\Controllers;
+
+use Core\Controller;
+
+class InstallerController extends Controller
+{
+    private $db = null;
+    
+    /**
+     * Check if system is already installed
+     */
+    private function isInstalled(): bool
+    {
+        try {
+            $pdo = \Core\Database::getConnection();
+            $stmt = $pdo->query("SELECT COUNT(*) FROM users");
+            return $stmt->fetchColumn() > 0;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Check pending migrations
+     */
+    private function getPendingMigrations(): array
+    {
+        // For fresh installs - use consolidated schema
+        $freshInstallMigration = ['000_initial_schema_v1.1.0.sql'];
+        
+        // For incremental updates from v1.0.0
+        $incrementalMigrations = [
+            '001_create_tables.sql',
+            '002_create_users_table.sql',
+            '003_add_whois_fields.sql',
+            '004_create_tld_registry_table.sql',
+            '005_update_tld_import_logs.sql',
+            '006_add_complete_workflow_import_type.sql',
+            '007_add_app_and_email_settings.sql',
+            '008_add_notes_to_domains.sql',
+            '009_add_authentication_features.sql',
+            '010_add_app_version_setting.sql',
+            '011_create_sessions_table.sql',
+            '012_link_remember_tokens_to_sessions.sql',
+            '013_create_user_notifications_table.sql',
+        ];
+        
+        try {
+            $pdo = \Core\Database::getConnection();
+            
+            // Check if this is a v1.0.0 install (has tables but no migrations tracking)
+            $hasUsers = false;
+            $hasDomains = false;
+            
+            try {
+                $stmt = $pdo->query("SELECT COUNT(*) FROM users");
+                $hasUsers = $stmt->fetchColumn() > 0;
+                
+                $stmt = $pdo->query("SELECT COUNT(*) FROM domains");
+                $hasDomains = true; // Table exists
+            } catch (\Exception $e) {
+                // Tables don't exist - fresh install
+            }
+            
+            // Create migrations table if it doesn't exist
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS migrations (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    migration VARCHAR(255) NOT NULL UNIQUE,
+                    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_migration (migration)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+            
+            // Get executed migrations
+            $stmt = $pdo->query("SELECT migration FROM migrations");
+            $executed = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            
+            // If no migrations executed but has data - v1.0.0 upgrade
+            if (empty($executed) && ($hasUsers || $hasDomains)) {
+                // Mark 001-008 as executed (v1.0.0 migrations)
+                $v1Migrations = [
+                    '001_create_tables.sql',
+                    '002_create_users_table.sql',
+                    '003_add_whois_fields.sql',
+                    '004_create_tld_registry_table.sql',
+                    '005_update_tld_import_logs.sql',
+                    '006_add_complete_workflow_import_type.sql',
+                    '007_add_app_and_email_settings.sql',
+                    '008_add_notes_to_domains.sql'
+                ];
+                
+                $stmt = $pdo->prepare("INSERT IGNORE INTO migrations (migration) VALUES (?)");
+                foreach ($v1Migrations as $migration) {
+                    $stmt->execute([$migration]);
+                }
+                
+                // Return only new migrations for v1.1.0
+                return [
+                    '009_add_authentication_features.sql', 
+                    '010_add_app_version_setting.sql', 
+                    '011_create_sessions_table.sql',
+                    '012_link_remember_tokens_to_sessions.sql',
+                    '013_create_user_notifications_table.sql'
+                ];
+            }
+            
+            // If no migrations executed and no data - fresh install (use consolidated)
+            if (empty($executed)) {
+                return $freshInstallMigration;
+            }
+            
+            // If has executed migrations - check for pending incremental ones
+            return array_diff($incrementalMigrations, $executed);
+            
+        } catch (\Exception $e) {
+            // If critical error - assume fresh install
+            return $freshInstallMigration;
+        }
+    }
+    
+    /**
+     * Show installer welcome page
+     */
+    public function index()
+    {
+        if ($this->isInstalled()) {
+            $pending = $this->getPendingMigrations();
+            if (empty($pending)) {
+                $_SESSION['info'] = 'System is already installed and up to date';
+                $this->redirect('/');
+                return;
+            }
+            // Has pending migrations - show updater
+            $this->redirect('/install/update');
+            return;
+        }
+        
+        $this->view('installer/welcome', [
+            'title' => 'Install Domain Monitor'
+        ]);
+    }
+    
+    /**
+     * Check database connection
+     */
+    public function checkDatabase()
+    {
+        try {
+            $pdo = \Core\Database::getConnection();
+            $pdo->query("SELECT 1");
+            
+            $this->view('installer/database-check', [
+                'title' => 'Database Connection',
+                'success' => true
+            ]);
+        } catch (\Exception $e) {
+            $this->view('installer/database-check', [
+                'title' => 'Database Connection',
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Run installation
+     */
+    public function install()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/install');
+            return;
+        }
+        
+        $adminPassword = trim($_POST['admin_password'] ?? '');
+        $adminEmail = trim($_POST['admin_email'] ?? '');
+        
+        // Validate
+        if (empty($adminPassword) || strlen($adminPassword) < 8) {
+            $_SESSION['error'] = 'Admin password must be at least 8 characters';
+            $this->redirect('/install');
+            return;
+        }
+        
+        if (empty($adminEmail) || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['error'] = 'Please enter a valid admin email';
+            $this->redirect('/install');
+            return;
+        }
+        
+        try {
+            $pdo = \Core\Database::getConnection();
+            
+            // Run all migrations
+            $migrations = $this->getPendingMigrations();
+            $results = [];
+            
+            foreach ($migrations as $migration) {
+                $file = __DIR__ . '/../../database/migrations/' . $migration;
+                if (!file_exists($file)) continue;
+                
+                $sql = file_get_contents($file);
+                
+                // Replace password placeholder for user migration
+                if ($migration === '002_create_users_table.sql') {
+                    $passwordHash = password_hash($adminPassword, PASSWORD_BCRYPT);
+                    $sql = str_replace('{{ADMIN_PASSWORD_HASH}}', $passwordHash, $sql);
+                }
+                
+                // Execute SQL
+                $statements = array_filter(array_map('trim', explode(';', $sql)));
+                foreach ($statements as $statement) {
+                    if (!empty($statement)) {
+                        try {
+                            $pdo->exec($statement);
+                        } catch (\PDOException $e) {
+                            // Ignore duplicate/already exists errors
+                            if (strpos($e->getMessage(), 'Duplicate') === false && 
+                                strpos($e->getMessage(), 'already exists') === false) {
+                                throw $e;
+                            }
+                        }
+                    }
+                }
+                
+                // Mark as executed
+                $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (?) ON DUPLICATE KEY UPDATE migration=migration");
+                $stmt->execute([$migration]);
+                
+                $results[] = $migration;
+            }
+            
+            // Update admin email and ensure admin role and verified status
+            $stmt = $pdo->prepare("UPDATE users SET email = ?, role = 'admin', email_verified = 1 WHERE username = 'admin'");
+            $stmt->execute([$adminEmail]);
+            
+            // Generate encryption key if not exists
+            if (empty($_ENV['APP_ENCRYPTION_KEY'])) {
+                $this->generateEncryptionKey();
+            }
+            
+            // Create .installed flag file
+            $installedFile = __DIR__ . '/../../.installed';
+            file_put_contents($installedFile, date('Y-m-d H:i:s'));
+            
+            // Create welcome notification for admin
+            try {
+                // Get the admin user ID
+                $stmt = $pdo->query("SELECT id FROM users WHERE username = 'admin' LIMIT 1");
+                $adminUser = $stmt->fetch(\PDO::FETCH_ASSOC);
+                
+                if ($adminUser) {
+                    $notificationService = new \App\Services\NotificationService();
+                    $notificationService->notifyWelcome($adminUser['id'], 'admin');
+                }
+            } catch (\Exception $e) {
+                // Don't fail install if notification fails
+                error_log("Failed to create welcome notification: " . $e->getMessage());
+            }
+            
+            // Redirect to complete page
+            $_SESSION['install_complete'] = true;
+            $_SESSION['admin_password'] = $adminPassword;
+            $this->redirect('/install/complete');
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Installation failed: ' . $e->getMessage();
+            $this->redirect('/install');
+        }
+    }
+    
+    /**
+     * Show update page
+     */
+    public function showUpdate()
+    {
+        $pending = $this->getPendingMigrations();
+        
+        if (empty($pending)) {
+            $_SESSION['info'] = 'No updates available';
+            $this->redirect('/');
+            return;
+        }
+        
+        $this->view('installer/update', [
+            'title' => 'System Update',
+            'migrations' => $pending
+        ]);
+    }
+    
+    /**
+     * Run update
+     */
+    public function runUpdate()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/install/update');
+            return;
+        }
+        
+        try {
+            $pdo = \Core\Database::getConnection();
+            $migrations = $this->getPendingMigrations();
+            $executed = [];
+            
+            foreach ($migrations as $migration) {
+                $file = __DIR__ . '/../../database/migrations/' . $migration;
+                if (!file_exists($file)) continue;
+                
+                $sql = file_get_contents($file);
+                
+                // Execute SQL
+                $statements = array_filter(array_map('trim', explode(';', $sql)));
+                foreach ($statements as $statement) {
+                    if (!empty($statement)) {
+                        try {
+                            $pdo->exec($statement);
+                        } catch (\PDOException $e) {
+                            // Ignore duplicate/already exists errors
+                            if (strpos($e->getMessage(), 'Duplicate') === false && 
+                                strpos($e->getMessage(), 'already exists') === false) {
+                                throw $e;
+                            }
+                        }
+                    }
+                }
+                
+                // Mark as executed
+                $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (?) ON DUPLICATE KEY UPDATE migration=migration");
+                $stmt->execute([$migration]);
+                
+                $executed[] = $migration;
+            }
+            
+            // Create .installed flag file if doesn't exist (for v1.0.0 upgrades)
+            $installedFile = __DIR__ . '/../../.installed';
+            if (!file_exists($installedFile)) {
+                file_put_contents($installedFile, date('Y-m-d H:i:s'));
+            }
+            
+            // Notify admins about upgrade (if migrations were executed)
+            if (!empty($executed)) {
+                try {
+                    $settingModel = new \App\Models\Setting();
+                    $currentVersion = $settingModel->getAppVersion();
+                    
+                    // Determine from/to versions based on migrations
+                    $fromVersion = '1.0.0';
+                    $toVersion = '1.1.0';
+                    
+                    // Detect version based on which migrations were run
+                    if (in_array('011_create_sessions_table.sql', $executed) || 
+                        in_array('012_link_remember_tokens_to_sessions.sql', $executed) ||
+                        in_array('013_create_user_notifications_table.sql', $executed)) {
+                        $toVersion = '1.1.0';
+                    }
+                    
+                    $notificationService = new \App\Services\NotificationService();
+                    $notificationService->notifyAdminsUpgrade($fromVersion, $toVersion, count($executed));
+                } catch (\Exception $e) {
+                    // Don't fail upgrade if notification fails
+                    error_log("Failed to create upgrade notification: " . $e->getMessage());
+                }
+            }
+            
+            $_SESSION['success'] = count($executed) . ' migration(s) executed successfully';
+            $this->redirect('/');
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Update failed: ' . $e->getMessage();
+            $this->redirect('/install/update');
+        }
+    }
+    
+    /**
+     * Show installation complete page
+     */
+    public function complete()
+    {
+        if (!isset($_SESSION['install_complete'])) {
+            $this->redirect('/');
+            return;
+        }
+        
+        $adminPassword = $_SESSION['admin_password'] ?? null;
+        unset($_SESSION['admin_password']);
+        unset($_SESSION['install_complete']);
+        
+        $this->view('installer/complete', [
+            'title' => 'Installation Complete',
+            'adminPassword' => $adminPassword
+        ]);
+    }
+    
+    /**
+     * Generate encryption key
+     */
+    private function generateEncryptionKey()
+    {
+        $encryptionKey = base64_encode(random_bytes(32));
+        $envFile = __DIR__ . '/../../.env';
+        
+        if (file_exists($envFile)) {
+            $envContent = file_get_contents($envFile);
+            
+            if (strpos($envContent, 'APP_ENCRYPTION_KEY=') !== false) {
+                $envContent = preg_replace(
+                    '/APP_ENCRYPTION_KEY=.*$/m',
+                    "APP_ENCRYPTION_KEY=$encryptionKey",
+                    $envContent
+                );
+            } else {
+                $envContent .= "\nAPP_ENCRYPTION_KEY=$encryptionKey\n";
+            }
+            
+            file_put_contents($envFile, $envContent);
+        }
+    }
+}
+

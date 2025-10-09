@@ -12,6 +12,13 @@ class SettingsController extends Controller
     public function __construct()
     {
         $this->settingModel = new Setting();
+        
+        // Ensure only admins can access settings
+        if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+            $_SESSION['error'] = 'Access denied. Admin privileges required.';
+            $this->redirect('/');
+            exit;
+        }
     }
 
     public function index()
@@ -204,7 +211,16 @@ class SettingsController extends Controller
                 return;
             }
 
+            // Update app settings
             $this->settingModel->updateAppSettings($appSettings);
+            
+            // Update registration settings
+            $registrationEnabled = isset($_POST['registration_enabled']) ? '1' : '0';
+            $requireEmailVerification = isset($_POST['require_email_verification']) ? '1' : '0';
+            
+            $this->settingModel->setValue('registration_enabled', $registrationEnabled);
+            $this->settingModel->setValue('require_email_verification', $requireEmailVerification);
+            
             $_SESSION['success'] = 'Application settings updated successfully';
             $this->redirect('/settings#app');
 

@@ -3,44 +3,12 @@ $title = 'Domain Details';
 $pageTitle = htmlspecialchars($domain['domain_name']);
 $pageDescription = 'Domain information and monitoring status';
 $pageIcon = 'fas fa-globe';
+
+// Data already formatted by controller via DomainHelper
 $whoisData = json_decode($domain['whois_data'] ?? '{}', true);
-$daysLeft = !empty($domain['expiration_date']) ? floor((strtotime($domain['expiration_date']) - time()) / 86400) : null;
-
-// Recalculate domain status if it's empty or error (for backward compatibility)
-$domainStatus = $domain['status'];
-if (empty($domainStatus) || $domainStatus === 'error') {
-    // Check WHOIS data for AVAILABLE status
-    $statusArray = $whoisData['status'] ?? [];
-    $isAvailable = false;
-    foreach ($statusArray as $status) {
-        if (stripos($status, 'AVAILABLE') !== false || stripos($status, 'FREE') !== false) {
-            $isAvailable = true;
-            break;
-        }
-    }
-    
-    if ($isAvailable) {
-        $domainStatus = 'available';
-    } elseif ($daysLeft !== null) {
-        if ($daysLeft < 0) {
-            $domainStatus = 'expired';
-        } elseif ($daysLeft <= 30) {
-            $domainStatus = 'expiring_soon';
-        } else {
-            $domainStatus = 'active';
-        }
-    } else {
-        $domainStatus = 'error';
-    }
-}
-
-// Determine expiry color
-$expiryColor = 'green';
-if ($daysLeft !== null) {
-    if ($daysLeft < 0) $expiryColor = 'red';
-    elseif ($daysLeft <= 30) $expiryColor = 'orange';
-    elseif ($daysLeft <= 90) $expiryColor = 'yellow';
-}
+$daysLeft = $domain['daysLeft'];
+$domainStatus = $domain['displayStatus'];
+$expiryColor = $domain['expiryColor'];
 
 ob_start();
 ?>
@@ -49,32 +17,10 @@ ob_start();
 <div class="mb-3 flex flex-wrap gap-2 justify-between items-center">
     <div class="flex gap-2">
         <?php
-        // Determine domain status badge
-        if ($domainStatus === 'available') {
-            $statusClass = 'bg-blue-100 text-blue-700 border-blue-200';
-            $statusText = 'Available (Not Registered)';
-            $statusIcon = 'fa-info-circle';
-        } elseif ($domainStatus === 'expired') {
-            $statusClass = 'bg-red-100 text-red-700 border-red-200';
-            $statusText = 'Expired';
-            $statusIcon = 'fa-times-circle';
-        } elseif ($domainStatus === 'expiring_soon' || ($daysLeft !== null && $daysLeft <= 30 && $daysLeft >= 0)) {
-            $statusClass = 'bg-orange-100 text-orange-700 border-orange-200';
-            $statusText = 'Expiring Soon';
-            $statusIcon = 'fa-exclamation-triangle';
-        } elseif ($domainStatus === 'active') {
-            $statusClass = 'bg-green-100 text-green-700 border-green-200';
-            $statusText = 'Active';
-            $statusIcon = 'fa-check-circle';
-        } elseif ($domainStatus === 'error') {
-            $statusClass = 'bg-gray-100 text-gray-700 border-gray-200';
-            $statusText = 'Error';
-            $statusIcon = 'fa-exclamation-circle';
-        } else {
-            $statusClass = 'bg-gray-100 text-gray-700 border-gray-200';
-            $statusText = ucfirst($domainStatus);
-            $statusIcon = 'fa-question-circle';
-        }
+        // Status badge data prepared by DomainHelper in controller
+        $statusClass = $domain['statusClass'];
+        $statusText = $domain['statusText'];
+        $statusIcon = $domain['statusIcon'];
         ?>
         <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold <?= $statusClass ?>">
             <i class="fas <?= $statusIcon ?> mr-1.5"></i>
@@ -257,51 +203,20 @@ ob_start();
         <?php endif; ?>
 
         <!-- Domain Status -->
-        <?php if (!empty($whoisData['status']) && is_array($whoisData['status'])): ?>
-            <?php
-            // Pre-filter to count only valid statuses
-            $validStatuses = [];
-            foreach ($whoisData['status'] as $status) {
-                $cleanStatus = trim($status);
-                
-                // Skip if it's just a URL or starts with http/https or //
-                if (empty($cleanStatus) || 
-                    strpos($cleanStatus, 'http') === 0 || 
-                    strpos($cleanStatus, '//') === 0 ||
-                    strpos($cleanStatus, 'www.') === 0) {
-                    continue;
-                }
-                
-                // Keep the full status text, don't split by spaces
-                // Skip if after cleaning it's empty or just a URL
-                if (empty($cleanStatus) || strpos($cleanStatus, 'http') === 0 || strpos($cleanStatus, '//') === 0) {
-                    continue;
-                }
-                
-                $validStatuses[] = $cleanStatus;
-            }
-            ?>
-            <?php if (!empty($validStatuses)): ?>
+        <?php if (!empty($domain['parsedStatuses'])): ?>
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
                 <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wider flex items-center">
                     <i class="fas fa-info-circle text-gray-400 mr-2" style="font-size: 10px;"></i>
-                    Domain Status (<?= count($validStatuses) ?>)
+                    Domain Status (<?= count($domain['parsedStatuses']) ?>)
                 </h3>
             </div>
             <div class="p-4">
                 <div class="flex flex-wrap gap-1.5">
-                    <?php foreach ($validStatuses as $cleanStatus): ?>
+                    <?php foreach ($domain['parsedStatuses'] as $cleanStatus): ?>
                         <?php
-                        // Convert to readable format
-                        $readableStatus = $cleanStatus;
-                        
-                        // Convert camelCase to readable format (for cases like "clientTransferProhibited")
-                        $readableStatus = preg_replace('/([a-z])([A-Z])/', '$1 $2', $readableStatus);
-                        
-                        // Convert underscores to spaces and capitalize words
-                        $readableStatus = str_replace('_', ' ', $readableStatus);
-                        $readableStatus = ucwords(strtolower($readableStatus));
+                        // Format status text using helper
+                        $readableStatus = \App\Helpers\DomainHelper::formatStatusText($cleanStatus);
                         ?>
                     <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium" title="<?= htmlspecialchars($cleanStatus) ?>">
                         <?= htmlspecialchars($readableStatus) ?>
@@ -310,7 +225,6 @@ ob_start();
                 </div>
             </div>
         </div>
-            <?php endif; ?>
         <?php endif; ?>
 
     </div>
@@ -335,11 +249,8 @@ ob_start();
                     <div>
                         <p class="font-semibold text-sm text-gray-900"><?= htmlspecialchars($domain['group_name']) ?></p>
                         <?php if (!empty($domain['channels'])): ?>
-                        <?php 
-                        $activeChannels = array_filter($domain['channels'], fn($ch) => $ch['is_active']);
-                        ?>
                         <p class="text-xs text-gray-600">
-                            <?= count($activeChannels) ?> / <?= count($domain['channels']) ?> channels active
+                            <?= $domain['activeChannelCount'] ?? 0 ?> / <?= count($domain['channels']) ?> channels active
                         </p>
                         <?php endif; ?>
                     </div>

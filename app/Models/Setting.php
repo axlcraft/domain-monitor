@@ -110,6 +110,14 @@ class Setting extends Model
     }
 
     /**
+     * Get application version
+     */
+    public function getAppVersion(): string
+    {
+        return $this->getValue('app_version', '1.1.0');
+    }
+
+    /**
      * Get application settings
      */
     public function getAppSettings(): array
@@ -117,7 +125,8 @@ class Setting extends Model
         return [
             'app_name' => $this->getValue('app_name', 'Domain Monitor'),
             'app_url' => $this->getValue('app_url', 'http://localhost:8000'),
-            'app_timezone' => $this->getValue('app_timezone', 'UTC')
+            'app_timezone' => $this->getValue('app_timezone', 'UTC'),
+            'app_version' => $this->getAppVersion()
         ];
     }
 

@@ -5,10 +5,146 @@ All notable changes to Domain Monitor will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2025-10-09
 
 ### Added
-- TLD Registry System with IANA integration
+- **User Notifications System** - In-app notification center with filtering and pagination
+- **Welcome Notifications** - Automatically sent to new users on registration or fresh install
+- **System Upgrade Notifications** - Admins notified when system is upgraded with migration details
+- **Notification Types**:
+  - System: Welcome, Upgrade notifications
+  - Domain: Expiring, Expired, Updated
+  - Security: New login detection
+  - WHOIS: Lookup failures
+- **Notification Features**:
+  - Unread notification count in top navigation
+  - Dropdown preview of recent notifications
+  - Full notification page with filtering (status, type, date range)
+  - Pagination and sorting
+  - Mark as read / Mark all as read
+  - Delete individual / Clear all notifications
+- **Database-Backed Sessions** - Full session management stored in database
+- **Active Session Management** - View, monitor, and control all logged-in devices
+- **Geolocation Tracking** - IP-based location detection (country, city, region, ISP)
+- **Session Details Display**:
+  - Country flags with flag-icons library
+  - City and country name
+  - ISP/Network provider
+  - Device type detection (Desktop/Mobile/Tablet)
+  - Browser detection (Chrome/Firefox/Safari/Edge/Opera)
+  - Session age and last activity timestamps
+  - Remember me indicator (cookie badge)
+- **Remote Session Control**:
+  - Terminate individual sessions with delete button
+  - Logout all other sessions with one click
+  - Immediate logout validation (deleted sessions can't access anything)
+- **Enhanced Profile Page**:
+  - Sidebar navigation layout
+  - Four sections: Profile Information, Security, Active Sessions, Danger Zone
+  - URL hash navigation (#profile, #security, #sessions, #danger)
+  - Clean design matching application theme
+- **Remember Token Security**:
+  - Remember tokens linked to specific sessions
+  - Deleting session also invalidates remember token
+  - Prevents auto-login after remote logout
+- **Session Validator Middleware** - Validates sessions on every request
+- **Auto-Detected Cron Paths** - Settings page shows actual installation paths (thanks @jadeops)
+- **Automatic Session Cleanup** - Multiple cleanup triggers (no cron job needed)
+- User registration with email verification
+- Password reset via email
+- Remember me functionality (30-day cookies)
+- User profile management
+- Change password
+- Email verification with token expiry (24h)
+- Password reset tokens (1h expiry)
+- Registration enable/disable toggle
+- User CRUD management (admin-only)
+- Role-based access control (admin/user)
+- Centralized app version in database
+- Web-based installer (replaces CLI migrate.php)
+- Web-based updater for new migrations
+- Auto-detection of installation status
+- Migration tracking system
+- Consolidated database schema for v1.1.0 fresh installs
+- Smart migration system (consolidated for new, incremental for upgrades)
+
+### Changed
+- Profile page completely redesigned with sidebar layout
+- Session system migrated from file-based to database-backed
+- Top navigation dropdown links updated with hash navigation
+- Settings → System tab now shows auto-detected cron paths
+- Help & Support menu links to GitHub repository
+- Auth views refactored with base layout
+- System section (Settings/Users) restricted to admins
+- TLD Registry read-only for regular users
+- Sidebar shows role-based links
+- Profile integrated with dashboard layout
+- Installation now via web UI instead of CLI
+- Auto-redirect to installer on first run
+
+### Security
+- **Database Session Storage** - True session control with remote termination
+- **Session Validation** - Every request validates session exists in database
+- **Geolocation Logging** - Track suspicious login locations
+- **Remember Token Linking** - Tokens tied to sessions, deleted together
+- **Immediate Logout** - Deleted sessions invalidated within seconds
+- Bcrypt password hashing
+- Secure 32-byte tokens
+- Time-limited tokens
+- One-time use reset tokens
+- HttpOnly secure cookies
+- Email enumeration protection
+- Session-based verification resend
+- Admin-only route protection
+
+### Technical
+- **MVC Architecture Refactoring** - Complete separation of concerns
+  - `LayoutHelper` - Global layout data (notifications, stats, settings)
+  - `DomainHelper` - Domain formatting and business logic
+  - `SessionHelper` - Session display formatting
+  - `NotificationService` - Notification creation and management
+  - All business logic removed from views (~265 lines cleaned)
+- Database session handler implementing SessionHandlerInterface
+- IP geolocation via ip-api.com (free, 45 req/min)
+- Session validator middleware for real-time validation
+- Automatic session cleanup (no cron needed for sessions)
+- Flag-icons library integration for country flags
+- User-agent parsing for device and browser detection
+- Remember token cascade deletion on session termination
+- Notification system with 7 notification types
+- Welcome notifications on user creation and fresh install
+- Upgrade notifications for admins with version tracking
+
+### Contributors
+- Special thanks to @jadeops for auto-detected cron path improvement & XSS protection enhancement (PR #1)
+
+## [1.0.0] - 2024-10-08
+
+### Added
+- Initial release of Domain Monitor
+- Modern PHP 8.1+ MVC architecture
+- Domain management system with CRUD operations
+- Automatic WHOIS lookup for domain information
+- Multi-channel notification system:
+  - Email notifications via PHPMailer
+  - Telegram bot integration
+  - Discord webhook support
+  - Slack webhook support
+- Notification groups feature
+- Assign domains to notification groups
+- Dashboard with real-time statistics
+- Domain status tracking (active, expiring_soon, expired, error)
+- Notification logging system
+- Customizable notification intervals
+- Cron job for automated domain checks
+- Test notification script
+- Responsive, modern UI design
+- Database migration system
+- Comprehensive documentation
+- Installation guide
+- Basic login/logout authentication
+- Security features (prepared statements, session management)
+- **TLD Registry System with IANA integration**
   - Import and manage TLD data (RDAP servers, WHOIS servers, registry URLs)
   - Progressive import workflow with real-time progress tracking
   - Support for 1,400+ TLDs with automatic updates
@@ -47,38 +183,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed hardcoded default credentials
 - 16-character cryptographically secure admin passwords
 
-## [1.0.0] - 2024-10-08
-
-### Added
-- Initial release of Domain Monitor
-- Modern PHP 8.1+ MVC architecture
-- Domain management system with CRUD operations
-- Automatic WHOIS lookup for domain information
-- Multi-channel notification system:
-  - Email notifications via PHPMailer
-  - Telegram bot integration
-  - Discord webhook support
-  - Slack webhook support
-- Notification groups feature
-- Assign domains to notification groups
-- Dashboard with real-time statistics
-- Domain status tracking (active, expiring_soon, expired, error)
-- Notification logging system
-- Customizable notification intervals
-- Cron job for automated domain checks
-- Test notification script
-- Responsive, modern UI design
-- Database migration system
-- Comprehensive documentation
-- Installation guide
-- User authentication system
-- Security features (prepared statements, session management)
-
 ### Features
 - ✅ Add, edit, delete, and view domains
 - ✅ Automatic expiration date detection via WHOIS
 - ✅ Support for multiple notification channels per group
-- ✅ Flexible notification scheduling (60,30, 15, 7, 3, 1 days before)
+- ✅ Flexible notification scheduling (60, 30, 21, 14, 7, 5, 3, 2, 1 days before)
 - ✅ Email notifications with HTML templates
 - ✅ Rich Discord embeds with color coding
 - ✅ Telegram messages with formatting
@@ -110,14 +219,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 - README.md with comprehensive guide
-- INSTALL.md with step-by-step installation
 - Inline code documentation
 - Configuration examples
 - Troubleshooting guide
 
-### Future Enhancements (Roadmap)
-- [ ] User authentication system
-- [ ] Multi-user support with permissions
+---
+
+## Roadmap - Future Enhancements
+
+- [x] User authentication system (completed - v1.1.0)
+- [x] Session management with geolocation (completed - v1.1.0)
+- [x] TLD Registry System (completed - v1.0.0)
+- [x] Remote session termination (completed - v1.1.0)
+- [x] In-app user notifications (completed - v1.1.0)
+- [ ] Multi-user support with advanced permissions and roles
 - [ ] API for external integrations
 - [ ] Domain grouping/tagging
 - [ ] Custom notification templates
@@ -146,7 +261,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+### 1.1.0 (2025-10-09)
+- **User Notifications System** - In-app notification center with 7 notification types, filtering, pagination
+- **Advanced Session Management** - Database-backed sessions with geolocation (country, city, ISP)
+- **Remote Session Control** - Terminate any device instantly with immediate logout validation
+- **Enhanced Profile Page** - Sidebar navigation with 4 tabs, hash-based routing (#profile, #security, #sessions)
+- **MVC Architecture Refactoring** - 3 new Helpers (Layout, Domain, Session), ~265 lines cleaned from views
+- **Geolocation Tracking** - IP-based location detection using ip-api.com, country flags with flag-icons
+- **Device Detection** - Browser & device type parsing (Chrome/Firefox/Safari, Desktop/Mobile/Tablet)
+- **Auto-Detected Cron Paths** - Settings show actual installation paths (thanks @jadeops)
+- **Welcome Notifications** - Sent to new users on registration or fresh install
+- **Upgrade Notifications** - Admins notified on system updates with version & migration count
+- **Web-Based Installer** - Replaces CLI, auto-generates encryption key, one-time password display
+- **Web-Based Updater** - `/install/update` for running new migrations with smart detection
+- **User Registration** - Full signup flow with email verification, password reset, resend verification
+- **User Management** - CRUD for users with filtering, sorting, pagination (admin-only)
+- **Remember Me** - 30-day secure tokens linked to sessions, cascade deletion on logout
+- **Session Validator** - Middleware validates sessions on every request for instant remote logout
+- **Consistent UI/UX** - Unified filtering, sorting, pagination across Domains, Users, Notifications, TLD Registry
+- **Smart Migrations** - Consolidated schema for fresh installs, incremental for upgrades
+- **XSS Protection** - htmlspecialchars() applied across all user-facing data (thanks @jadeops)
+
 ### 1.0.0 (2024-10-08)
 - Initial public release
 - Created by [Hosteroid](https://www.hosteroid.uk) - Premium Hosting Solutions
+
+---
+
+## 🙏 Special Thanks
+
+### Contributors
+- **@jadeops** - Auto-detected cron path improvement & XSS protection enhancement (PR #1)
 

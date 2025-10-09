@@ -4,61 +4,30 @@
  * Contains: HTML structure, meta tags, CSS/JS includes, global stats
  */
 
+// Fetch notifications for top nav (available on all pages)
+if (isset($_SESSION['user_id'])) {
+    $notificationData = \App\Helpers\LayoutHelper::getNotifications($_SESSION['user_id']);
+    $recentNotifications = $notificationData['items'];
+    $unreadNotifications = $notificationData['unread_count'];
+} else {
+    $recentNotifications = [];
+    $unreadNotifications = 0;
+}
+
 // Fetch global stats for sidebar (available on all pages)
 if (!isset($globalStats)) {
-    try {
-        $pdo = \Core\Database::getConnection();
-        
-        // Get total domains
-        $totalStmt = $pdo->query("SELECT COUNT(*) as count FROM domains");
-        $totalResult = $totalStmt->fetch(\PDO::FETCH_ASSOC);
-        $total = $totalResult['count'] ?? 0;
-        
-        // Get active domains
-        $activeStmt = $pdo->query("SELECT COUNT(*) as count FROM domains WHERE is_active = 1");
-        $activeResult = $activeStmt->fetch(\PDO::FETCH_ASSOC);
-        $active = $activeResult['count'] ?? 0;
-        
-        // Get expiring soon - use the first notification threshold from settings
-        $settingModel = new \App\Models\Setting();
-        $notificationDays = $settingModel->getNotificationDays();
-        $expiringThreshold = !empty($notificationDays) ? max($notificationDays) : 30; // Use the largest notification day
-        
-        $expiringSoonStmt = $pdo->prepare("SELECT COUNT(*) as count FROM domains WHERE is_active = 1 AND expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(NOW(), INTERVAL ? DAY) AND expiration_date >= NOW()");
-        $expiringSoonStmt->execute([$expiringThreshold]);
-        $expiringSoonResult = $expiringSoonStmt->fetch(\PDO::FETCH_ASSOC);
-        $expiringSoon = $expiringSoonResult['count'] ?? 0;
-        
-        $globalStats = [
-            'total' => $total,
-            'active' => $active,
-            'expiring_soon' => $expiringSoon,
-            'expiring_threshold' => $expiringThreshold
-        ];
-    } catch (\Exception $e) {
-        $globalStats = [
-            'total' => 0,
-            'active' => 0,
-            'expiring_soon' => 0,
-            'expiring_threshold' => 30
-        ];
-    }
+    $globalStats = \App\Helpers\LayoutHelper::getGlobalStats();
 }
 
 // Get application settings from database
 if (!isset($appName)) {
-    try {
-        $settingModel = new \App\Models\Setting();
-        $appSettings = $settingModel->getAppSettings();
-        $appName = htmlspecialchars($appSettings['app_name']);
-        $appTimezone = $appSettings['app_timezone'];
-        
-        // Set PHP timezone
-        date_default_timezone_set($appTimezone);
-    } catch (\Exception $e) {
-        $appName = 'Domain Monitor';
-        date_default_timezone_set('UTC');
-    }
+    $appSettings = \App\Helpers\LayoutHelper::getAppSettings();
+    $appName = $appSettings['app_name'];
+    $appTimezone = $appSettings['app_timezone'];
+    $appVersion = $appSettings['app_version'];
+    
+    // Set PHP timezone
+    date_default_timezone_set($appTimezone);
 }
 ?>
 <!DOCTYPE html>
@@ -179,16 +148,44 @@ if (!isset($appName)) {
 
         // Toggle user dropdown
         function toggleDropdown() {
-            document.getElementById('userDropdown').classList.toggle('show');
+            const dropdown = document.getElementById('userDropdown');
+            const notifDropdown = document.getElementById('notificationsDropdown');
+            
+            // Close notifications dropdown if open
+            if (notifDropdown && notifDropdown.classList.contains('show')) {
+                notifDropdown.classList.remove('show');
+            }
+            
+            dropdown.classList.toggle('show');
         }
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('userDropdown');
-            const isClickInside = event.target.closest('[onclick="toggleDropdown()"]') || event.target.closest('#userDropdown');
+        // Toggle notifications dropdown
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notificationsDropdown');
+            const userDropdown = document.getElementById('userDropdown');
             
-            if (!isClickInside && dropdown && dropdown.classList.contains('show')) {
-                dropdown.classList.remove('show');
+            // Close user dropdown if open
+            if (userDropdown && userDropdown.classList.contains('show')) {
+                userDropdown.classList.remove('show');
+            }
+            
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            const userDropdown = document.getElementById('userDropdown');
+            const notifDropdown = document.getElementById('notificationsDropdown');
+            
+            const isUserDropdownClick = event.target.closest('[onclick="toggleDropdown()"]') || event.target.closest('#userDropdown');
+            const isNotifDropdownClick = event.target.closest('[onclick="toggleNotifications()"]') || event.target.closest('#notificationsDropdown');
+            
+            if (!isUserDropdownClick && userDropdown && userDropdown.classList.contains('show')) {
+                userDropdown.classList.remove('show');
+            }
+            
+            if (!isNotifDropdownClick && notifDropdown && notifDropdown.classList.contains('show')) {
+                notifDropdown.classList.remove('show');
             }
         });
 

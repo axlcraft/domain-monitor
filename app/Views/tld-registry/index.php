@@ -30,6 +30,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
 <!-- Action Buttons -->
 <div class="mb-4">
     <div class="flex flex-wrap gap-2 justify-between items-center">
+        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
         <div class="flex flex-wrap gap-2">
             <form method="POST" action="/tld-registry/start-progressive-import" class="inline">
                 <input type="hidden" name="import_type" value="complete_workflow">
@@ -45,13 +46,22 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
                     Check Updates
                 </button>
             </form>
-        </div>
-        
-        <div class="flex gap-2">
             <a href="/tld-registry/import-logs" class="inline-flex items-center px-4 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors font-medium">
                 <i class="fas fa-history mr-2"></i>
                 Import Logs
             </a>
+        </div>
+        <?php else: ?>
+        <div>
+            <p class="text-sm text-gray-600">
+                <i class="fas fa-info-circle mr-1"></i>
+                View-only mode. Contact admin to import or modify TLD data.
+            </p>
+        </div>
+        <?php endif; ?>
+        
+        <div class="flex gap-2">
+            <!-- Search and filters will stay visible for all users -->
         </div>
     </div>
 </div>
@@ -188,8 +198,8 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
     </form>
 </div>
 
-<!-- Bulk Actions -->
-<?php if (!empty($tlds)): ?>
+<!-- Bulk Actions (Admin Only) -->
+<?php if (!empty($tlds) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
 <div class="bg-white rounded-lg border border-gray-200 p-4 mb-4">
     <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
@@ -216,9 +226,11 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
+                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             <input type="checkbox" id="select-all" class="rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllCheckboxes(this)">
                         </th>
+                        <?php endif; ?>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             <a href="<?= sortUrl('tld', $currentFilters['sort'], $currentFilters['order']) ?>" class="hover:text-primary flex items-center">
                                 TLD <?= sortIcon('tld', $currentFilters['sort'], $currentFilters['order']) ?>
@@ -250,9 +262,11 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($tlds as $tld): ?>
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
+                            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <input type="checkbox" name="tld_ids[]" value="<?= $tld['id'] ?>" class="tld-checkbox rounded border-gray-300 text-primary focus:ring-primary">
                             </td>
+                            <?php endif; ?>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-10 w-10 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -320,12 +334,14 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
                                     <a href="/tld-registry/<?= $tld['id'] ?>" class="text-blue-600 hover:text-blue-800" title="View">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                                     <a href="/tld-registry/<?= $tld['id'] ?>/refresh" class="text-green-600 hover:text-green-800" title="Refresh" onclick="return confirm('Refresh TLD data from IANA?')">
                                         <i class="fas fa-sync-alt"></i>
                                     </a>
                                     <a href="/tld-registry/<?= $tld['id'] ?>/toggle-active" class="text-orange-600 hover:text-orange-800" title="Toggle Status" onclick="return confirm('Toggle TLD status?')">
                                         <i class="fas fa-power-off"></i>
                                     </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -390,12 +406,14 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
                     </div>
                     
                     <div class="flex space-x-2 mt-3">
-                        <a href="/tld-registry/<?= $tld['id'] ?>" class="flex-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded text-center text-sm hover:bg-blue-100 transition-colors">
+                        <a href="/tld-registry/<?= $tld['id'] ?>" class="<?= (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') ? 'flex-1' : 'w-full' ?> px-3 py-1.5 bg-blue-50 text-blue-600 rounded text-center text-sm hover:bg-blue-100 transition-colors">
                             <i class="fas fa-eye mr-1"></i> View
                         </a>
+                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                         <a href="/tld-registry/<?= $tld['id'] ?>/refresh" class="flex-1 px-3 py-1.5 bg-green-50 text-green-600 rounded text-center text-sm hover:bg-green-100 transition-colors" onclick="return confirm('Refresh TLD data?')">
                             <i class="fas fa-sync-alt mr-1"></i> Refresh
                         </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>

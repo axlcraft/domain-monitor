@@ -33,6 +33,9 @@
                 <a href="/tld-registry" class="sidebar-link flex items-center px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150 <?= strpos($_SERVER['REQUEST_URI'], '/tld-registry') !== false ? 'bg-primary text-white' : '' ?>">
                     <i class="fas fa-database text-xs mr-3 w-4"></i>
                     <span class="text-sm">TLD Registry</span>
+                    <?php if (isset($_SESSION['role']) && $_SESSION['role'] !== 'admin'): ?>
+                    <span class="ml-auto text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-400">View</span>
+                    <?php endif; ?>
                 </a>
             </div>
 
@@ -47,7 +50,8 @@
                 </div>
             </div>
 
-            <!-- System Section -->
+            <!-- System Section (Admin Only) -->
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
             <div class="mt-4 pt-3 border-t border-gray-800">
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-1">System</p>
                 <div class="space-y-0.5">
@@ -55,8 +59,13 @@
                         <i class="fas fa-cog text-xs mr-3 w-4"></i>
                         <span class="text-sm">Settings</span>
                     </a>
+                    <a href="/users" class="sidebar-link flex items-center px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150 <?= strpos($_SERVER['REQUEST_URI'], '/users') !== false ? 'bg-primary text-white' : '' ?>">
+                        <i class="fas fa-users text-xs mr-3 w-4"></i>
+                        <span class="text-sm">Users</span>
+                    </a>
                 </div>
             </div>
+            <?php endif; ?>
         </nav>
 
         <!-- Quick Stats Cards - Pinned to Bottom -->
@@ -105,7 +114,7 @@
         <div class="px-4 py-3 border-t border-gray-800">
             <div class="text-center">
                 <p class="text-xs text-gray-500">© <?= date('Y') ?> Domain Monitor</p>
-                <p class="text-xs text-gray-600 mt-0.5">v1.0.0</p>
+                <p class="text-xs text-gray-600 mt-0.5">v<?= $appVersion ?></p>
             </div>
         </div>
     </div>

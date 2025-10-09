@@ -44,9 +44,23 @@ class Auth
         // Get current path
         $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
         
-        // Don't redirect if already on login page or logout
-        if ($currentPath === '/login' || $currentPath === '/logout') {
-            return;
+        // Public paths that don't require authentication
+        $publicPaths = [
+            '/login',
+            '/logout',
+            '/register',
+            '/forgot-password',
+            '/reset-password',
+            '/verify-email',
+            '/resend-verification',
+            '/install'
+        ];
+        
+        // Don't redirect if on a public path
+        foreach ($publicPaths as $path) {
+            if (strpos($currentPath, $path) === 0) {
+                return;
+            }
         }
         
         if (!self::check()) {

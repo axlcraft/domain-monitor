@@ -132,11 +132,15 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="flex items-end">
-                <button type="submit" class="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">
                     <i class="fas fa-filter mr-2"></i>
                     Apply Filters
                 </button>
+                <a href="/domains" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                    <i class="fas fa-times mr-2"></i>
+                    Clear
+                </a>
             </div>
         </div>
         <input type="hidden" name="sort" value="<?= htmlspecialchars($currentFilters['sort']) ?>">
@@ -217,73 +221,12 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($domains as $domain): ?>
                         <?php
-                        // Calculate days until expiry and determine status color
-                        $daysLeft = !empty($domain['expiration_date']) ? floor((strtotime($domain['expiration_date']) - time()) / 86400) : null;
-                        $expiryClass = '';
-                        if ($daysLeft !== null) {
-                            if ($daysLeft < 0) {
-                                $expiryClass = 'text-red-600 font-semibold';
-                            } elseif ($daysLeft <= 30) {
-                                $expiryClass = 'text-orange-600 font-semibold';
-                            } elseif ($daysLeft <= 90) {
-                                $expiryClass = 'text-yellow-600';
-                            }
-                        }
-                        
-                        // Recalculate domain status if it's empty or error (for backward compatibility)
-                        $domainStatus = $domain['status'];
-                        if (empty($domainStatus) || $domainStatus === 'error') {
-                            $whoisData = json_decode($domain['whois_data'] ?? '{}', true);
-                            $statusArray = $whoisData['status'] ?? [];
-                            $isAvailable = false;
-                            foreach ($statusArray as $status) {
-                                if (stripos($status, 'AVAILABLE') !== false || stripos($status, 'FREE') !== false) {
-                                    $isAvailable = true;
-                                    break;
-                                }
-                            }
-                            
-                            if ($isAvailable) {
-                                $domainStatus = 'available';
-                            } elseif ($daysLeft !== null) {
-                                if ($daysLeft < 0) {
-                                    $domainStatus = 'expired';
-                                } elseif ($daysLeft <= 30) {
-                                    $domainStatus = 'expiring_soon';
-                                } else {
-                                    $domainStatus = 'active';
-                                }
-                            } else {
-                                $domainStatus = 'error';
-                            }
-                        }
-                        
-                        // Status badge color
-                        if ($domainStatus === 'available') {
-                            $statusClass = 'bg-blue-100 text-blue-700 border-blue-200';
-                            $statusText = 'Available';
-                            $statusIcon = 'fa-info-circle';
-                        } elseif ($daysLeft !== null && $daysLeft <= 30 && $daysLeft >= 0) {
-                            $statusClass = 'bg-orange-100 text-orange-700 border-orange-200';
-                            $statusText = 'Expiring Soon';
-                            $statusIcon = 'fa-exclamation-triangle';
-                        } elseif ($domainStatus === 'active') {
-                            $statusClass = 'bg-green-100 text-green-700 border-green-200';
-                            $statusText = 'Active';
-                            $statusIcon = 'fa-check-circle';
-                        } elseif ($domainStatus === 'expired') {
-                            $statusClass = 'bg-red-100 text-red-700 border-red-200';
-                            $statusText = 'Expired';
-                            $statusIcon = 'fa-times-circle';
-                        } elseif ($domainStatus === 'error') {
-                            $statusClass = 'bg-gray-100 text-gray-700 border-gray-200';
-                            $statusText = 'Error';
-                            $statusIcon = 'fa-exclamation-circle';
-                        } else {
-                            $statusClass = 'bg-gray-100 text-gray-700 border-gray-200';
-                            $statusText = ucfirst($domainStatus);
-                            $statusIcon = 'fa-times-circle';
-                        }
+                        // Display data prepared by DomainHelper in controller
+                        $daysLeft = $domain['daysLeft'];
+                        $expiryClass = $domain['expiryClass'];
+                        $statusClass = $domain['statusClass'];
+                        $statusText = $domain['statusText'];
+                        $statusIcon = $domain['statusIcon'];
                         ?>
                         <tr class="hover:bg-gray-50 transition-colors duration-150 domain-row">
                             <td class="px-4 py-4">

@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert default admin user
--- Password is randomly generated during migration and displayed in output
--- Hash placeholder will be replaced by migrate.php
+-- Password is randomly generated during installation and displayed in output
+-- Hash placeholder will be replaced by web installer
 INSERT INTO users (username, password, email, full_name, is_active) VALUES
 ('admin', '{{ADMIN_PASSWORD_HASH}}', 'admin@domainmonitor.local', 'Administrator', 1)
 ON DUPLICATE KEY UPDATE username=username;

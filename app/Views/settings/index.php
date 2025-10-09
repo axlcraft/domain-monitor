@@ -118,6 +118,41 @@ foreach ($notificationPresets as $key => $preset) {
                     </select>
                     <p class="text-xs text-gray-500 mt-1">Application timezone for dates and times</p>
                 </div>
+
+                <!-- User Registration Settings -->
+                <div class="border-t border-gray-200 pt-4 mt-6">
+                    <h4 class="text-base font-semibold text-gray-900 mb-4">User Registration</h4>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input type="checkbox" id="registration_enabled" name="registration_enabled" value="1"
+                                       <?= !empty($settings['registration_enabled']) ? 'checked' : '' ?>
+                                       class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary">
+                            </div>
+                            <div class="ml-3">
+                                <label for="registration_enabled" class="text-sm font-medium text-gray-700">
+                                    Enable User Registration
+                                </label>
+                                <p class="text-xs text-gray-500 mt-1">Allow new users to create accounts via registration form</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input type="checkbox" id="require_email_verification" name="require_email_verification" value="1"
+                                       <?= !empty($settings['require_email_verification']) ? 'checked' : '' ?>
+                                       class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary">
+                            </div>
+                            <div class="ml-3">
+                                <label for="require_email_verification" class="text-sm font-medium text-gray-700">
+                                    Require Email Verification
+                                </label>
+                                <p class="text-xs text-gray-500 mt-1">Users must verify their email address before accessing the system</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">

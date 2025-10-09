@@ -65,7 +65,7 @@ Use our [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md).
 3. **Set up your development environment**
    - Copy `env.example.txt` to `.env`
    - Configure database settings
-   - Run migrations: `php database/migrate.php`
+   - Run web installer: Visit `http://localhost:8000` (or your local domain)
 
 4. **Create a feature branch**
    ```bash
@@ -131,12 +131,15 @@ public function getDomainInfo(string $domain): ?array
 If your contribution includes database changes:
 
 1. **Create a new migration file** in `database/migrations/`
-   - Name it: `XXX_descriptive_name.sql` (e.g., `007_add_timezone_column.sql`)
+   - Name it: `XXX_descriptive_name.sql` (e.g., `014_add_new_feature.sql`)
+   - Use sequential numbering (next available number)
    - Include `IF NOT EXISTS` checks where appropriate
 
-2. **Update `database/migrate.php`** to include the new migration
+2. **Update `app/Controllers/InstallerController.php`**
+   - Add your migration to the `$incrementalMigrations` array
+   - Add it to the appropriate version upgrade path
 
-3. **Test the migration** on a fresh database
+3. **Test the migration** using the web updater at `/install/update`
 
 ### Frontend Changes
 

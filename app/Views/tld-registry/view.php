@@ -19,6 +19,7 @@ ob_start();
         </span>
     </div>
     <div class="flex gap-2 items-center">
+        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
         <a href="/tld-registry/<?= $tld['id'] ?>/refresh" class="inline-flex items-center justify-center px-3 py-2 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors font-medium min-w-[80px] h-[32px]" onclick="return confirm('Refresh TLD data from IANA?')">
             <i class="fas fa-sync-alt mr-1.5"></i>
             Refresh
@@ -27,6 +28,7 @@ ob_start();
             <i class="fas fa-power-off mr-1.5"></i>
             Toggle
         </a>
+        <?php endif; ?>
         <a href="/tld-registry" class="inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-gray-700 text-xs rounded-lg hover:bg-gray-50 transition-colors font-medium min-w-[80px] h-[32px]">
             <i class="fas fa-arrow-left mr-1.5"></i>
             Back
@@ -189,6 +191,7 @@ ob_start();
                 </h3>
             </div>
             <div class="p-4 space-y-2">
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                 <a href="/tld-registry/<?= $tld['id'] ?>/refresh" class="flex items-center p-3 border border-gray-200 hover:border-green-500 hover:bg-green-50 rounded-lg transition-all duration-200 group" onclick="return confirm('Refresh TLD data from IANA?')">
                     <div class="w-9 h-9 bg-green-50 group-hover:bg-green-500 rounded-lg flex items-center justify-center group-hover:text-white text-green-600 transition-colors duration-200">
                         <i class="fas fa-sync-alt text-sm"></i>
@@ -201,6 +204,7 @@ ob_start();
                     </div>
                     <span class="ml-3 text-sm font-medium text-gray-700 group-hover:text-orange-700">Toggle Status</span>
                 </a>
+                <?php endif; ?>
                 <?php if ($tld['registry_url']): ?>
                 <a href="<?= htmlspecialchars($tld['registry_url']) ?>" target="_blank" class="flex items-center p-3 border border-gray-200 hover:border-blue-500 hover:bg-blue-50 rounded-lg transition-all duration-200 group">
                     <div class="w-9 h-9 bg-blue-50 group-hover:bg-blue-500 rounded-lg flex items-center justify-center group-hover:text-white text-blue-600 transition-colors duration-200">

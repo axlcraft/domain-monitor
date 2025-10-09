@@ -74,13 +74,9 @@ ob_start();
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($existingDomains as $domain): ?>
                         <?php
-                        $daysLeft = !empty($domain['expiration_date']) ? floor((strtotime($domain['expiration_date']) - time()) / 86400) : null;
-                        $expiryClass = '';
-                        if ($daysLeft !== null) {
-                            if ($daysLeft < 0) $expiryClass = 'text-red-600 font-semibold';
-                            elseif ($daysLeft <= 30) $expiryClass = 'text-orange-600 font-semibold';
-                            elseif ($daysLeft <= 90) $expiryClass = 'text-yellow-600';
-                        }
+                        // Display data prepared by DomainHelper in controller
+                        $daysLeft = $domain['daysLeft'];
+                        $expiryClass = $domain['expiryClass'];
                         ?>
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4">

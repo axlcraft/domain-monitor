@@ -19,6 +19,18 @@ class TldRegistryController extends Controller
         $this->importLogModel = new TldImportLog();
         $this->tldService = new TldRegistryService();
     }
+    
+    /**
+     * Check if current user is admin
+     */
+    private function requireAdmin()
+    {
+        if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+            $_SESSION['error'] = 'Access denied. Admin privileges required.';
+            $this->redirect('/tld-registry');
+            exit;
+        }
+    }
 
     /**
      * Display TLD registry dashboard
@@ -76,6 +88,8 @@ class TldRegistryController extends Controller
      */
     public function importTldList()
     {
+        $this->requireAdmin();
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/tld-registry');
             return;
@@ -109,6 +123,8 @@ class TldRegistryController extends Controller
      */
     public function importRdap()
     {
+        $this->requireAdmin();
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/tld-registry');
             return;
@@ -142,6 +158,8 @@ class TldRegistryController extends Controller
      */
     public function importWhois()
     {
+        $this->requireAdmin();
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/tld-registry');
             return;
@@ -179,6 +197,8 @@ class TldRegistryController extends Controller
      */
     public function checkUpdates()
     {
+        $this->requireAdmin();
+        
         try {
             $updateInfo = $this->tldService->checkForUpdates();
             
@@ -219,6 +239,8 @@ class TldRegistryController extends Controller
      */
     public function startProgressiveImport()
     {
+        $this->requireAdmin();
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/tld-registry');
             return;
@@ -312,6 +334,8 @@ class TldRegistryController extends Controller
      */
     public function bulkDelete()
     {
+        $this->requireAdmin();
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/tld-registry');
             return;
@@ -347,6 +371,8 @@ class TldRegistryController extends Controller
      */
     public function toggleActive($params = [])
     {
+        $this->requireAdmin();
+        
         $id = $params['id'] ?? 0;
         $tld = $this->tldModel->find($id);
 
@@ -369,6 +395,8 @@ class TldRegistryController extends Controller
      */
     public function refresh($params = [])
     {
+        $this->requireAdmin();
+        
         $id = $params['id'] ?? 0;
         $tld = $this->tldModel->find($id);
 

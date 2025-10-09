@@ -104,19 +104,12 @@ ob_start();
                             </div>
                             <div class="flex items-center space-x-2 flex-shrink-0">
                                 <?php
-                                $status = $domain['status'] ?? 'active';
-                                $statusClasses = [
-                                    'active' => 'bg-green-100 text-green-700',
-                                    'expiring_soon' => 'bg-orange-100 text-orange-700',
-                                    'expired' => 'bg-red-100 text-red-700',
-                                    'error' => 'bg-red-100 text-red-700',
-                                    'available' => 'bg-blue-100 text-blue-700'
-                                ];
-                                $statusClass = $statusClasses[$status] ?? 'bg-gray-100 text-gray-700';
-                                $statusLabel = $status === 'expiring_soon' ? 'Expiring Soon' : ($status === 'available' ? 'Available' : ucfirst($status));
+                                // Display data prepared by DomainHelper in controller
+                                $statusClass = $domain['statusClass'];
+                                $statusText = $domain['statusText'];
                                 ?>
                                 <span class="px-2 py-1 rounded text-xs font-medium <?= $statusClass ?>">
-                                    <?= $statusLabel ?>
+                                    <?= $statusText ?>
                                 </span>
                                 <a href="/domains/<?= $domain['id'] ?>" class="text-gray-400 hover:text-primary">
                                     <i class="fas fa-chevron-right text-sm"></i>
@@ -238,7 +231,8 @@ ob_start();
                 <div class="p-4 space-y-2">
                     <?php foreach ($expiringThisMonth as $domain): ?>
                         <?php 
-                            $daysLeft = floor((strtotime($domain['expiration_date']) - time()) / 86400);
+                            // Display data prepared by DomainHelper in controller
+                            $daysLeft = $domain['daysLeft'];
                             $urgencyClass = $daysLeft <= 7 ? 'text-red-600' : ($daysLeft <= 30 ? 'text-orange-600' : 'text-yellow-600');
                         ?>
                         <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200">
