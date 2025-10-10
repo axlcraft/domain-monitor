@@ -1430,10 +1430,10 @@ class TldRegistryService
                     if (isset($event['eventAction']) && isset($event['eventDate'])) {
                         switch ($event['eventAction']) {
                             case 'registration':
-                                $result['registration_date'] = $event['eventDate'];
+                                $result['registration_date'] = $this->normalizeDate($event['eventDate']);
                                 break;
                             case 'last changed':
-                                $result['record_last_updated'] = $event['eventDate'];
+                                $result['record_last_updated'] = $this->normalizeDate($event['eventDate']);
                                 break;
                         }
                     }
@@ -1507,13 +1507,13 @@ class TldRegistryService
                 $result['whois_server'] = $whoisServer;
             }
             if ($lastUpdated) {
-                $result['record_last_updated'] = $lastUpdated;
+                $result['record_last_updated'] = $this->normalizeDate($lastUpdated);
             }
             if ($registryUrl) {
                 $result['registry_url'] = $registryUrl;
             }
             if ($registrationDate) {
-                $result['registration_date'] = $registrationDate;
+                $result['registration_date'] = $this->normalizeDate($registrationDate);
             }
 
             return !empty($result) ? $result : null;
