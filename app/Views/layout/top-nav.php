@@ -129,9 +129,7 @@
                         </div>
                         <div class="hidden lg:block text-left">
                             <p class="text-sm font-medium text-gray-700"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></p>
-                            <p class="text-xs text-gray-500">
-                                <?= ucfirst($_SESSION['role'] ?? 'user') ?>
-                            </p>
+                            <p class="text-xs text-gray-500"><?= htmlspecialchars($_SESSION['email'] ?? '') ?></p>
                         </div>
                         <i class="fas fa-chevron-down text-gray-400 text-xs hidden md:block"></i>
                     </button>
@@ -141,9 +139,16 @@
                         <div class="px-4 py-3 border-b border-gray-200">
                             <p class="text-sm font-medium text-gray-900"><?= htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User') ?></p>
                             <p class="text-xs text-gray-500 mt-1"><?= htmlspecialchars($_SESSION['email'] ?? 'user@example.com') ?></p>
-                            <span class="inline-block mt-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
-                                <i class="fas fa-circle text-xs mr-1"></i>Online
-                            </span>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="inline-flex items-center px-2.5 py-1 bg-<?= $_SESSION['role'] === 'admin' ? 'amber' : 'blue' ?>-100 text-<?= $_SESSION['role'] === 'admin' ? 'amber' : 'blue' ?>-800 text-xs font-semibold rounded border border-<?= $_SESSION['role'] === 'admin' ? 'amber' : 'blue' ?>-200">
+                                    <i class="fas fa-<?= $_SESSION['role'] === 'admin' ? 'crown' : 'user' ?> mr-1.5"></i>
+                                    <?= ucfirst($_SESSION['role'] ?? 'user') ?>
+                                </span>
+                                <span class="inline-flex items-center px-2.5 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded border border-green-200">
+                                    <i class="fas fa-circle text-xs mr-1"></i>
+                                    Online
+                                </span>
+                            </div>
                         </div>
                         
                         <a href="/profile#profile" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">

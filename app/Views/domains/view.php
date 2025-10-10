@@ -32,7 +32,7 @@ ob_start();
             <?= $daysLeft !== null ? $daysLeft . ' days left' : 'No expiry date' ?>
         </span>
         <?php endif; ?>
-        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
+        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
             <i class="fas fa-<?= $domain['is_active'] ? 'check-circle' : 'pause-circle' ?> mr-1.5"></i>
             <?= $domain['is_active'] ? 'Monitoring Active' : 'Monitoring Paused' ?>
         </span>
@@ -167,8 +167,8 @@ ob_start();
                     </div>
                     <?php endif; ?>
 
-                    <div class="flex items-center p-2 bg-purple-50 rounded border border-purple-200">
-                        <div class="w-7 h-7 bg-purple-500 rounded flex items-center justify-center mr-2">
+                    <div class="flex items-center p-2 bg-indigo-50 rounded border border-indigo-200">
+                        <div class="w-7 h-7 bg-indigo-500 rounded flex items-center justify-center mr-2">
                             <i class="fas fa-sync text-white text-xs"></i>
                         </div>
                         <div>

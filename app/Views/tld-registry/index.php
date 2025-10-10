@@ -28,45 +28,39 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
 ?>
 
 <!-- Action Buttons -->
-<div class="mb-4">
-    <div class="flex flex-wrap gap-2 justify-between items-center">
-        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-        <div class="flex flex-wrap gap-2">
-            <form method="POST" action="/tld-registry/start-progressive-import" class="inline">
-                <?= csrf_field() ?>
-                <input type="hidden" name="import_type" value="complete_workflow">
-                <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium" title="Complete TLD import workflow: TLD List → RDAP → WHOIS → Registry URLs">
-                    <i class="fas fa-rocket mr-2"></i>
-                    Import TLDs
-                </button>
-            </form>
-            <form method="POST" action="/tld-registry/start-progressive-import" class="inline">
-                <?= csrf_field() ?>
-                <input type="hidden" name="import_type" value="check_updates">
-                <button type="submit" <?= $stats['total'] == 0 ? 'disabled' : '' ?> class="inline-flex items-center px-4 py-2.5 <?= $stats['total'] == 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700' ?> text-white text-sm rounded-lg transition-colors font-medium" title="<?= $stats['total'] == 0 ? 'Import TLDs first' : 'Check for IANA updates' ?>">
-                    <i class="fas fa-sync-alt mr-2"></i>
-                    Check Updates
-                </button>
-            </form>
-            <a href="/tld-registry/import-logs" class="inline-flex items-center px-4 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors font-medium">
-                <i class="fas fa-history mr-2"></i>
-                Import Logs
-            </a>
-        </div>
-        <?php else: ?>
-        <div>
-            <p class="text-sm text-gray-600">
-                <i class="fas fa-info-circle mr-1"></i>
-                View-only mode. Contact admin to import or modify TLD data.
-            </p>
-        </div>
-        <?php endif; ?>
-        
-        <div class="flex gap-2">
-            <!-- Search and filters will stay visible for all users -->
-        </div>
+<?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+<div class="mb-4 flex justify-end gap-2">
+    <a href="/tld-registry/import-logs" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors font-medium">
+        <i class="fas fa-history mr-2"></i>
+        Import Logs
+    </a>
+    <form method="POST" action="/tld-registry/start-progressive-import" class="inline">
+        <?= csrf_field() ?>
+        <input type="hidden" name="import_type" value="check_updates">
+        <button type="submit" <?= $stats['total'] == 0 ? 'disabled' : '' ?> class="inline-flex items-center px-4 py-2 <?= $stats['total'] == 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700' ?> text-white text-sm rounded-lg transition-colors font-medium" title="<?= $stats['total'] == 0 ? 'Import TLDs first' : 'Check for IANA updates' ?>">
+            <i class="fas fa-sync-alt mr-2"></i>
+            Check Updates
+        </button>
+    </form>
+    <form method="POST" action="/tld-registry/start-progressive-import" class="inline">
+        <?= csrf_field() ?>
+        <input type="hidden" name="import_type" value="complete_workflow">
+        <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium" title="Complete TLD import workflow: TLD List → RDAP → WHOIS → Registry URLs">
+            <i class="fas fa-rocket mr-2"></i>
+            Import TLDs
+        </button>
+    </form>
+</div>
+<?php else: ?>
+<div class="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+    <div class="flex items-center">
+        <i class="fas fa-info-circle text-yellow-600 mr-2"></i>
+        <p class="text-sm text-yellow-800">
+            View-only mode. Contact admin to import or modify TLD data.
+        </p>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Statistics Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -103,8 +97,8 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">With RDAP</p>
                 <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['with_rdap'] ?? 0 ?></p>
             </div>
-            <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
-                <i class="fas fa-database text-purple-600 text-lg"></i>
+            <div class="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center">
+                <i class="fas fa-database text-indigo-600 text-lg"></i>
             </div>
         </div>
     </div>
@@ -200,22 +194,25 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
     </form>
 </div>
 
-<!-- Bulk Actions (Admin Only) -->
-<?php if (!empty($tlds) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-<div class="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+<!-- Bulk Actions Toolbar (Admin Only - Hidden by default, shown when TLDs are selected) -->
+<?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+<div id="bulk-actions" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
     <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-600">Bulk Actions:</span>
+        <div class="flex items-center gap-4">
+            <span id="selected-count" class="text-sm font-medium text-blue-900"></span>
+            
             <form method="POST" action="/tld-registry/bulk-delete" id="bulk-delete-form" class="inline">
                 <?= csrf_field() ?>
-                <button type="button" onclick="confirmBulkDelete()" class="inline-flex items-center px-3 py-2 border border-red-300 text-red-700 text-sm rounded-lg hover:bg-red-50 transition-colors font-medium">
+                <button type="button" onclick="confirmBulkDelete()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
                     <i class="fas fa-trash mr-2"></i>
                     Delete Selected
                 </button>
             </form>
-        </div>
-        <div class="text-sm text-gray-500">
-            <span id="selected-count">0</span> selected
+            
+            <button type="button" onclick="clearSelection()" class="inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                <i class="fas fa-times mr-2"></i>
+                Clear Selection
+            </button>
         </div>
     </div>
 </div>
@@ -546,20 +543,44 @@ function toggleAllCheckboxes(selectAllCheckbox) {
 function updateSelectedCount() {
     const checkboxes = document.querySelectorAll('.tld-checkbox:checked');
     const count = checkboxes.length;
-    document.getElementById('selected-count').textContent = count;
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+    const selectAllCheckbox = document.getElementById('select-all');
+    
+    if (count > 0) {
+        bulkActions.classList.remove('hidden');
+        bulkActions.classList.add('flex');
+        selectedCount.textContent = `${count} TLD(s) selected`;
+    } else {
+        bulkActions.classList.add('hidden');
+        bulkActions.classList.remove('flex');
+    }
     
     // Update select all checkbox state
-    const selectAllCheckbox = document.getElementById('select-all');
     const allCheckboxes = document.querySelectorAll('.tld-checkbox');
-    if (count === 0) {
-        selectAllCheckbox.indeterminate = false;
-        selectAllCheckbox.checked = false;
-    } else if (count === allCheckboxes.length) {
-        selectAllCheckbox.indeterminate = false;
-        selectAllCheckbox.checked = true;
-    } else {
-        selectAllCheckbox.indeterminate = true;
+    if (selectAllCheckbox) {
+        if (count === 0) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = false;
+        } else if (count === allCheckboxes.length) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = true;
+        } else {
+            selectAllCheckbox.indeterminate = true;
+        }
     }
+}
+
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('.tld-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    const selectAllCheckbox = document.getElementById('select-all');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+    }
+    updateSelectedCount();
 }
 
 function confirmBulkDelete() {

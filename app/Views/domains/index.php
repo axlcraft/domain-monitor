@@ -28,81 +28,27 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
 ?>
 
 <!-- Action Buttons -->
-<div class="mb-4 flex flex-wrap gap-2 justify-between items-center">
-    <div class="flex gap-2">
-        <!-- Bulk Actions Toolbar (Hidden by default, shown when domains are selected) -->
-        <div id="bulk-actions" class="hidden items-center gap-2">
-            <span id="selected-count" class="text-sm font-medium text-gray-700"></span>
-            
-            <button type="button" onclick="bulkRefresh()" class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium">
-                <i class="fas fa-sync-alt mr-2"></i>
-                Refresh
-            </button>
-            
-            <div class="relative inline-block">
-                <button type="button" onclick="toggleAssignGroupDropdown()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                    <i class="fas fa-bell mr-2"></i>
-                    Assign Group
-                    <i class="fas fa-chevron-down ml-2 text-xs"></i>
-                </button>
-                <div id="assign-group-dropdown" class="hidden absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                    <form method="POST" action="/domains/bulk-assign-group" id="bulk-assign-form">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="domain_ids" id="bulk-assign-ids">
-                        <div class="p-3">
-                            <select name="group_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                <option value="">-- No Group --</option>
-                                <?php foreach ($groups as $group): ?>
-                                    <option value="<?= $group['id'] ?>"><?= htmlspecialchars($group['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="border-t border-gray-200 p-2 flex gap-2">
-                            <button type="submit" class="flex-1 px-3 py-1.5 bg-primary text-white text-xs rounded hover:bg-primary-dark">
-                                Assign
-                            </button>
-                            <button type="button" onclick="toggleAssignGroupDropdown()" class="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300">
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <button type="button" onclick="bulkDelete()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
-                <i class="fas fa-trash mr-2"></i>
-                Delete
-            </button>
-            
-            <button type="button" onclick="clearSelection()" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors font-medium">
-                <i class="fas fa-times mr-2"></i>
-                Clear
-            </button>
-        </div>
-    </div>
-    
-    <div class="flex gap-2">
-        <?php if (!empty($domains)): ?>
-        <form method="POST" action="/domains/bulk-refresh" id="refresh-all-form">
-            <?= csrf_field() ?>
-            <?php foreach ($domains as $domain): ?>
-                <input type="hidden" name="domain_ids[]" value="<?= $domain['id'] ?>">
-            <?php endforeach; ?>
-            <button type="submit" class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium" title="Refresh all domains on this page">
-                <i class="fas fa-sync-alt mr-2"></i>
-                Refresh Page (<?= count($domains) ?>)
-            </button>
-        </form>
-        <?php endif; ?>
-        <a href="/domains/bulk-add" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors font-medium">
-            <i class="fas fa-layer-group mr-2"></i>
-            Bulk Add
-        </a>
-        <a href="/domains/create" class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">
-            <i class="fas fa-plus mr-2"></i>
-            Add Domain
-        </a>
-    </div>
+<div class="mb-4 flex gap-2 justify-end">
+    <?php if (!empty($domains)): ?>
+    <form method="POST" action="/domains/bulk-refresh" id="refresh-all-form">
+        <?= csrf_field() ?>
+        <?php foreach ($domains as $domain): ?>
+            <input type="hidden" name="domain_ids[]" value="<?= $domain['id'] ?>">
+        <?php endforeach; ?>
+        <button type="submit" class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium" title="Refresh all domains on this page">
+            <i class="fas fa-sync-alt mr-2"></i>
+            Refresh Page (<?= count($domains) ?>)
+        </button>
+    </form>
+    <?php endif; ?>
+    <a href="/domains/bulk-add" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+        <i class="fas fa-layer-group mr-2"></i>
+        Bulk Add
+    </a>
+    <a href="/domains/create" class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">
+        <i class="fas fa-plus mr-2"></i>
+        Add Domain
+    </a>
 </div>
 
 <!-- Filters & Search -->
@@ -150,6 +96,59 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
     </form>
 </div>
 
+<!-- Bulk Actions Toolbar (Hidden by default, shown when domains are selected) -->
+<div id="bulk-actions" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <span id="selected-count" class="text-sm font-medium text-blue-900"></span>
+            
+            <button type="button" onclick="bulkRefresh()" class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium">
+                <i class="fas fa-sync-alt mr-2"></i>
+                Refresh Selected
+            </button>
+            
+            <div class="relative inline-block">
+                <button type="button" onclick="toggleAssignGroupDropdown()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    <i class="fas fa-bell mr-2"></i>
+                    Assign Group
+                    <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                </button>
+                <div id="assign-group-dropdown" class="hidden absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                    <form method="POST" action="/domains/bulk-assign-group" id="bulk-assign-form">
+                        <?= csrf_field() ?>
+                        <div class="p-3">
+                            <select name="group_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="">-- No Group --</option>
+                                <?php foreach ($groups as $group): ?>
+                                    <option value="<?= $group['id'] ?>"><?= htmlspecialchars($group['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="border-t border-gray-200 p-2 flex gap-2">
+                            <button type="submit" class="flex-1 px-3 py-1.5 bg-primary text-white text-xs rounded hover:bg-primary-dark">
+                                Assign
+                            </button>
+                            <button type="button" onclick="toggleAssignGroupDropdown()" class="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <button type="button" onclick="bulkDelete()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
+                <i class="fas fa-trash mr-2"></i>
+                Delete Selected
+            </button>
+            
+            <button type="button" onclick="clearSelection()" class="inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                <i class="fas fa-times mr-2"></i>
+                Clear Selection
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Pagination Info & Per Page Selector -->
 <div class="mb-4 flex justify-between items-center">
     <div class="text-sm text-gray-600">
@@ -184,8 +183,8 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-3 text-left w-12">
-                            <input type="checkbox" id="select-all" onclick="toggleSelectAll(this)" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                        <th class="px-6 py-3 text-left">
+                            <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)" class="rounded border-gray-300 text-primary focus:ring-primary">
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             <a href="<?= sortUrl('domain_name', $currentFilters['sort'], $currentFilters['order']) ?>" class="hover:text-primary flex items-center">
@@ -231,8 +230,8 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                         $statusIcon = $domain['statusIcon'];
                         ?>
                         <tr class="hover:bg-gray-50 transition-colors duration-150 domain-row">
-                            <td class="px-4 py-4">
-                                <input type="checkbox" class="domain-checkbox w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer" value="<?= $domain['id'] ?>">
+                            <td class="px-6 py-4">
+                                <input type="checkbox" class="domain-checkbox rounded border-gray-300 text-primary focus:ring-primary" value="<?= $domain['id'] ?>" onchange="updateBulkActions()">
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
@@ -328,7 +327,7 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
             <?php foreach ($domains as $domain): ?>
                 <div class="p-6 hover:bg-gray-50 transition-colors duration-150">
                     <div class="flex items-center mb-3">
-                        <input type="checkbox" class="domain-checkbox-mobile w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer mr-3" value="<?= $domain['id'] ?>">
+                        <input type="checkbox" class="domain-checkbox-mobile rounded border-gray-300 text-primary focus:ring-primary mr-3" value="<?= $domain['id'] ?>" onchange="updateBulkActions()">
                         <a href="/domains/<?= $domain['id'] ?>" class="text-lg font-semibold text-gray-900 hover:text-primary"><?= htmlspecialchars($domain['domain_name']) ?></a>
                     </div>
                     <!-- Add mobile view content here if needed -->
@@ -440,76 +439,47 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
 <script>
 // Multi-select functionality
 function toggleSelectAll(checkbox) {
-    // Only select checkboxes that are currently visible
-    const desktopCheckboxes = document.querySelectorAll('.domain-checkbox');
-    const mobileCheckboxes = document.querySelectorAll('.domain-checkbox-mobile');
-    
-    // Check if desktop view is visible (lg:block class)
-    const desktopTable = document.querySelector('.hidden.lg\\:block');
-    const isDesktopVisible = desktopTable && !desktopTable.classList.contains('hidden');
-    
-    if (isDesktopVisible) {
-        // Desktop view is visible, select desktop checkboxes
-        desktopCheckboxes.forEach(cb => cb.checked = checkbox.checked);
-    } else {
-        // Mobile view is visible, select mobile checkboxes
-        mobileCheckboxes.forEach(cb => cb.checked = checkbox.checked);
-    }
-    
+    const checkboxes = document.querySelectorAll('.domain-checkbox, .domain-checkbox-mobile');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
     updateBulkActions();
 }
 
 function updateBulkActions() {
-    // Only count checkboxes that are currently visible
-    const desktopCheckboxes = document.querySelectorAll('.domain-checkbox:checked');
-    const mobileCheckboxes = document.querySelectorAll('.domain-checkbox-mobile:checked');
-    
-    // Check if desktop view is visible
-    const desktopTable = document.querySelector('.hidden.lg\\:block');
-    const isDesktopVisible = desktopTable && !desktopTable.classList.contains('hidden');
-    
-    const checkboxes = isDesktopVisible ? desktopCheckboxes : mobileCheckboxes;
+    const checkboxes = document.querySelectorAll('.domain-checkbox:checked, .domain-checkbox-mobile:checked');
     const bulkActions = document.getElementById('bulk-actions');
     const selectedCount = document.getElementById('selected-count');
+    const selectAllCheckbox = document.getElementById('select-all');
     
     if (checkboxes.length > 0) {
         bulkActions.classList.remove('hidden');
         bulkActions.classList.add('flex');
-        selectedCount.textContent = `${checkboxes.length} selected`;
+        selectedCount.textContent = `${checkboxes.length} domain(s) selected`;
     } else {
         bulkActions.classList.add('hidden');
         bulkActions.classList.remove('flex');
     }
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.domain-checkbox, .domain-checkbox-mobile');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
+        selectAllCheckbox.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
+    }
 }
 
 function clearSelection() {
-    const desktopCheckboxes = document.querySelectorAll('.domain-checkbox');
-    const mobileCheckboxes = document.querySelectorAll('.domain-checkbox-mobile');
-    
-    // Check if desktop view is visible
-    const desktopTable = document.querySelector('.hidden.lg\\:block');
-    const isDesktopVisible = desktopTable && !desktopTable.classList.contains('hidden');
-    
-    if (isDesktopVisible) {
-        desktopCheckboxes.forEach(cb => cb.checked = false);
-    } else {
-        mobileCheckboxes.forEach(cb => cb.checked = false);
-    }
-    
+    const checkboxes = document.querySelectorAll('.domain-checkbox, .domain-checkbox-mobile');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
     document.getElementById('select-all').checked = false;
     updateBulkActions();
 }
 
 function getSelectedIds() {
-    // Only get IDs from currently visible checkboxes
-    const desktopCheckboxes = document.querySelectorAll('.domain-checkbox:checked');
-    const mobileCheckboxes = document.querySelectorAll('.domain-checkbox-mobile:checked');
-    
-    // Check if desktop view is visible
-    const desktopTable = document.querySelector('.hidden.lg\\:block');
-    const isDesktopVisible = desktopTable && !desktopTable.classList.contains('hidden');
-    
-    const checkboxes = isDesktopVisible ? desktopCheckboxes : mobileCheckboxes;
+    const checkboxes = document.querySelectorAll('.domain-checkbox:checked, .domain-checkbox-mobile:checked');
     return Array.from(checkboxes).map(cb => cb.value);
 }
 
@@ -580,37 +550,6 @@ document.getElementById('bulk-assign-form')?.addEventListener('submit', function
     });
 });
 
-// Listen to checkbox changes
-document.querySelectorAll('.domain-checkbox, .domain-checkbox-mobile').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        // Update the select-all checkbox state
-        const desktopCheckboxes = document.querySelectorAll('.domain-checkbox');
-        const mobileCheckboxes = document.querySelectorAll('.domain-checkbox-mobile');
-        
-        // Check if desktop view is visible
-        const desktopTable = document.querySelector('.hidden.lg\\:block');
-        const isDesktopVisible = desktopTable && !desktopTable.classList.contains('hidden');
-        
-        const checkboxes = isDesktopVisible ? desktopCheckboxes : mobileCheckboxes;
-        const checkedBoxes = isDesktopVisible ? 
-            document.querySelectorAll('.domain-checkbox:checked') : 
-            document.querySelectorAll('.domain-checkbox-mobile:checked');
-        
-        const selectAllCheckbox = document.getElementById('select-all');
-        if (checkedBoxes.length === 0) {
-            selectAllCheckbox.checked = false;
-            selectAllCheckbox.indeterminate = false;
-        } else if (checkedBoxes.length === checkboxes.length) {
-            selectAllCheckbox.checked = true;
-            selectAllCheckbox.indeterminate = false;
-        } else {
-            selectAllCheckbox.checked = false;
-            selectAllCheckbox.indeterminate = true;
-        }
-        
-        updateBulkActions();
-    });
-});
 
 // Close dropdown when clicking outside
 document.addEventListener('click', function(event) {
@@ -622,11 +561,6 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Handle window resize to sync checkboxes when switching between desktop/mobile views
-window.addEventListener('resize', function() {
-    // Small delay to allow CSS classes to update
-    setTimeout(updateBulkActions, 100);
-});
 </script>
 
 <?php

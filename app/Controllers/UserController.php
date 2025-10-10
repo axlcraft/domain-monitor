@@ -12,14 +12,8 @@ class UserController extends Controller
 
     public function __construct()
     {
+        Auth::requireAdmin();
         $this->userModel = new User();
-        
-        // Ensure only admins can access user management
-        if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-            $_SESSION['error'] = 'Access denied. Admin privileges required.';
-            $this->redirect('/');
-            exit;
-        }
     }
 
     /**
@@ -377,6 +371,113 @@ class UserController extends Controller
             $_SESSION['error'] = 'Failed to update user status: ' . $e->getMessage();
             $this->redirect('/users');
         }
+    }
+
+    /**
+     * Bulk toggle user status (activate or deactivate)
+     */
+    public function bulkToggleStatus()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/users');
+            return;
+        }
+
+        $this->verifyCsrf('/users');
+
+        $userIdsJson = $_POST['user_ids'] ?? '[]';
+        $userIds = json_decode($userIdsJson, true);
+        $action = $_POST['action'] ?? 'activate'; // 'activate' or 'deactivate'
+
+        if (empty($userIds) || !is_array($userIds)) {
+            $_SESSION['error'] = 'No users selected';
+            $this->redirect('/users');
+            return;
+        }
+
+        $newStatus = ($action === 'activate') ? 1 : 0;
+        $updatedCount = 0;
+        $skippedSelf = false;
+
+        foreach ($userIds as $userId) {
+            // Prevent modifying your own account
+            if ($userId == Auth::id()) {
+                $skippedSelf = true;
+                continue;
+            }
+
+            try {
+                $this->userModel->update((int)$userId, ['is_active' => $newStatus]);
+                $updatedCount++;
+            } catch (\Exception $e) {
+                // Continue with next user
+            }
+        }
+
+        $message = $action === 'activate' ? "Activated $updatedCount user(s)" : "Deactivated $updatedCount user(s)";
+        if ($skippedSelf) {
+            $message .= ' (skipped your own account)';
+        }
+
+        $_SESSION['success'] = $message;
+        $this->redirect('/users');
+    }
+
+    /**
+     * Bulk delete users
+     */
+    public function bulkDelete()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/users');
+            return;
+        }
+
+        $this->verifyCsrf('/users');
+
+        $userIdsJson = $_POST['user_ids'] ?? '[]';
+        $userIds = json_decode($userIdsJson, true);
+
+        if (empty($userIds) || !is_array($userIds)) {
+            $_SESSION['error'] = 'No users selected for deletion';
+            $this->redirect('/users');
+            return;
+        }
+
+        $deletedCount = 0;
+        $skippedSelf = false;
+
+        foreach ($userIds as $userId) {
+            // Prevent deleting your own account
+            if ($userId == Auth::id()) {
+                $skippedSelf = true;
+                continue;
+            }
+
+            // Prevent deleting if this is the last admin
+            $user = $this->userModel->find((int)$userId);
+            if ($user && $user['role'] === 'admin') {
+                $allAdmins = $this->userModel->where('role', 'admin');
+                if (count($allAdmins) <= 1) {
+                    continue; // Skip - can't delete last admin
+                }
+            }
+
+            try {
+                $this->userModel->delete((int)$userId);
+                $deletedCount++;
+            } catch (\Exception $e) {
+                // Continue with next user
+            }
+        }
+
+        $message = "Successfully deleted $deletedCount user(s)";
+        if ($skippedSelf) {
+            $message .= ' (skipped your own account)';
+        }
+
+        $_SESSION['success'] = $message;
+        $this->redirect('/users');
     }
 }
 

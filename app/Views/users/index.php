@@ -38,17 +38,11 @@ $pagination = $pagination ?? [
 ?>
 
 <!-- Action Buttons -->
-<div class="mb-4 flex flex-wrap gap-2 justify-between items-center">
-    <div class="flex gap-2">
-        <!-- Placeholder for future bulk actions -->
-    </div>
-    
-    <div class="flex gap-2">
-        <a href="/users/create" class="inline-flex items-center px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors font-medium">
-            <i class="fas fa-user-plus mr-2"></i>
-            Add User
-        </a>
-    </div>
+<div class="mb-4 flex justify-end">
+    <a href="/users/create" class="inline-flex items-center px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors font-medium">
+        <i class="fas fa-user-plus mr-2"></i>
+        Add User
+    </a>
 </div>
 
 <!-- Filters & Search -->
@@ -101,6 +95,35 @@ $pagination = $pagination ?? [
     </form>
 </div>
 
+<!-- Bulk Actions Toolbar (Hidden by default, shown when users are selected) -->
+<div id="bulk-actions" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <span id="selected-count" class="text-sm font-medium text-blue-900"></span>
+            
+            <button type="button" onclick="bulkToggleStatus('active')" class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium">
+                <i class="fas fa-user-check mr-2"></i>
+                Activate Selected
+            </button>
+            
+            <button type="button" onclick="bulkToggleStatus('inactive')" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium">
+                <i class="fas fa-user-slash mr-2"></i>
+                Deactivate Selected
+            </button>
+            
+            <button type="button" onclick="bulkDeleteUsers()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
+                <i class="fas fa-trash mr-2"></i>
+                Delete Selected
+            </button>
+            
+            <button type="button" onclick="clearSelection()" class="inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                <i class="fas fa-times mr-2"></i>
+                Clear Selection
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Pagination Info & Per Page Selector -->
 <div class="mb-4 flex justify-between items-center">
     <div class="text-sm text-gray-600">
@@ -134,6 +157,9 @@ $pagination = $pagination ?? [
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
+                    <th class="px-6 py-3 text-left">
+                        <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)" class="rounded border-gray-300 text-primary focus:ring-primary">
+                    </th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         <a href="<?= sortUrl('full_name', $currentFilters['sort'], $currentFilters['order']) ?>" class="hover:text-primary flex items-center">
                             User <?= sortIcon('full_name', $currentFilters['sort'], $currentFilters['order']) ?>
@@ -170,6 +196,15 @@ $pagination = $pagination ?? [
             <tbody class="bg-white divide-y divide-gray-200">
                 <?php foreach ($users as $user): ?>
                     <tr class="hover:bg-gray-50 transition-colors duration-150">
+                        <td class="px-6 py-4">
+                            <?php if ($user['id'] != $_SESSION['user_id']): ?>
+                                <input type="checkbox" class="user-checkbox rounded border-gray-300 text-primary focus:ring-primary" value="<?= $user['id'] ?>" onchange="updateBulkActions()">
+                            <?php else: ?>
+                                <span class="text-gray-300" title="Cannot select your own account">
+                                    <i class="fas fa-lock text-xs"></i>
+                                </span>
+                            <?php endif; ?>
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-10 w-10 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -188,7 +223,7 @@ $pagination = $pagination ?? [
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border 
-                                <?= $user['role'] === 'admin' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-blue-100 text-blue-700 border-blue-200' ?>">
+                                <?= $user['role'] === 'admin' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-blue-100 text-blue-700 border-blue-200' ?>">
                                 <i class="fas fa-<?= $user['role'] === 'admin' ? 'crown' : 'user' ?> mr-1"></i>
                                 <?= ucfirst($user['role']) ?>
                             </span>
@@ -347,6 +382,124 @@ $pagination = $pagination ?? [
     </div>
 </div>
 <?php endif; ?>
+
+<script>
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+    const selectAllCheckbox = document.getElementById('select-all');
+    
+    if (checkboxes.length > 0) {
+        bulkActions.classList.remove('hidden');
+        bulkActions.classList.add('flex');
+        selectedCount.textContent = checkboxes.length + ' user(s) selected';
+    } else {
+        bulkActions.classList.add('hidden');
+        bulkActions.classList.remove('flex');
+    }
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.user-checkbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
+        selectAllCheckbox.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
+    }
+}
+
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    document.getElementById('select-all').checked = false;
+    updateBulkActions();
+}
+
+function getSelectedUserIds() {
+    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function bulkToggleStatus(action) {
+    const userIds = getSelectedUserIds();
+    
+    if (userIds.length === 0) {
+        alert('Please select at least one user');
+        return;
+    }
+    
+    const actionText = action === 'active' ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${actionText} ${userIds.length} user(s)?`)) {
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/users/bulk-toggle-status';
+    
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '<?= csrf_token() ?>';
+    form.appendChild(csrfInput);
+    
+    const idsInput = document.createElement('input');
+    idsInput.type = 'hidden';
+    idsInput.name = 'user_ids';
+    idsInput.value = JSON.stringify(userIds);
+    form.appendChild(idsInput);
+    
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = action;
+    form.appendChild(actionInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function bulkDeleteUsers() {
+    const userIds = getSelectedUserIds();
+    
+    if (userIds.length === 0) {
+        alert('Please select at least one user to delete');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete ${userIds.length} user(s)? This action cannot be undone.`)) {
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/users/bulk-delete';
+    
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '<?= csrf_token() ?>';
+    form.appendChild(csrfInput);
+    
+    const idsInput = document.createElement('input');
+    idsInput.type = 'hidden';
+    idsInput.name = 'user_ids';
+    idsInput.value = JSON.stringify(userIds);
+    form.appendChild(idsInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
 
 <?php
 $content = ob_get_clean();

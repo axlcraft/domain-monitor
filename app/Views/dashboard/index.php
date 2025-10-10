@@ -161,11 +161,11 @@ ob_start();
                     </div>
                     <span class="ml-3 text-sm font-medium text-gray-700 group-hover:text-green-700">Create Group</span>
                 </a>
-                <a href="/debug/whois" class="flex items-center p-3 border border-gray-200 hover:border-purple-500 hover:bg-purple-50 rounded-lg transition-all duration-200 group">
-                    <div class="w-9 h-9 bg-purple-50 group-hover:bg-purple-500 rounded-lg flex items-center justify-center group-hover:text-white text-purple-600 transition-colors duration-200">
+                <a href="/debug/whois" class="flex items-center p-3 border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 rounded-lg transition-all duration-200 group">
+                    <div class="w-9 h-9 bg-indigo-50 group-hover:bg-indigo-500 rounded-lg flex items-center justify-center group-hover:text-white text-indigo-600 transition-colors duration-200">
                         <i class="fas fa-search text-sm"></i>
                     </div>
-                    <span class="ml-3 text-sm font-medium text-gray-700 group-hover:text-purple-700">WHOIS Lookup</span>
+                    <span class="ml-3 text-sm font-medium text-gray-700 group-hover:text-indigo-700">WHOIS Lookup</span>
                 </a>
             </div>
         </div>

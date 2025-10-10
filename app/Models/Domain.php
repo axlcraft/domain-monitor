@@ -139,5 +139,76 @@ class Domain extends Model
 
         return $stats;
     }
+
+    /**
+     * Get filtered, sorted, and paginated domains
+     */
+    public function getFilteredPaginated(array $filters, string $sortBy, string $sortOrder, int $page, int $perPage, int $expiringThreshold = 30): array
+    {
+        // Get all domains with groups
+        $domains = $this->getAllWithGroups();
+
+        // Apply search filter
+        if (!empty($filters['search'])) {
+            $domains = array_filter($domains, function($domain) use ($filters) {
+                return stripos($domain['domain_name'], $filters['search']) !== false ||
+                       stripos($domain['registrar'] ?? '', $filters['search']) !== false;
+            });
+        }
+
+        // Apply status filter
+        if (!empty($filters['status'])) {
+            $domains = array_filter($domains, function($domain) use ($filters, $expiringThreshold) {
+                if ($filters['status'] === 'expiring_soon') {
+                    // Check if domain expires within configured threshold
+                    if (!empty($domain['expiration_date'])) {
+                        $daysLeft = floor((strtotime($domain['expiration_date']) - time()) / 86400);
+                        return $daysLeft <= $expiringThreshold && $daysLeft >= 0;
+                    }
+                    return false;
+                }
+                return $domain['status'] === $filters['status'];
+            });
+        }
+
+        // Apply group filter
+        if (!empty($filters['group'])) {
+            $domains = array_filter($domains, function($domain) use ($filters) {
+                return $domain['notification_group_id'] == $filters['group'];
+            });
+        }
+
+        // Get total count after filtering
+        $totalDomains = count($domains);
+
+        // Apply sorting
+        usort($domains, function($a, $b) use ($sortBy, $sortOrder) {
+            $aVal = $a[$sortBy] ?? '';
+            $bVal = $b[$sortBy] ?? '';
+            
+            $comparison = strcasecmp($aVal, $bVal);
+            return $sortOrder === 'desc' ? -$comparison : $comparison;
+        });
+
+        // Calculate pagination
+        $totalPages = ceil($totalDomains / $perPage);
+        $page = min($page, max(1, $totalPages)); // Ensure page is within valid range
+        $offset = ($page - 1) * $perPage;
+
+        // Slice array for current page
+        $paginatedDomains = array_slice($domains, $offset, $perPage);
+
+        return [
+            'domains' => $paginatedDomains,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total' => $totalDomains,
+                'total_pages' => $totalPages,
+                'showing_from' => $totalDomains > 0 ? $offset + 1 : 0,
+                'showing_to' => min($offset + $perPage, $totalDomains)
+            ]
+        ];
+    }
 }
 

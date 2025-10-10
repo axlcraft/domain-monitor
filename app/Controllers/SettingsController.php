@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use Core\Controller;
+use Core\Auth;
 use App\Models\Setting;
 
 class SettingsController extends Controller
@@ -11,14 +12,8 @@ class SettingsController extends Controller
 
     public function __construct()
     {
+        Auth::requireAdmin();
         $this->settingModel = new Setting();
-        
-        // Ensure only admins can access settings
-        if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-            $_SESSION['error'] = 'Access denied. Admin privileges required.';
-            $this->redirect('/');
-            exit;
-        }
     }
 
     public function index()

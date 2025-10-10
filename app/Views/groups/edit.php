@@ -79,14 +79,16 @@ ob_start();
                     <?php foreach ($group['channels'] as $channel): 
                         $config = json_decode($channel['channel_config'], true);
                         $icons = ['email' => 'fa-envelope', 'telegram' => 'fa-telegram', 'discord' => 'fa-discord', 'slack' => 'fa-slack'];
-                        $colors = ['email' => 'blue', 'telegram' => 'blue', 'discord' => 'indigo', 'slack' => 'purple'];
+                        $iconClasses = ['email' => 'fas', 'telegram' => 'fab', 'discord' => 'fab', 'slack' => 'fab'];
+                        $colors = ['email' => 'blue', 'telegram' => 'blue', 'discord' => 'indigo', 'slack' => 'teal'];
                         $icon = $icons[$channel['channel_type']] ?? 'fa-bell';
+                        $iconClass = $iconClasses[$channel['channel_type']] ?? 'fas';
                         $color = $colors[$channel['channel_type']] ?? 'gray';
                     ?>
                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow duration-200">
                             <div class="flex items-start justify-between mb-4">
                                 <div class="w-12 h-12 bg-<?= $color ?>-100 rounded-lg flex items-center justify-center">
-                                    <i class="fab <?= $icon ?> text-<?= $color ?>-600 text-xl"></i>
+                                    <i class="<?= $iconClass ?> <?= $icon ?> text-<?= $color ?>-600 text-xl"></i>
                                 </div>
                                 <span class="px-3 py-1 rounded-full text-xs font-semibold <?= $channel['is_active'] ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600' ?>">
                                     <?= $channel['is_active'] ? 'Active' : 'Disabled' ?>

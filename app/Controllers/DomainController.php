@@ -36,61 +36,20 @@ class DomainController extends Controller
         $notificationDays = $settingModel->getNotificationDays();
         $expiringThreshold = !empty($notificationDays) ? max($notificationDays) : 30;
 
-        // Get all domains with groups
-        $domains = $this->domainModel->getAllWithGroups();
+        // Prepare filters array
+        $filters = [
+            'search' => $search,
+            'status' => $status,
+            'group' => $groupId
+        ];
 
-        // Apply filters
-        if (!empty($search)) {
-            $domains = array_filter($domains, function($domain) use ($search) {
-                return stripos($domain['domain_name'], $search) !== false ||
-                       stripos($domain['registrar'] ?? '', $search) !== false;
-            });
-        }
-
-        if (!empty($status)) {
-            $domains = array_filter($domains, function($domain) use ($status, $expiringThreshold) {
-                if ($status === 'expiring_soon') {
-                    // Check if domain expires within configured threshold
-                    if (!empty($domain['expiration_date'])) {
-                        $daysLeft = floor((strtotime($domain['expiration_date']) - time()) / 86400);
-                        return $daysLeft <= $expiringThreshold && $daysLeft >= 0;
-                    }
-                    return false;
-                }
-                return $domain['status'] === $status;
-            });
-        }
-
-        if (!empty($groupId)) {
-            $domains = array_filter($domains, function($domain) use ($groupId) {
-                return $domain['notification_group_id'] == $groupId;
-            });
-        }
-
-        // Get total count after filtering
-        $totalDomains = count($domains);
-
-        // Apply sorting
-        usort($domains, function($a, $b) use ($sortBy, $sortOrder) {
-            $aVal = $a[$sortBy] ?? '';
-            $bVal = $b[$sortBy] ?? '';
-            
-            $comparison = strcasecmp($aVal, $bVal);
-            return $sortOrder === 'desc' ? -$comparison : $comparison;
-        });
-
-        // Calculate pagination
-        $totalPages = ceil($totalDomains / $perPage);
-        $page = min($page, max(1, $totalPages)); // Ensure page is within valid range
-        $offset = ($page - 1) * $perPage;
-
-        // Slice array for current page
-        $paginatedDomains = array_slice($domains, $offset, $perPage);
+        // Get filtered and paginated domains using model
+        $result = $this->domainModel->getFilteredPaginated($filters, $sortBy, $sortOrder, $page, $perPage, $expiringThreshold);
 
         $groups = $this->groupModel->all();
         
         // Format domains for display
-        $formattedDomains = \App\Helpers\DomainHelper::formatMultiple($paginatedDomains);
+        $formattedDomains = \App\Helpers\DomainHelper::formatMultiple($result['domains']);
 
         $this->view('domains/index', [
             'domains' => $formattedDomains,
@@ -102,14 +61,7 @@ class DomainController extends Controller
                 'sort' => $sortBy,
                 'order' => $sortOrder
             ],
-            'pagination' => [
-                'current_page' => $page,
-                'per_page' => $perPage,
-                'total' => $totalDomains,
-                'total_pages' => $totalPages,
-                'showing_from' => $totalDomains > 0 ? $offset + 1 : 0,
-                'showing_to' => min($offset + $perPage, $totalDomains)
-            ],
+            'pagination' => $result['pagination'],
             'title' => 'Domains'
         ]);
     }

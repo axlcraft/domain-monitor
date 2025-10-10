@@ -245,5 +245,41 @@ class NotificationGroupController extends Controller
                 return null;
         }
     }
+
+    /**
+     * Bulk delete notification groups
+     */
+    public function bulkDelete()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/groups');
+            return;
+        }
+
+        $this->verifyCsrf('/groups');
+
+        $groupIdsJson = $_POST['group_ids'] ?? '[]';
+        $groupIds = json_decode($groupIdsJson, true);
+
+        if (empty($groupIds) || !is_array($groupIds)) {
+            $_SESSION['error'] = 'No groups selected for deletion';
+            $this->redirect('/groups');
+            return;
+        }
+
+        $deletedCount = 0;
+
+        foreach ($groupIds as $groupId) {
+            try {
+                $this->groupModel->deleteWithRelations((int)$groupId);
+                $deletedCount++;
+            } catch (\Exception $e) {
+                // Continue with next group
+            }
+        }
+
+        $_SESSION['success'] = "Successfully deleted $deletedCount notification group(s)";
+        $this->redirect('/groups');
+    }
 }
 

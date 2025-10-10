@@ -14,6 +14,7 @@ use App\Controllers\ProfileController;
 use App\Controllers\UserController;
 use App\Controllers\InstallerController;
 use App\Controllers\NotificationController;
+use App\Controllers\ErrorLogController;
 
 $router = Application::$router;
 
@@ -76,6 +77,7 @@ $router->post('/groups/store', [NotificationGroupController::class, 'store']);
 $router->get('/groups/edit', [NotificationGroupController::class, 'edit']);
 $router->post('/groups/update', [NotificationGroupController::class, 'update']);
 $router->get('/groups/delete', [NotificationGroupController::class, 'delete']);
+$router->post('/groups/bulk-delete', [NotificationGroupController::class, 'bulkDelete']);
 
 // Notification Channels
 $router->post('/channels/add', [NotificationGroupController::class, 'addChannel']);
@@ -134,4 +136,15 @@ $router->get('/users/edit', [UserController::class, 'edit']);
 $router->post('/users/update', [UserController::class, 'update']);
 $router->get('/users/delete', [UserController::class, 'delete']);
 $router->get('/users/toggle-status', [UserController::class, 'toggleStatus']);
+$router->post('/users/bulk-toggle-status', [UserController::class, 'bulkToggleStatus']);
+$router->post('/users/bulk-delete', [UserController::class, 'bulkDelete']);
+
+// Error Logs (Admin Only)
+$router->get('/errors', [ErrorLogController::class, 'index']);
+$router->get('/errors/{id}', [ErrorLogController::class, 'show']);
+$router->post('/errors/{id}/resolve', [ErrorLogController::class, 'markResolved']);
+$router->post('/errors/{id}/unresolve', [ErrorLogController::class, 'markUnresolved']);
+$router->post('/errors/{id}/delete', [ErrorLogController::class, 'delete']);
+$router->post('/errors/bulk-delete', [ErrorLogController::class, 'bulkDelete']);
+$router->post('/errors/clear-resolved', [ErrorLogController::class, 'clearResolved']);
 

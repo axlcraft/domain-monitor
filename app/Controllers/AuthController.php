@@ -12,13 +12,11 @@ class AuthController extends Controller
 {
     private User $userModel;
     private Setting $settingModel;
-    private $db;
 
     public function __construct()
     {
         $this->userModel = new User();
         $this->settingModel = new Setting();
-        $this->db = \Core\Database::getConnection();
     }
 
     /**
@@ -290,11 +288,8 @@ class AuthController extends Controller
                 // Generate verification token
                 $token = bin2hex(random_bytes(32));
                 
-                // Save token to database
-                $stmt = $this->db->prepare(
-                    "UPDATE users SET email_verification_token = ?, email_verification_sent_at = NOW() WHERE id = ?"
-                );
-                $stmt->execute([$token, $userId]);
+                // Save token to database using model
+                $this->userModel->updateEmailVerificationToken($userId, $token);
 
                 // Send verification email
                 $this->sendVerificationEmail($email, $fullName, $token);
@@ -303,9 +298,8 @@ class AuthController extends Controller
                 $_SESSION['pending_verification_email'] = $email;
                 $this->redirect('/verify-email');
             } else {
-                // Mark as verified and log them in
-                $stmt = $this->db->prepare("UPDATE users SET email_verified = 1 WHERE id = ?");
-                $stmt->execute([$userId]);
+                // Mark as verified and log them in using model
+                $this->userModel->markEmailAsVerified($userId);
 
                 $_SESSION['success'] = 'Account created successfully! You can now log in.';
                 $this->redirect('/login');
@@ -344,11 +338,8 @@ class AuthController extends Controller
     private function verifyEmail($token)
     {
         try {
-            $stmt = $this->db->prepare(
-                "SELECT * FROM users WHERE email_verification_token = ? AND email_verified = 0"
-            );
-            $stmt->execute([$token]);
-            $user = $stmt->fetch();
+            // Find user by verification token using model
+            $user = $this->userModel->findByVerificationToken($token);
 
             if (!$user) {
                 $this->view('auth/verify-email', [
@@ -370,11 +361,8 @@ class AuthController extends Controller
                 return;
             }
 
-            // Mark email as verified
-            $stmt = $this->db->prepare(
-                "UPDATE users SET email_verified = 1, email_verification_token = NULL WHERE id = ?"
-            );
-            $stmt->execute([$user['id']]);
+            // Mark email as verified using model
+            $this->userModel->verifyEmailByToken($user['id']);
 
             $this->view('auth/verify-email', [
                 'title' => 'Email Verified',
@@ -424,10 +412,8 @@ class AuthController extends Controller
             // Generate new verification token
             $token = bin2hex(random_bytes(32));
             
-            $stmt = $this->db->prepare(
-                "UPDATE users SET email_verification_token = ?, email_verification_sent_at = NOW() WHERE id = ?"
-            );
-            $stmt->execute([$token, $user['id']]);
+            // Update verification token using model
+            $this->userModel->updateEmailVerificationToken($user['id'], $token);
 
             // Send verification email
             $this->sendVerificationEmail($user['email'], $user['full_name'], $token);
@@ -507,11 +493,8 @@ class AuthController extends Controller
                 $token = bin2hex(random_bytes(32));
                 $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
-                // Save token to database
-                $stmt = $this->db->prepare(
-                    "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)"
-                );
-                $stmt->execute([$user['id'], $token, $expiresAt]);
+                // Save token to database using model
+                $this->userModel->createPasswordResetToken($user['id'], $token, $expiresAt);
 
                 // Send reset email
                 $this->sendPasswordResetEmail($user['email'], $user['full_name'], $token);
@@ -538,12 +521,8 @@ class AuthController extends Controller
             return;
         }
 
-        // Verify token exists and is not expired
-        $stmt = $this->db->prepare(
-            "SELECT * FROM password_reset_tokens WHERE token = ? AND used = 0 AND expires_at > NOW()"
-        );
-        $stmt->execute([$token]);
-        $resetToken = $stmt->fetch();
+        // Verify token exists and is not expired using model
+        $resetToken = $this->userModel->findPasswordResetToken($token);
 
         if (!$resetToken) {
             $_SESSION['error'] = 'Invalid or expired reset link';
@@ -612,12 +591,8 @@ class AuthController extends Controller
         }
 
         try {
-            // Verify token
-            $stmt = $this->db->prepare(
-                "SELECT * FROM password_reset_tokens WHERE token = ? AND used = 0 AND expires_at > NOW()"
-            );
-            $stmt->execute([$token]);
-            $resetToken = $stmt->fetch();
+            // Verify token using model
+            $resetToken = $this->userModel->findPasswordResetToken($token);
 
             if (!$resetToken) {
                 $_SESSION['error'] = 'Invalid or expired reset link';
@@ -628,9 +603,8 @@ class AuthController extends Controller
             // Update password
             $this->userModel->changePassword($resetToken['user_id'], $password);
 
-            // Mark token as used
-            $stmt = $this->db->prepare("UPDATE password_reset_tokens SET used = 1 WHERE id = ?");
-            $stmt->execute([$resetToken['id']]);
+            // Mark token as used using model
+            $this->userModel->markPasswordResetTokenAsUsed($resetToken['id']);
 
             $_SESSION['success'] = 'Password reset successfully! You can now log in.';
             $this->redirect('/login');
@@ -651,10 +625,8 @@ class AuthController extends Controller
             $expiresAt = date('Y-m-d H:i:s', strtotime('+30 days'));
             $sessionId = session_id();
 
-            $stmt = $this->db->prepare(
-                "INSERT INTO remember_tokens (user_id, session_id, token, expires_at) VALUES (?, ?, ?, ?)"
-            );
-            $stmt->execute([$userId, $sessionId, $token, $expiresAt]);
+            // Create remember token using model
+            $this->userModel->createRememberToken($userId, $sessionId, $token, $expiresAt);
 
             // Set cookie
             setcookie('remember_token', $token, [
@@ -683,11 +655,8 @@ class AuthController extends Controller
         }
 
         try {
-            $stmt = $this->db->prepare(
-                "SELECT user_id FROM remember_tokens WHERE token = ? AND expires_at > NOW()"
-            );
-            $stmt->execute([$token]);
-            $rememberToken = $stmt->fetch();
+            // Find user by remember token using model
+            $rememberToken = $this->userModel->findByRememberToken($token);
 
             if ($rememberToken) {
                 $user = $this->userModel->find($rememberToken['user_id']);
@@ -817,8 +786,8 @@ class AuthController extends Controller
             $token = $_COOKIE['remember_token'];
             
             try {
-                $stmt = $this->db->prepare("DELETE FROM remember_tokens WHERE token = ?");
-                $stmt->execute([$token]);
+                // Delete remember token using model
+                $this->userModel->deleteRememberToken($token);
             } catch (\Exception $e) {
                 // Silently fail
             }

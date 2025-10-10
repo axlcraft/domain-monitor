@@ -43,7 +43,7 @@
             <div class="mt-4 pt-3 border-t border-gray-800">
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-1">Tools</p>
                 <div class="space-y-0.5">
-                    <a href="/debug/whois" class="sidebar-link flex items-center px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150">
+                    <a href="/debug/whois" class="sidebar-link flex items-center px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150 <?= strpos($_SERVER['REQUEST_URI'], '/debug/whois') !== false ? 'bg-primary text-white' : '' ?>">
                         <i class="fas fa-search text-xs mr-3 w-4"></i>
                         <span class="text-sm">WHOIS Lookup</span>
                     </a>
@@ -62,6 +62,10 @@
                     <a href="/users" class="sidebar-link flex items-center px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150 <?= strpos($_SERVER['REQUEST_URI'], '/users') !== false ? 'bg-primary text-white' : '' ?>">
                         <i class="fas fa-users text-xs mr-3 w-4"></i>
                         <span class="text-sm">Users</span>
+                    </a>
+                    <a href="/errors" class="sidebar-link flex items-center px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150 <?= strpos($_SERVER['REQUEST_URI'], '/errors') !== false ? 'bg-primary text-white' : '' ?>">
+                        <i class="fas fa-bug text-xs mr-3 w-4"></i>
+                        <span class="text-sm">Error Logs</span>
                     </a>
                 </div>
             </div>

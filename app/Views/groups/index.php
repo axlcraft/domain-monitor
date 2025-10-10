@@ -31,6 +31,25 @@ ob_start();
     </div>
 </div>
 
+<!-- Bulk Actions Toolbar (Hidden by default, shown when groups are selected) -->
+<div id="bulk-actions" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <span id="selected-count" class="text-sm font-medium text-blue-900"></span>
+            
+            <button type="button" onclick="bulkDelete()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
+                <i class="fas fa-trash mr-2"></i>
+                Delete Selected
+            </button>
+            
+            <button type="button" onclick="clearSelection()" class="inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                <i class="fas fa-times mr-2"></i>
+                Clear Selection
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Groups List -->
 <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
     <?php if (!empty($groups)): ?>
@@ -39,6 +58,9 @@ ob_start();
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
+                        <th class="px-6 py-3 text-left">
+                            <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)" class="rounded border-gray-300 text-primary focus:ring-primary">
+                        </th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Group Name</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Channels</th>
@@ -49,6 +71,9 @@ ob_start();
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($groups as $group): ?>
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
+                            <td class="px-6 py-4">
+                                <input type="checkbox" class="group-checkbox rounded border-gray-300 text-primary focus:ring-primary" value="<?= $group['id'] ?>" onchange="updateBulkActions()">
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-10 w-10 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -149,6 +174,85 @@ ob_start();
         </div>
     <?php endif; ?>
 </div>
+
+<script>
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.group-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const checkboxes = document.querySelectorAll('.group-checkbox:checked');
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+    const selectAllCheckbox = document.getElementById('select-all');
+    
+    if (checkboxes.length > 0) {
+        bulkActions.classList.remove('hidden');
+        bulkActions.classList.add('flex');
+        selectedCount.textContent = checkboxes.length + ' group(s) selected';
+    } else {
+        bulkActions.classList.add('hidden');
+        bulkActions.classList.remove('flex');
+    }
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.group-checkbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
+        selectAllCheckbox.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
+    }
+}
+
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('.group-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    document.getElementById('select-all').checked = false;
+    updateBulkActions();
+}
+
+function getSelectedGroupIds() {
+    const checkboxes = document.querySelectorAll('.group-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function bulkDelete() {
+    const groupIds = getSelectedGroupIds();
+    
+    if (groupIds.length === 0) {
+        alert('Please select at least one group to delete');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete ${groupIds.length} group(s)? Domains will be unassigned from these groups.`)) {
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/groups/bulk-delete';
+    
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '<?= csrf_token() ?>';
+    form.appendChild(csrfInput);
+    
+    const idsInput = document.createElement('input');
+    idsInput.type = 'hidden';
+    idsInput.name = 'group_ids';
+    idsInput.value = JSON.stringify(groupIds);
+    form.appendChild(idsInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
 
 <?php
 $content = ob_get_clean();

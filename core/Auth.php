@@ -69,5 +69,37 @@ class Auth
             exit;
         }
     }
+
+    /**
+     * Require admin role (redirect with error if not admin)
+     */
+    public static function requireAdmin(): void
+    {
+        // First ensure user is authenticated
+        self::require();
+        
+        // Then check for admin role
+        if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+            $_SESSION['error'] = 'Access denied. Admin privileges required.';
+            header('Location: /');
+            exit;
+        }
+    }
+
+    /**
+     * Check if current user is admin
+     */
+    public static function isAdmin(): bool
+    {
+        return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+    }
+
+    /**
+     * Get current user's role
+     */
+    public static function role(): ?string
+    {
+        return $_SESSION['role'] ?? null;
+    }
 }
 

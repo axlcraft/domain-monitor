@@ -144,5 +144,115 @@ class User extends Model
         $stmt->execute($params);
         return (int)$stmt->fetch(\PDO::FETCH_ASSOC)['total'];
     }
+
+    /**
+     * Update email verification token
+     */
+    public function updateEmailVerificationToken(int $userId, string $token): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE users SET email_verification_token = ?, email_verification_sent_at = NOW() WHERE id = ?"
+        );
+        return $stmt->execute([$token, $userId]);
+    }
+
+    /**
+     * Mark email as verified
+     */
+    public function markEmailAsVerified(int $userId): bool
+    {
+        $stmt = $this->db->prepare("UPDATE users SET email_verified = 1 WHERE id = ?");
+        return $stmt->execute([$userId]);
+    }
+
+    /**
+     * Verify email by clearing token
+     */
+    public function verifyEmailByToken(int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE users SET email_verified = 1, email_verification_token = NULL WHERE id = ?"
+        );
+        return $stmt->execute([$userId]);
+    }
+
+    /**
+     * Find user by email verification token
+     */
+    public function findByVerificationToken(string $token): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM users WHERE email_verification_token = ? AND email_verified = 0"
+        );
+        $stmt->execute([$token]);
+        $result = $stmt->fetch();
+        return $result ?: null;
+    }
+
+    /**
+     * Create password reset token
+     */
+    public function createPasswordResetToken(int $userId, string $token, string $expiresAt): bool
+    {
+        $stmt = $this->db->prepare(
+            "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)"
+        );
+        return $stmt->execute([$userId, $token, $expiresAt]);
+    }
+
+    /**
+     * Find valid password reset token
+     */
+    public function findPasswordResetToken(string $token): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM password_reset_tokens WHERE token = ? AND used = 0 AND expires_at > NOW()"
+        );
+        $stmt->execute([$token]);
+        $result = $stmt->fetch();
+        return $result ?: null;
+    }
+
+    /**
+     * Mark password reset token as used
+     */
+    public function markPasswordResetTokenAsUsed(int $tokenId): bool
+    {
+        $stmt = $this->db->prepare("UPDATE password_reset_tokens SET used = 1 WHERE id = ?");
+        return $stmt->execute([$tokenId]);
+    }
+
+    /**
+     * Create remember token
+     */
+    public function createRememberToken(int $userId, string $sessionId, string $token, string $expiresAt): bool
+    {
+        $stmt = $this->db->prepare(
+            "INSERT INTO remember_tokens (user_id, session_id, token, expires_at) VALUES (?, ?, ?, ?)"
+        );
+        return $stmt->execute([$userId, $sessionId, $token, $expiresAt]);
+    }
+
+    /**
+     * Find user by remember token
+     */
+    public function findByRememberToken(string $token): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT user_id FROM remember_tokens WHERE token = ? AND expires_at > NOW()"
+        );
+        $stmt->execute([$token]);
+        $result = $stmt->fetch();
+        return $result ?: null;
+    }
+
+    /**
+     * Delete remember token
+     */
+    public function deleteRememberToken(string $token): bool
+    {
+        $stmt = $this->db->prepare("DELETE FROM remember_tokens WHERE token = ?");
+        return $stmt->execute([$token]);
+    }
 }
 

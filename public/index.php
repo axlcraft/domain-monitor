@@ -5,12 +5,32 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Core\Application;
 use Core\Router;
 use Dotenv\Dotenv;
+use App\Services\ErrorHandler;
 
 define('PATH_ROOT', __DIR__ . '/../');
 
-// Load environment variables
+// Register global error handlers FIRST (before anything else can fail)
+ErrorHandler::register();
+
+// Load environment variables (using safeLoad to not throw if missing)
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+try {
+    $dotenv->load();
+} catch (\Throwable $e) {
+    // If .env is missing, create a minimal one or use defaults
+    if (!file_exists(__DIR__ . '/../.env')) {
+        // Show helpful error about missing .env file
+        throw new \Exception(
+            ".env file not found! Please copy env.example.txt to .env and configure your settings.\n\n" .
+            "Quick fix:\n" .
+            "1. Copy env.example.txt to .env\n" .
+            "2. Update database credentials in .env\n" .
+            "3. Set APP_ENV=development or production\n\n" .
+            "Original error: " . $e->getMessage()
+        );
+    }
+    throw $e;
+}
 
 // Configure and start session (with database sessions if available)
 Core\SessionConfig::configure();

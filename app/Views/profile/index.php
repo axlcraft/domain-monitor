@@ -21,7 +21,7 @@ ob_start();
                     <p class="text-sm text-gray-500 mt-1">@<?= htmlspecialchars($user['username'] ?? '') ?></p>
                     
                     <!-- Role Badge -->
-                    <span class="inline-flex items-center mt-3 px-2.5 py-1 bg-<?= $user['role'] === 'admin' ? 'indigo' : 'blue' ?>-100 text-<?= $user['role'] === 'admin' ? 'indigo' : 'blue' ?>-800 text-xs font-semibold rounded">
+                    <span class="inline-flex items-center mt-3 px-2.5 py-1 bg-<?= $user['role'] === 'admin' ? 'amber' : 'blue' ?>-100 text-<?= $user['role'] === 'admin' ? 'amber' : 'blue' ?>-800 text-xs font-semibold rounded border border-<?= $user['role'] === 'admin' ? 'amber' : 'blue' ?>-200">
                         <i class="fas fa-<?= $user['role'] === 'admin' ? 'crown' : 'user' ?> mr-1.5"></i>
                         <?= ucfirst($user['role'] ?? 'user') ?>
                     </span>

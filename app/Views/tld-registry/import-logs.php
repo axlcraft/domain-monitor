@@ -74,8 +74,8 @@ ob_start();
                     <?php endif; ?>
                 </p>
             </div>
-            <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
-                <i class="fas fa-clock text-purple-600 text-lg"></i>
+            <div class="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center">
+                <i class="fas fa-clock text-indigo-600 text-lg"></i>
             </div>
         </div>
     </div>

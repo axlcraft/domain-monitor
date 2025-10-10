@@ -98,7 +98,7 @@ ob_start();
                 <div class="space-y-1.5">
                     <?php foreach ($rdapServers as $index => $server): ?>
                     <div class="flex items-center p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
-                        <div class="w-6 h-6 bg-purple-500 rounded flex items-center justify-center text-white font-bold text-xs mr-2">
+                        <div class="w-6 h-6 bg-indigo-500 rounded flex items-center justify-center text-white font-bold text-xs mr-2">
                             <?= $index + 1 ?>
                         </div>
                         <p class="font-mono text-xs text-gray-800"><?= htmlspecialchars($server) ?></p>
@@ -168,8 +168,8 @@ ob_start();
                     <?php endif; ?>
 
                     <?php if ($tld['iana_publication_date']): ?>
-                    <div class="flex items-center p-2 bg-purple-50 rounded border border-purple-200">
-                        <div class="w-7 h-7 bg-purple-500 rounded flex items-center justify-center mr-2">
+                    <div class="flex items-center p-2 bg-indigo-50 rounded border border-indigo-200">
+                        <div class="w-7 h-7 bg-indigo-500 rounded flex items-center justify-center mr-2">
                             <i class="fas fa-calendar text-white text-xs"></i>
                         </div>
                         <div>

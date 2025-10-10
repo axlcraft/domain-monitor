@@ -18,11 +18,23 @@ class Database
 
     private function connect()
     {
-        $host = $_ENV['DB_HOST'];
-        $port = $_ENV['DB_PORT'];
-        $database = $_ENV['DB_DATABASE'];
-        $username = $_ENV['DB_USERNAME'];
-        $password = $_ENV['DB_PASSWORD'];
+        $host = $_ENV['DB_HOST'] ?? null;
+        $port = $_ENV['DB_PORT'] ?? '3306';
+        $database = $_ENV['DB_DATABASE'] ?? null;
+        $username = $_ENV['DB_USERNAME'] ?? null;
+        $password = $_ENV['DB_PASSWORD'] ?? '';
+
+        // Validate required credentials
+        if (empty($host) || empty($database) || empty($username)) {
+            throw new \Exception(
+                "Database credentials not configured!\n\n" .
+                "Missing in .env file:\n" .
+                (!empty($host) ? "" : "- DB_HOST\n") .
+                (!empty($database) ? "" : "- DB_DATABASE\n") .
+                (!empty($username) ? "" : "- DB_USERNAME\n") .
+                "\nPlease update your .env file with valid database credentials."
+            );
+        }
 
         try {
             $dsn = "mysql:host=$host;port=$port;dbname=$database;charset=utf8mb4";
@@ -32,7 +44,7 @@ class Database
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
         } catch (PDOException $e) {
-            die("Database connection failed: " . $e->getMessage());
+            throw new \Exception("Database connection failed: " . $e->getMessage());
         }
     }
 

@@ -76,13 +76,12 @@ class DashboardController extends Controller
             $status['database'] = ['status' => 'offline', 'color' => 'red'];
         }
 
-        // Check WHOIS service (test with a known TLD)
+        // Check TLD Registry (WHOIS service)
         try {
-            $whoisService = new \App\Services\WhoisService();
-            // Quick test - just check if we can discover TLD servers
             $tldModel = new \App\Models\TldRegistry();
-            $testTld = $tldModel->find(1); // Get first TLD
-            if ($testTld) {
+            // Check if ANY TLDs exist in registry (not just id=1)
+            $tldStats = $tldModel->getStatistics();
+            if ($tldStats['total'] > 0) {
                 $status['whois'] = ['status' => 'active', 'color' => 'green'];
             } else {
                 $status['whois'] = ['status' => 'no data', 'color' => 'yellow'];
