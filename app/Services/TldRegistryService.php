@@ -322,7 +322,7 @@ class TldRegistryService
                 $stats['total_tlds']++;
                 
                 try {
-                    $result = $this->fetchWhoisDataFromIana($tld['tld']);
+                    $result = $this->fetchWhoisDataFromRdap($tld['tld']);
                     
                     if ($result) {
                         $this->tldModel->update($tld['id'], $result);
@@ -1869,7 +1869,7 @@ class TldRegistryService
                     }
 
                     // Fetch WHOIS data
-                    $result = $this->fetchWhoisDataFromIana($tld);
+                    $result = $this->fetchWhoisDataFromRdap($tld);
                     
                     if ($result && $existing) {
                         $this->tldModel->update($existing['id'], $result);
