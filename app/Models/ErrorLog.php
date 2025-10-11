@@ -350,7 +350,7 @@ class ErrorLog extends Model
             SET is_resolved = 1, 
                 resolved_at = NOW(), 
                 resolved_by = ?,
-                resolution_notes = ?
+                notes = ?
             WHERE error_id = ?
         ");
         
@@ -367,7 +367,7 @@ class ErrorLog extends Model
             SET is_resolved = 0, 
                 resolved_at = NULL, 
                 resolved_by = NULL,
-                resolution_notes = NULL
+                notes = NULL
             WHERE error_id = ?
         ");
         

@@ -114,7 +114,7 @@ class ErrorHandler
             'error_message' => $exception->getMessage(),
             'error_file' => $exception->getFile(),
             'error_line' => $exception->getLine(),
-            'stack_trace' => $exception->getTraceAsString(),
+            'stack_trace' => json_encode($exception->getTrace()),
             'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
             'request_uri' => $_SERVER['REQUEST_URI'] ?? 'N/A',
             'request_data' => json_encode($requestData),
@@ -254,7 +254,11 @@ class ErrorHandler
         $error_message = $errorData['error_message'];
         $error_file = $errorData['error_file'];
         $error_line = $errorData['error_line'];
-        $stack_trace = $errorData['stack_trace'];
+        
+        // Convert JSON stack trace back to string format for display
+        $traceArray = json_decode($errorData['stack_trace'], true) ?? [];
+        $stack_trace = $this->formatStackTraceAsString($traceArray);
+        
         $request_method = $errorData['request_method'];
         $request_uri = $errorData['request_uri'];
         $user_agent = $errorData['user_agent'];
@@ -291,6 +295,42 @@ class ErrorHandler
             'role' => $_SESSION['role'] ?? 'guest',
             'email' => $_SESSION['email'] ?? 'Unknown'
         ];
+    }
+
+    /**
+     * Format stack trace array as string (similar to getTraceAsString())
+     */
+    private function formatStackTraceAsString(array $trace): string
+    {
+        if (empty($trace)) {
+            return 'No stack trace available';
+        }
+
+        $result = [];
+        foreach ($trace as $index => $frame) {
+            $line = "#{$index} ";
+            
+            if (isset($frame['file'])) {
+                $line .= $frame['file'];
+                if (isset($frame['line'])) {
+                    $line .= "({$frame['line']})";
+                }
+                $line .= ': ';
+            }
+            
+            if (isset($frame['class'])) {
+                $line .= $frame['class'];
+                $line .= $frame['type'] ?? '->';
+            }
+            
+            if (isset($frame['function'])) {
+                $line .= $frame['function'] . '()';
+            }
+            
+            $result[] = $line;
+        }
+        
+        return implode("\n", $result);
     }
 
     /**

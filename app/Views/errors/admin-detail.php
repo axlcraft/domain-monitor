@@ -107,8 +107,8 @@ $errorTypeShort = substr(strrchr($error['error_type'], '\\'), 1) ?: $error['erro
             <h3 class="text-sm font-semibold text-green-900 mb-2">Resolved</h3>
             <div class="text-sm text-green-800 space-y-1">
                 <p><strong>Date:</strong> <?= date('M d, Y H:i:s', strtotime($error['resolved_at'])) ?></p>
-                <?php if ($error['resolution_notes']): ?>
-                    <p><strong>Notes:</strong> <?= htmlspecialchars($error['resolution_notes']) ?></p>
+                <?php if (!empty($error['notes'])): ?>
+                    <p><strong>Notes:</strong> <?= htmlspecialchars($error['notes']) ?></p>
                 <?php endif; ?>
             </div>
         </div>
@@ -254,6 +254,57 @@ $errorTypeShort = substr(strrchr($error['error_type'], '\\'), 1) ?: $error['erro
     </div>
 </div>
 
+<!-- Resolution Notes Modal -->
+<div id="resolutionModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-lg bg-white">
+        <div class="mt-3">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                    Mark Error as Resolved
+                </h3>
+                <button onclick="closeResolutionModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="mb-4">
+                <label for="resolutionNotes" class="block text-sm font-medium text-gray-700 mb-2">
+                    Resolution Notes (Optional)
+                </label>
+                <textarea 
+                    id="resolutionNotes" 
+                    rows="4" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                    placeholder="Describe how you resolved this error or any relevant notes..."
+                ></textarea>
+                <p class="mt-1 text-xs text-gray-500">
+                    Add any details about the fix or resolution for future reference.
+                </p>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-end gap-3">
+                <button 
+                    onclick="closeResolutionModal()" 
+                    class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+                >
+                    Cancel
+                </button>
+                <button 
+                    onclick="submitResolution()" 
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                    <i class="fas fa-check mr-2"></i>
+                    Mark as Resolved
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function switchTab(tabName) {
     // Hide all tab contents
@@ -308,8 +359,16 @@ function showCopySuccess() {
 }
 
 function markResolved() {
-    const notes = prompt('Add resolution notes (optional):');
-    if (notes === null) return; // User cancelled
+    document.getElementById('resolutionModal').classList.remove('hidden');
+}
+
+function closeResolutionModal() {
+    document.getElementById('resolutionModal').classList.add('hidden');
+    document.getElementById('resolutionNotes').value = '';
+}
+
+function submitResolution() {
+    const notes = document.getElementById('resolutionNotes').value;
     
     const form = document.createElement('form');
     form.method = 'POST';
