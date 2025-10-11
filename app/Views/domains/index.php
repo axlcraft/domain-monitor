@@ -452,20 +452,26 @@ function updateBulkActions() {
     const selectedCount = document.getElementById('selected-count');
     const selectAllCheckbox = document.getElementById('select-all');
     
-    if (checkboxes.length > 0) {
+    // Get unique domain IDs (avoid counting both desktop and mobile checkboxes)
+    const uniqueIds = new Set(Array.from(checkboxes).map(cb => cb.value));
+    const count = uniqueIds.size;
+    
+    if (count > 0) {
         bulkActions.classList.remove('hidden');
         bulkActions.classList.add('flex');
-        selectedCount.textContent = `${checkboxes.length} domain(s) selected`;
+        selectedCount.textContent = `${count} domain(s) selected`;
     } else {
         bulkActions.classList.add('hidden');
         bulkActions.classList.remove('flex');
     }
     
     // Update select all checkbox state
-    const allCheckboxes = document.querySelectorAll('.domain-checkbox, .domain-checkbox-mobile');
+    // Only count desktop checkboxes to avoid double counting
+    const allCheckboxes = document.querySelectorAll('.domain-checkbox');
+    const checkedDesktopBoxes = document.querySelectorAll('.domain-checkbox:checked');
     if (selectAllCheckbox) {
-        selectAllCheckbox.checked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
-        selectAllCheckbox.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
+        selectAllCheckbox.checked = allCheckboxes.length > 0 && checkedDesktopBoxes.length === allCheckboxes.length;
+        selectAllCheckbox.indeterminate = checkedDesktopBoxes.length > 0 && checkedDesktopBoxes.length < allCheckboxes.length;
     }
 }
 
@@ -480,7 +486,9 @@ function clearSelection() {
 
 function getSelectedIds() {
     const checkboxes = document.querySelectorAll('.domain-checkbox:checked, .domain-checkbox-mobile:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
+    // Return unique IDs only (avoid duplicates from desktop and mobile views)
+    const ids = Array.from(checkboxes).map(cb => cb.value);
+    return [...new Set(ids)];
 }
 
 function bulkRefresh() {
@@ -490,6 +498,13 @@ function bulkRefresh() {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '/domains/bulk-refresh';
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '<?= csrf_token() ?>';
+    form.appendChild(csrfInput);
     
     ids.forEach(id => {
         const input = document.createElement('input');
@@ -514,6 +529,13 @@ function bulkDelete() {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '/domains/bulk-delete';
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '<?= csrf_token() ?>';
+    form.appendChild(csrfInput);
     
     ids.forEach(id => {
         const input = document.createElement('input');

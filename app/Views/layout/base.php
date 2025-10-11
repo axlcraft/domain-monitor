@@ -26,8 +26,7 @@ if (!isset($appName)) {
     $appTimezone = $appSettings['app_timezone'];
     $appVersion = $appSettings['app_version'];
     
-    // Set PHP timezone
-    date_default_timezone_set($appTimezone);
+    // Note: Timezone is now set early in public/index.php (before controllers run)
 }
 ?>
 <!DOCTYPE html>

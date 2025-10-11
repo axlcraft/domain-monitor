@@ -58,6 +58,21 @@ if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_token']) && !$isIns
     $authController->checkRememberToken();
 }
 
+// Set application timezone early (before any date operations)
+if (!$isInstallerPath && file_exists($installedFlagFile)) {
+    try {
+        $settingModel = new \App\Models\Setting();
+        $timezone = $settingModel->getValue('app_timezone', 'UTC');
+        date_default_timezone_set($timezone);
+    } catch (\Exception $e) {
+        // Database not available, use UTC as fallback
+        date_default_timezone_set('UTC');
+    }
+} else {
+    // Default to UTC during installation
+    date_default_timezone_set('UTC');
+}
+
 // Initialize application
 $app = new Application();
 
