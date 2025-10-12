@@ -1912,8 +1912,15 @@ class TldRegistryService
         }
 
         try {
-            // Create DateTime object (handles both ISO 8601 and MySQL datetime)
-            $dateTime = new \DateTime($date);
+            // If date has timezone info (ISO 8601 with Z or +00:00), parse it correctly
+            // Otherwise assume it's UTC (for dates from database)
+            if (strpos($date, 'T') !== false || strpos($date, 'Z') !== false || strpos($date, '+') !== false) {
+                // ISO 8601 format with timezone - parse as-is
+                $dateTime = new \DateTime($date);
+            } else {
+                // Plain datetime (from database) - explicitly parse as UTC
+                $dateTime = new \DateTime($date, new \DateTimeZone('UTC'));
+            }
             
             // Convert to UTC to ensure consistent comparison
             $dateTime->setTimezone(new \DateTimeZone('UTC'));
