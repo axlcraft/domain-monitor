@@ -15,7 +15,7 @@ ob_start();
 
 <!-- Top Action Bar -->
 <div class="mb-3 flex flex-wrap gap-2 justify-between items-center">
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
         <?php
         // Status badge data prepared by DomainHelper in controller
         $statusClass = $domain['statusClass'];
@@ -36,6 +36,27 @@ ob_start();
             <i class="fas fa-<?= $domain['is_active'] ? 'check-circle' : 'pause-circle' ?> mr-1.5"></i>
             <?= $domain['is_active'] ? 'Monitoring Active' : 'Monitoring Paused' ?>
         </span>
+        
+        <!-- Tags Display -->
+        <?php
+        $tags = !empty($domain['tags']) ? explode(',', $domain['tags']) : [];
+        $tagColors = [
+            'production' => 'bg-green-100 text-green-700 border-green-200',
+            'staging' => 'bg-yellow-100 text-yellow-700 border-yellow-200',
+            'development' => 'bg-blue-100 text-blue-700 border-blue-200',
+            'client' => 'bg-purple-100 text-purple-700 border-purple-200',
+            'personal' => 'bg-orange-100 text-orange-700 border-orange-200',
+            'archived' => 'bg-gray-100 text-gray-600 border-gray-200'
+        ];
+        foreach ($tags as $tag):
+            $tag = trim($tag);
+            $colorClass = $tagColors[$tag] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+        ?>
+            <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border <?= $colorClass ?>">
+                <i class="fas fa-tag mr-1.5" style="font-size: 10px;"></i>
+                <?= htmlspecialchars(ucfirst($tag)) ?>
+            </span>
+        <?php endforeach; ?>
     </div>
     <div class="flex gap-2 items-center">
         <form method="POST" action="/domains/<?= $domain['id'] ?>/refresh" class="inline">

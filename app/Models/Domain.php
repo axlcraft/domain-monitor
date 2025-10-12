@@ -178,6 +178,17 @@ class Domain extends Model
             });
         }
 
+        // Apply tag filter
+        if (!empty($filters['tag'])) {
+            $domains = array_filter($domains, function($domain) use ($filters) {
+                if (empty($domain['tags'])) {
+                    return false;
+                }
+                $domainTags = array_map('trim', explode(',', $domain['tags']));
+                return in_array($filters['tag'], $domainTags);
+            });
+        }
+
         // Get total count after filtering
         $totalDomains = count($domains);
 
@@ -209,6 +220,28 @@ class Domain extends Model
                 'showing_to' => min($offset + $perPage, $totalDomains)
             ]
         ];
+    }
+
+    /**
+     * Get all unique tags from all domains
+     */
+    public function getAllTags(): array
+    {
+        $stmt = $this->db->query("SELECT DISTINCT tags FROM domains WHERE tags IS NOT NULL AND tags != ''");
+        $results = $stmt->fetchAll();
+        
+        $allTags = [];
+        foreach ($results as $row) {
+            if (!empty($row['tags'])) {
+                $tags = array_map('trim', explode(',', $row['tags']));
+                $allTags = array_merge($allTags, $tags);
+            }
+        }
+        
+        // Return unique, sorted tags
+        $allTags = array_unique($allTags);
+        sort($allTags);
+        return $allTags;
     }
 }
 

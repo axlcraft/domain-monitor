@@ -47,6 +47,7 @@ class InstallerController extends Controller
             '013_create_user_notifications_table.sql',
             '014_add_captcha_settings.sql',
             '015_create_error_logs_table.sql',
+            '016_add_tags_to_domains.sql',
         ];
         
         try {
@@ -264,7 +265,8 @@ class InstallerController extends Controller
                     '012_link_remember_tokens_to_sessions.sql',
                     '013_create_user_notifications_table.sql',
                     '014_add_captcha_settings.sql',
-                    '015_create_error_logs_table.sql'
+                    '015_create_error_logs_table.sql',
+                    '016_add_tags_to_domains.sql',
                 ];
                 
                 $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (?) ON DUPLICATE KEY UPDATE migration=migration");

@@ -27,6 +27,7 @@ If upgrading from v1.0.0, these incremental migrations will be applied:
 - `013_create_user_notifications_table.sql` - User notifications table
 - `014_add_captcha_settings.sql` - CAPTCHA settings (v2, v3, Turnstile)
 - `015_create_error_logs_table.sql` - Error logging and debugging system
+- `016_add_tags_to_domains.sql` - Domain tags for organization
 
 **Upgrade via:** Web updater at `/install/update`
 

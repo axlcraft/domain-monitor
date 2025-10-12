@@ -203,5 +203,52 @@ class InputValidator
         }
         return null;
     }
+
+    /**
+     * Validate and sanitize tags
+     *
+     * @param string $tagsString Comma-separated tags
+     * @param int $maxTags Maximum number of tags allowed (default 10)
+     * @param int $maxLength Maximum length per tag (default 50)
+     * @return array Array with 'valid' (bool), 'tags' (string), and 'error' (string|null)
+     */
+    public static function validateTags(string $tagsString, int $maxTags = 10, int $maxLength = 50): array
+    {
+        if (empty($tagsString)) {
+            return ['valid' => true, 'tags' => '', 'error' => null];
+        }
+
+        // Split tags and clean them
+        $tags = array_filter(array_map('trim', explode(',', $tagsString)));
+        
+        // Check tag count
+        if (count($tags) > $maxTags) {
+            return ['valid' => false, 'tags' => '', 'error' => "Maximum $maxTags tags allowed"];
+        }
+
+        // Validate each tag
+        $validatedTags = [];
+        foreach ($tags as $tag) {
+            $tag = strtolower($tag);
+            
+            // Check length
+            if (strlen($tag) > $maxLength) {
+                return ['valid' => false, 'tags' => '', 'error' => "Tag '$tag' is too long (maximum $maxLength characters)"];
+            }
+            
+            // Check format (alphanumeric and hyphens only)
+            if (!preg_match('/^[a-z0-9-]+$/', $tag)) {
+                return ['valid' => false, 'tags' => '', 'error' => "Tag '$tag' contains invalid characters (use only letters, numbers, and hyphens)"];
+            }
+            
+            // Avoid duplicates
+            if (!in_array($tag, $validatedTags)) {
+                $validatedTags[] = $tag;
+            }
+        }
+
+        return ['valid' => true, 'tags' => implode(',', $validatedTags), 'error' => null];
+    }
 }
+
 

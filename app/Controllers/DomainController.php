@@ -26,6 +26,7 @@ class DomainController extends Controller
         $search = \App\Helpers\InputValidator::sanitizeSearch($_GET['search'] ?? '', 100);
         $status = $_GET['status'] ?? '';
         $groupId = $_GET['group'] ?? '';
+        $tag = $_GET['tag'] ?? '';
         $sortBy = $_GET['sort'] ?? 'domain_name';
         $sortOrder = $_GET['order'] ?? 'asc';
         $page = max(1, (int)($_GET['page'] ?? 1));
@@ -40,7 +41,8 @@ class DomainController extends Controller
         $filters = [
             'search' => $search,
             'status' => $status,
-            'group' => $groupId
+            'group' => $groupId,
+            'tag' => $tag
         ];
 
         // Get filtered and paginated domains using model
@@ -48,16 +50,21 @@ class DomainController extends Controller
 
         $groups = $this->groupModel->all();
         
+        // Get all unique tags for filter dropdown
+        $allTags = $this->domainModel->getAllTags();
+        
         // Format domains for display
         $formattedDomains = \App\Helpers\DomainHelper::formatMultiple($result['domains']);
 
         $this->view('domains/index', [
             'domains' => $formattedDomains,
             'groups' => $groups,
+            'allTags' => $allTags,
             'filters' => [
                 'search' => $search,
                 'status' => $status,
                 'group' => $groupId,
+                'tag' => $tag,
                 'sort' => $sortBy,
                 'order' => $sortOrder
             ],
@@ -88,6 +95,7 @@ class DomainController extends Controller
 
         $domainName = trim($_POST['domain_name'] ?? '');
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
+        $tagsInput = trim($_POST['tags'] ?? '');
 
         // Validate
         if (empty($domainName)) {
@@ -102,6 +110,15 @@ class DomainController extends Controller
             $this->redirect('/domains/create');
             return;
         }
+
+        // Validate tags
+        $tagValidation = \App\Helpers\InputValidator::validateTags($tagsInput);
+        if (!$tagValidation['valid']) {
+            $_SESSION['error'] = $tagValidation['error'];
+            $this->redirect('/domains/create');
+            return;
+        }
+        $tags = $tagValidation['tags'];
 
         // Check if domain already exists
         if ($this->domainModel->existsByDomain($domainName)) {
@@ -130,6 +147,7 @@ class DomainController extends Controller
         $id = $this->domainModel->create([
             'domain_name' => $domainName,
             'notification_group_id' => $groupId,
+            'tags' => $tags,
             'registrar' => $whoisData['registrar'],
             'registrar_url' => $whoisData['registrar_url'] ?? null,
             'expiration_date' => $whoisData['expiration_date'],
@@ -188,6 +206,16 @@ class DomainController extends Controller
 
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
         $isActive = isset($_POST['is_active']) ? 1 : 0;
+        $tagsInput = trim($_POST['tags'] ?? '');
+        
+        // Validate tags
+        $tagValidation = \App\Helpers\InputValidator::validateTags($tagsInput);
+        if (!$tagValidation['valid']) {
+            $_SESSION['error'] = $tagValidation['error'];
+            $this->redirect('/domains/' . $id . '/edit');
+            return;
+        }
+        $tags = $tagValidation['tags'];
         
         // Check if monitoring status changed
         $statusChanged = ($domain['is_active'] != $isActive);
@@ -195,6 +223,7 @@ class DomainController extends Controller
 
         $this->domainModel->update($id, [
             'notification_group_id' => $groupId,
+            'tags' => $tags,
             'is_active' => $isActive
         ]);
 
@@ -362,12 +391,22 @@ class DomainController extends Controller
         // POST - Process bulk add
         $domainsText = trim($_POST['domains'] ?? '');
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
+        $tagsInput = trim($_POST['tags'] ?? '');
 
         if (empty($domainsText)) {
             $_SESSION['error'] = 'Please enter at least one domain';
             $this->redirect('/domains/bulk-add');
             return;
         }
+
+        // Validate tags
+        $tagValidation = \App\Helpers\InputValidator::validateTags($tagsInput);
+        if (!$tagValidation['valid']) {
+            $_SESSION['error'] = $tagValidation['error'];
+            $this->redirect('/domains/bulk-add');
+            return;
+        }
+        $tags = $tagValidation['tags'];
 
         // Split by new lines and clean
         $domainNames = array_filter(array_map('trim', explode("\n", $domainsText)));
@@ -402,6 +441,7 @@ class DomainController extends Controller
             $this->domainModel->create([
                 'domain_name' => $domainName,
                 'notification_group_id' => $groupId,
+                'tags' => $tags,
                 'registrar' => $whoisData['registrar'],
                 'registrar_url' => $whoisData['registrar_url'] ?? null,
                 'expiration_date' => $whoisData['expiration_date'],
@@ -637,6 +677,84 @@ class DomainController extends Controller
 
         $_SESSION['success'] = 'Notes updated successfully';
         $this->redirect('/domains/' . $id);
+    }
+
+    public function bulkAddTags()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/domains');
+            return;
+        }
+
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
+
+        $domainIds = $_POST['domain_ids'] ?? [];
+        $tagToAdd = trim($_POST['tag'] ?? '');
+
+        if (empty($domainIds) || empty($tagToAdd)) {
+            $_SESSION['error'] = 'Invalid request';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Validate tag format
+        if (!preg_match('/^[a-z0-9-]+$/', $tagToAdd)) {
+            $_SESSION['error'] = 'Invalid tag format (use only letters, numbers, and hyphens)';
+            $this->redirect('/domains');
+            return;
+        }
+
+        $updated = 0;
+        foreach ($domainIds as $id) {
+            $domain = $this->domainModel->find($id);
+            if (!$domain) continue;
+
+            // Get existing tags
+            $existingTags = !empty($domain['tags']) ? explode(',', $domain['tags']) : [];
+            
+            // Add new tag if it doesn't exist
+            if (!in_array($tagToAdd, $existingTags)) {
+                $existingTags[] = $tagToAdd;
+                $newTags = implode(',', $existingTags);
+                
+                if ($this->domainModel->update($id, ['tags' => $newTags])) {
+                    $updated++;
+                }
+            }
+        }
+
+        $_SESSION['success'] = "Tag '$tagToAdd' added to $updated domain(s)";
+        $this->redirect('/domains');
+    }
+
+    public function bulkRemoveTags()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/domains');
+            return;
+        }
+
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
+
+        $domainIds = $_POST['domain_ids'] ?? [];
+
+        if (empty($domainIds)) {
+            $_SESSION['error'] = 'No domains selected';
+            $this->redirect('/domains');
+            return;
+        }
+
+        $updated = 0;
+        foreach ($domainIds as $id) {
+            if ($this->domainModel->update($id, ['tags' => ''])) {
+                $updated++;
+            }
+        }
+
+        $_SESSION['success'] = "Tags removed from $updated domain(s)";
+        $this->redirect('/domains');
     }
 }
 

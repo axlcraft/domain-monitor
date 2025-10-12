@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS domains (
     status ENUM('active', 'expiring_soon', 'expired', 'error', 'available') DEFAULT 'active',
     whois_data JSON,
     notes TEXT,
+    tags TEXT NULL COMMENT 'Comma-separated tags for organization',
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -36,7 +37,8 @@ CREATE TABLE IF NOT EXISTS domains (
     INDEX idx_domain_name (domain_name),
     INDEX idx_expiration_date (expiration_date),
     INDEX idx_status (status),
-    INDEX idx_is_active (is_active)
+    INDEX idx_is_active (is_active),
+    INDEX idx_tags (tags(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Notification channels table

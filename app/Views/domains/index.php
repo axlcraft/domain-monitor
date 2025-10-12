@@ -54,7 +54,7 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
 <!-- Filters & Search -->
 <div class="bg-white rounded-lg border border-gray-200 p-5 mb-4">
     <form method="GET" action="/domains" id="filter-form">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1.5">Search</label>
                 <div class="relative">
@@ -72,6 +72,29 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                 </select>
             </div>
             <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1.5">Tags</label>
+                <select name="tag" id="tagFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm">
+                    <option value="">All Tags</option>
+                    <?php 
+                    $tagIcons = [
+                        'production' => '🟢',
+                        'staging' => '🟡',
+                        'development' => '🔵',
+                        'client' => '🟣',
+                        'personal' => '🟠',
+                        'archived' => '⚪'
+                    ];
+                    foreach ($allTags as $tagOption): 
+                        $icon = $tagIcons[$tagOption] ?? '🏷️';
+                        $selected = ($currentFilters['tag'] ?? '') === $tagOption ? 'selected' : '';
+                    ?>
+                        <option value="<?= htmlspecialchars($tagOption) ?>" <?= $selected ?>>
+                            <?= $icon ?> <?= htmlspecialchars(ucfirst($tagOption)) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1.5">Group</label>
                 <select name="group" id="groupFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm">
                     <option value="">All Groups</option>
@@ -83,10 +106,10 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
             <div class="flex items-end space-x-2">
                 <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">
                     <i class="fas fa-filter mr-2"></i>
-                    Apply Filters
+                    Apply
                 </button>
                 <a href="/domains" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
-                    <i class="fas fa-times mr-2"></i>
+                    <i class="fas fa-times"></i>
                     Clear
                 </a>
             </div>
@@ -106,6 +129,52 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                 <i class="fas fa-sync-alt mr-2"></i>
                 Refresh Selected
             </button>
+            
+            <div class="relative inline-block">
+                <button type="button" onclick="toggleAssignTagsDropdown()" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                    <i class="fas fa-tags mr-2"></i>
+                    Manage Tags
+                    <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                </button>
+                <div id="assign-tags-dropdown" class="hidden absolute left-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                    <div class="p-3">
+                        <label class="block text-xs font-medium text-gray-700 mb-2">Add Tags to Selected Domains</label>
+                        <div class="flex flex-wrap gap-1.5 mb-3">
+                            <button type="button" onclick="bulkAddTag('production')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-green-50 text-green-700 border-green-200 hover:bg-green-100">
+                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
+                                Production
+                            </button>
+                            <button type="button" onclick="bulkAddTag('staging')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100">
+                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
+                                Staging
+                            </button>
+                            <button type="button" onclick="bulkAddTag('development')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
+                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
+                                Development
+                            </button>
+                            <button type="button" onclick="bulkAddTag('client')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
+                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
+                                Client
+                            </button>
+                            <button type="button" onclick="bulkAddTag('personal')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100">
+                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
+                                Personal
+                            </button>
+                        </div>
+                        <div class="border-t border-gray-200 pt-2">
+                            <button type="button" onclick="bulkRemoveAllTags()" class="w-full px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 font-medium">
+                                <i class="fas fa-times mr-1"></i>
+                                Remove All Tags
+                            </button>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-200 p-2">
+                        <button type="button" onclick="toggleAssignTagsDropdown()" class="w-full px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
             
             <div class="relative inline-block">
                 <button type="button" onclick="toggleAssignGroupDropdown()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium">
@@ -233,16 +302,38 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                             <td class="px-6 py-4">
                                 <input type="checkbox" class="domain-checkbox rounded border-gray-300 text-primary focus:ring-primary" value="<?= $domain['id'] ?>" onchange="updateBulkActions()">
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-4">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-10 w-10 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center">
                                         <i class="fas fa-globe text-primary"></i>
                                     </div>
                                     <div class="ml-4">
                                         <a href="/domains/<?= $domain['id'] ?>" class="text-sm font-semibold text-gray-900 hover:text-primary"><?= htmlspecialchars($domain['domain_name']) ?></a>
-                                        <?php if (!empty($domain['nameservers'])): ?>
-                                            <div class="text-xs text-gray-500">NS: <?= htmlspecialchars(explode(',', $domain['nameservers'])[0]) ?></div>
-                                        <?php endif; ?>
+                                        <div class="flex items-center gap-1.5 mt-1">
+                                            <?php
+                                            // Display tags (temporary hardcoded for UI demo - will be dynamic later)
+                                            $tags = !empty($domain['tags']) ? explode(',', $domain['tags']) : [];
+                                            $tagColors = [
+                                                'production' => 'bg-green-100 text-green-700 border-green-200',
+                                                'staging' => 'bg-yellow-100 text-yellow-700 border-yellow-200',
+                                                'development' => 'bg-blue-100 text-blue-700 border-blue-200',
+                                                'client' => 'bg-purple-100 text-purple-700 border-purple-200',
+                                                'personal' => 'bg-orange-100 text-orange-700 border-orange-200',
+                                                'archived' => 'bg-gray-100 text-gray-600 border-gray-200'
+                                            ];
+                                            foreach ($tags as $tag):
+                                                $tag = trim($tag);
+                                                $colorClass = $tagColors[$tag] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+                                            ?>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border <?= $colorClass ?>">
+                                                    <i class="fas fa-tag mr-1" style="font-size: 9px;"></i>
+                                                    <?= htmlspecialchars(ucfirst($tag)) ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                            <?php if (!empty($domain['nameservers']) && empty($tags)): ?>
+                                                <span class="text-xs text-gray-500">NS: <?= htmlspecialchars(explode(',', $domain['nameservers'])[0]) ?></span>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -549,9 +640,87 @@ function bulkDelete() {
     form.submit();
 }
 
+function toggleAssignTagsDropdown() {
+    const dropdown = document.getElementById('assign-tags-dropdown');
+    dropdown.classList.toggle('hidden');
+}
+
 function toggleAssignGroupDropdown() {
     const dropdown = document.getElementById('assign-group-dropdown');
     dropdown.classList.toggle('hidden');
+}
+
+function bulkAddTag(tagName) {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        alert('Please select at least one domain');
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/domains/bulk-add-tags';
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '<?= csrf_token() ?>';
+    form.appendChild(csrfInput);
+    
+    // Add tag to add
+    const tagInput = document.createElement('input');
+    tagInput.type = 'hidden';
+    tagInput.name = 'tag';
+    tagInput.value = tagName;
+    form.appendChild(tagInput);
+    
+    // Add domain IDs
+    ids.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'domain_ids[]';
+        input.value = id;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function bulkRemoveAllTags() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        alert('Please select at least one domain');
+        return;
+    }
+    
+    if (!confirm(`Remove all tags from ${ids.length} domain(s)?`)) {
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/domains/bulk-remove-tags';
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '<?= csrf_token() ?>';
+    form.appendChild(csrfInput);
+    
+    // Add domain IDs
+    ids.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'domain_ids[]';
+        input.value = id;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
 }
 
 // Update bulk assign form with selected IDs
@@ -573,13 +742,19 @@ document.getElementById('bulk-assign-form')?.addEventListener('submit', function
 });
 
 
-// Close dropdown when clicking outside
+// Close dropdowns when clicking outside
 document.addEventListener('click', function(event) {
-    const dropdown = document.getElementById('assign-group-dropdown');
-    const button = event.target.closest('button[onclick="toggleAssignGroupDropdown()"]');
+    const groupDropdown = document.getElementById('assign-group-dropdown');
+    const tagsDropdown = document.getElementById('assign-tags-dropdown');
+    const groupButton = event.target.closest('button[onclick="toggleAssignGroupDropdown()"]');
+    const tagsButton = event.target.closest('button[onclick="toggleAssignTagsDropdown()"]');
     
-    if (!button && !dropdown.contains(event.target)) {
-        dropdown?.classList.add('hidden');
+    if (!groupButton && !groupDropdown.contains(event.target)) {
+        groupDropdown?.classList.add('hidden');
+    }
+    
+    if (!tagsButton && !tagsDropdown.contains(event.target)) {
+        tagsDropdown?.classList.add('hidden');
     }
 });
 
