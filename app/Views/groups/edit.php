@@ -107,6 +107,11 @@ ob_start();
                                 ?>
                             </p>
                             <div class="flex gap-2">
+                                <button onclick="testChannel('<?= $channel['channel_type'] ?>', <?= htmlspecialchars(json_encode($config)) ?>)" 
+                                        class="flex-1 px-3 py-2 bg-blue-50 text-blue-700 rounded text-center text-sm hover:bg-blue-100 transition-colors duration-150">
+                                    <i class="fas fa-paper-plane mr-1"></i>
+                                    Test
+                                </button>
                                 <a href="/channels/toggle?id=<?= $channel['id'] ?>&group_id=<?= $group['id'] ?>" 
                                    class="flex-1 px-3 py-2 bg-yellow-50 text-yellow-700 rounded text-center text-sm hover:bg-yellow-100 transition-colors duration-150">
                                     <i class="fas fa-<?= $channel['is_active'] ? 'pause' : 'play' ?> mr-1"></i>
@@ -231,11 +236,21 @@ ob_start();
                         </div>
                     </div>
 
-                    <button type="submit" 
-                            class="inline-flex items-center px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors text-sm">
-                        <i class="fas fa-plus mr-2"></i>
-                        Add Channel
-                    </button>
+                    <div class="flex gap-3">
+                        <button type="submit" 
+                                class="inline-flex items-center px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors text-sm">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add Channel
+                        </button>
+                        
+                        <button type="button" 
+                                id="testChannelBtn"
+                                onclick="testChannel()"
+                                class="inline-flex items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm hidden">
+                            <i class="fas fa-paper-plane mr-2"></i>
+                            Test Channel
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -291,6 +306,7 @@ ob_start();
 <script>
 function toggleChannelFields() {
     const channelType = document.getElementById('channel_type').value;
+    const testBtn = document.getElementById('testChannelBtn');
     
     // Get all input fields
     const emailField = document.getElementById('email');
@@ -311,6 +327,9 @@ function toggleChannelFields() {
     document.getElementById('telegram_fields').classList.add('hidden');
     document.getElementById('discord_fields').classList.add('hidden');
     document.getElementById('slack_fields').classList.add('hidden');
+    
+    // Hide test button by default
+    testBtn.classList.add('hidden');
     
     // Show selected field and make required
     if (channelType) {
@@ -334,6 +353,9 @@ function toggleChannelFields() {
                 slackWebhook.focus();
                 break;
         }
+        
+        // Show test button when channel type is selected
+        testBtn.classList.remove('hidden');
     }
 }
 
@@ -381,6 +403,240 @@ if (addChannelForm) {
     
     return true;
     });
+}
+
+// Test channel functionality - handles both new and existing channels
+function testChannel(channelType, existingConfig = null) {
+    // If existingConfig is provided, we're testing an existing channel
+    // If not, we're testing a new channel from the form
+    const isExistingChannel = existingConfig !== null;
+    
+    if (!isExistingChannel) {
+        // For new channels, get values from form
+        channelType = document.getElementById('channel_type').value;
+        const testBtn = document.getElementById('testChannelBtn');
+        
+        if (!channelType) {
+            alert('Please select a channel type first');
+            return;
+        }
+        
+        // Validate required fields before testing
+        let isValid = true;
+        let errorMessage = '';
+        
+        switch(channelType) {
+            case 'email':
+                const email = document.getElementById('email').value.trim();
+                if (!email) {
+                    isValid = false;
+                    errorMessage = 'Please enter an email address';
+                } else if (!email.includes('@') || !email.includes('.')) {
+                    isValid = false;
+                    errorMessage = 'Please enter a valid email address';
+                }
+                break;
+                
+            case 'telegram':
+                const botToken = document.getElementById('bot_token').value.trim();
+                const chatId = document.getElementById('chat_id').value.trim();
+                if (!botToken) {
+                    isValid = false;
+                    errorMessage = 'Please enter a bot token';
+                } else if (!/^\d+:[A-Za-z0-9_-]+$/.test(botToken)) {
+                    isValid = false;
+                    errorMessage = 'Please enter a valid bot token format (e.g., 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11)';
+                } else if (!chatId) {
+                    isValid = false;
+                    errorMessage = 'Please enter a chat ID';
+                } else if (!/^-?\d+$/.test(chatId)) {
+                    isValid = false;
+                    errorMessage = 'Please enter a valid chat ID (numeric value)';
+                }
+                break;
+                
+            case 'discord':
+                const discordWebhook = document.getElementById('discord_webhook').value.trim();
+                if (!discordWebhook) {
+                    isValid = false;
+                    errorMessage = 'Please enter a Discord webhook URL';
+                } else if (!discordWebhook.includes('discord.com/api/webhooks/')) {
+                    isValid = false;
+                    errorMessage = 'Invalid Discord webhook URL';
+                }
+                break;
+                
+            case 'slack':
+                const slackWebhook = document.getElementById('slack_webhook').value.trim();
+                if (!slackWebhook) {
+                    isValid = false;
+                    errorMessage = 'Please enter a Slack webhook URL';
+                }
+                break;
+        }
+        
+        if (!isValid) {
+            alert(errorMessage);
+            return;
+        }
+        
+        // Disable button and show loading state for new channels
+        testBtn.disabled = true;
+        testBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Testing...';
+    }
+    
+    // Create form data for AJAX request
+    const formData = new FormData();
+    formData.append('channel_type', channelType);
+    
+    // Add group ID
+    const groupId = document.querySelector('input[name="group_id"]').value;
+    formData.append('group_id', groupId);
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    formData.append('csrf_token', csrfToken);
+    
+    // Add channel-specific data
+    if (isExistingChannel) {
+        // Use existing channel config
+        switch(channelType) {
+            case 'email':
+                formData.append('email', existingConfig.email);
+                break;
+            case 'telegram':
+                formData.append('bot_token', existingConfig.bot_token);
+                formData.append('chat_id', existingConfig.chat_id);
+                break;
+            case 'discord':
+                formData.append('discord_webhook_url', existingConfig.webhook_url);
+                break;
+            case 'slack':
+                formData.append('slack_webhook_url', existingConfig.webhook_url);
+                break;
+        }
+    } else {
+        // Use form values for new channels
+        switch(channelType) {
+            case 'email':
+                formData.append('email', document.getElementById('email').value);
+                break;
+            case 'telegram':
+                formData.append('bot_token', document.getElementById('bot_token').value);
+                formData.append('chat_id', document.getElementById('chat_id').value);
+                break;
+            case 'discord':
+                formData.append('discord_webhook_url', document.getElementById('discord_webhook').value);
+                break;
+            case 'slack':
+                formData.append('slack_webhook_url', document.getElementById('slack_webhook').value);
+                break;
+        }
+    }
+    
+    // Send AJAX request
+    fetch('/channels/test', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Reset button for new channels
+        if (!isExistingChannel) {
+            const testBtn = document.getElementById('testChannelBtn');
+            testBtn.disabled = false;
+            testBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Test Channel';
+        }
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        // Reset button for new channels
+        if (!isExistingChannel) {
+            const testBtn = document.getElementById('testChannelBtn');
+            testBtn.disabled = false;
+            testBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Test Channel';
+        }
+        
+        showToast('❌ Test failed: ' + error.message + ' Please check your configuration and try again.', 'error');
+    });
+}
+
+
+// Function to show toast messages dynamically
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) return;
+    
+    const typeConfig = {
+        success: {
+            icon: 'fa-check',
+            iconColor: 'text-green-600',
+            bgColor: 'bg-green-100',
+            borderColor: 'border-green-500',
+            title: 'Success'
+        },
+        error: {
+            icon: 'fa-times',
+            iconColor: 'text-red-600',
+            bgColor: 'bg-red-100',
+            borderColor: 'border-red-500',
+            title: 'Error'
+        },
+        warning: {
+            icon: 'fa-exclamation-triangle',
+            iconColor: 'text-orange-600',
+            bgColor: 'bg-orange-100',
+            borderColor: 'border-orange-500',
+            title: 'Warning'
+        },
+        info: {
+            icon: 'fa-info',
+            iconColor: 'text-blue-600',
+            bgColor: 'bg-blue-100',
+            borderColor: 'border-blue-500',
+            title: 'Info'
+        }
+    };
+    
+    const config = typeConfig[type] || typeConfig.info;
+    
+    const toast = document.createElement('div');
+    toast.className = `toast bg-white border-l-4 ${config.borderColor} rounded-lg shadow-lg p-4 flex items-start animate-slide-in`;
+    toast.innerHTML = `
+        <div class="flex-shrink-0">
+            <div class="w-8 h-8 ${config.bgColor} rounded-full flex items-center justify-center">
+                <i class="fas ${config.icon} ${config.iconColor} text-sm"></i>
+            </div>
+        </div>
+        <div class="ml-3 flex-1">
+            <p class="text-sm font-medium text-gray-900">${config.title}</p>
+            <p class="text-sm text-gray-600 mt-0.5">${message}</p>
+        </div>
+        <button onclick="this.parentElement.remove()" class="ml-3 flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
+            <i class="fas fa-times text-sm"></i>
+        </button>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 5000);
 }
 </script>
 

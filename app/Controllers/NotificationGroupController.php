@@ -68,13 +68,22 @@ class NotificationGroupController extends Controller
             return;
         }
 
-        $id = $this->groupModel->create([
-            'name' => $name,
-            'description' => $description
-        ]);
+        try {
+            $id = $this->groupModel->create([
+                'name' => $name,
+                'description' => $description
+            ]);
 
-        $_SESSION['success'] = "Group '$name' created successfully";
-        $this->redirect("/groups/edit?id=$id");
+            $_SESSION['success'] = "Group '$name' created successfully";
+            $this->redirect("/groups/edit?id=$id");
+        } catch (\Exception $e) {
+            // Log the error using the ErrorHandler service
+            $errorHandler = new \App\Services\ErrorHandler();
+            $errorHandler->handleException($e);
+            
+            $_SESSION['error'] = 'Failed to create notification group. Please try again.';
+            $this->redirect('/groups/create');
+        }
     }
 
     public function edit()
@@ -129,13 +138,22 @@ class NotificationGroupController extends Controller
             return;
         }
 
-        $this->groupModel->update($id, [
-            'name' => $name,
-            'description' => $description
-        ]);
+        try {
+            $this->groupModel->update($id, [
+                'name' => $name,
+                'description' => $description
+            ]);
 
-        $_SESSION['success'] = 'Group updated successfully';
-        $this->redirect("/groups/edit?id=$id");
+            $_SESSION['success'] = 'Group updated successfully';
+            $this->redirect("/groups/edit?id=$id");
+        } catch (\Exception $e) {
+            // Log the error using the ErrorHandler service
+            $errorHandler = new \App\Services\ErrorHandler();
+            $errorHandler->handleException($e);
+            
+            $_SESSION['error'] = 'Failed to update notification group. Please try again.';
+            $this->redirect("/groups/edit?id=$id");
+        }
     }
 
     public function delete()
@@ -149,9 +167,18 @@ class NotificationGroupController extends Controller
             return;
         }
 
-        $this->groupModel->deleteWithRelations($id);
-        $_SESSION['success'] = 'Group deleted successfully';
-        $this->redirect('/groups');
+        try {
+            $this->groupModel->deleteWithRelations($id);
+            $_SESSION['success'] = 'Group deleted successfully';
+            $this->redirect('/groups');
+        } catch (\Exception $e) {
+            // Log the error using the ErrorHandler service
+            $errorHandler = new \App\Services\ErrorHandler();
+            $errorHandler->handleException($e);
+            
+            $_SESSION['error'] = 'Failed to delete notification group. Please try again.';
+            $this->redirect('/groups');
+        }
     }
 
     public function addChannel()
@@ -166,6 +193,13 @@ class NotificationGroupController extends Controller
 
         $groupId = (int)$_POST['group_id'];
         $channelType = $_POST['channel_type'] ?? '';
+
+        // Validate channel type
+        if (empty($channelType)) {
+            $_SESSION['error'] = 'Please select a channel type';
+            $this->redirect("/groups/edit?id=$groupId");
+            return;
+        }
 
         $config = $this->buildChannelConfig($channelType, $_POST);
 
@@ -189,10 +223,18 @@ class NotificationGroupController extends Controller
             return;
         }
 
-        $this->channelModel->createChannel($groupId, $channelType, $config);
-
-        $_SESSION['success'] = 'Channel added successfully';
-        $this->redirect("/groups/edit?id=$groupId");
+        try {
+            $this->channelModel->createChannel($groupId, $channelType, $config);
+            $_SESSION['success'] = 'Channel added successfully';
+            $this->redirect("/groups/edit?id=$groupId");
+        } catch (\Exception $e) {
+            // Log the error using the ErrorHandler service
+            $errorHandler = new \App\Services\ErrorHandler();
+            $errorHandler->handleException($e);
+            
+            $_SESSION['error'] = 'Failed to add notification channel. Please try again.';
+            $this->redirect("/groups/edit?id=$groupId");
+        }
     }
 
     public function deleteChannel()
@@ -200,10 +242,18 @@ class NotificationGroupController extends Controller
         $id = $_GET['id'] ?? 0;
         $groupId = $_GET['group_id'] ?? 0;
 
-        $this->channelModel->delete($id);
-
-        $_SESSION['success'] = 'Channel deleted successfully';
-        $this->redirect("/groups/edit?id=$groupId");
+        try {
+            $this->channelModel->delete($id);
+            $_SESSION['success'] = 'Channel deleted successfully';
+            $this->redirect("/groups/edit?id=$groupId");
+        } catch (\Exception $e) {
+            // Log the error using the ErrorHandler service
+            $errorHandler = new \App\Services\ErrorHandler();
+            $errorHandler->handleException($e);
+            
+            $_SESSION['error'] = 'Failed to delete notification channel. Please try again.';
+            $this->redirect("/groups/edit?id=$groupId");
+        }
     }
 
     public function toggleChannel()
@@ -211,34 +261,170 @@ class NotificationGroupController extends Controller
         $id = $_GET['id'] ?? 0;
         $groupId = $_GET['group_id'] ?? 0;
 
-        $this->channelModel->toggleActive($id);
+        try {
+            $this->channelModel->toggleActive($id);
+            $_SESSION['success'] = 'Channel status updated';
+            $this->redirect("/groups/edit?id=$groupId");
+        } catch (\Exception $e) {
+            // Log the error using the ErrorHandler service
+            $errorHandler = new \App\Services\ErrorHandler();
+            $errorHandler->handleException($e);
+            
+            $_SESSION['error'] = 'Failed to update channel status. Please try again.';
+            $this->redirect("/groups/edit?id=$groupId");
+        }
+    }
 
-        $_SESSION['success'] = 'Channel status updated';
-        $this->redirect("/groups/edit?id=$groupId");
+    public function testChannel()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/groups');
+            return;
+        }
+
+        // CSRF Protection
+        $this->verifyCsrf('/groups');
+
+        $channelType = $_POST['channel_type'] ?? '';
+        $config = $this->buildChannelConfig($channelType, $_POST);
+
+        // Check if this is an AJAX request
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+        if (!$config) {
+            if ($isAjax) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid channel configuration for testing']);
+                return;
+            } else {
+                $_SESSION['error'] = 'Invalid channel configuration for testing';
+                $groupId = $_POST['group_id'] ?? 0;
+                $this->redirect($groupId ? "/groups/edit?id=$groupId" : '/groups');
+                return;
+            }
+        }
+
+        try {
+            $notificationService = new \App\Services\NotificationService();
+            $testMessage = $this->getTestMessage($channelType);
+            $testData = $this->getTestData();
+
+            $success = $notificationService->send($channelType, $config, $testMessage, $testData);
+
+            if ($success) {
+                $message = "Test message sent successfully to {$channelType} channel! Check your {$channelType} for the test notification.";
+                if ($isAjax) {
+                    echo json_encode(['success' => true, 'message' => $message]);
+                    return;
+                } else {
+                    $_SESSION['success'] = $message;
+                }
+            } else {
+                $message = "Failed to send test message to {$channelType} channel. Please check your configuration and try again.";
+                if ($isAjax) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => $message]);
+                    return;
+                } else {
+                    $_SESSION['error'] = $message;
+                }
+            }
+
+        } catch (\Exception $e) {
+            // Log the error using the ErrorHandler service
+            $errorHandler = new \App\Services\ErrorHandler();
+            $errorHandler->handleException($e);
+            
+            $message = "Test failed: " . $e->getMessage() . " Please check your configuration and try again.";
+            if ($isAjax) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => $message]);
+                return;
+            } else {
+                $_SESSION['error'] = $message;
+            }
+        }
+
+        // Only redirect if not AJAX
+        if (!$isAjax) {
+            $groupId = $_POST['group_id'] ?? 0;
+            $this->redirect("/groups/edit?id=$groupId");
+        }
+    }
+
+    private function getTestMessage(string $channelType): string
+    {
+        $channelNames = [
+            'email' => 'Email',
+            'telegram' => 'Telegram',
+            'discord' => 'Discord',
+            'slack' => 'Slack'
+        ];
+
+        $channelName = $channelNames[$channelType] ?? ucfirst($channelType);
+        
+        return "🧪 **Test Message from Domain Monitor**\n\n" .
+               "This is a test notification to verify your {$channelName} channel configuration.\n\n" .
+               "✅ If you're seeing this message, your {$channelName} integration is working correctly!\n\n" .
+               "Test sent at: " . date('Y-m-d H:i:s T');
+    }
+
+    private function getTestData(): array
+    {
+        return [
+            'domain' => 'example.com',
+            'days_left' => 30,
+            'expiration_date' => date('Y-m-d', strtotime('+30 days')),
+            'registrar' => 'Example Registrar',
+            'domain_id' => 1
+        ];
     }
 
     private function buildChannelConfig(string $type, array $data): ?array
     {
         switch ($type) {
             case 'email':
-                if (empty($data['email'])) return null;
-                return ['email' => $data['email']];
+                $email = trim($data['email'] ?? '');
+                if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    return null;
+                }
+                return ['email' => $email];
 
             case 'telegram':
-                if (empty($data['bot_token']) || empty($data['chat_id'])) return null;
+                $botToken = trim($data['bot_token'] ?? '');
+                $chatId = trim($data['chat_id'] ?? '');
+                if (empty($botToken) || empty($chatId)) {
+                    return null;
+                }
+                // Basic validation for bot token format
+                if (!preg_match('/^\d+:[A-Za-z0-9_-]+$/', $botToken)) {
+                    return null;
+                }
                 return [
-                    'bot_token' => $data['bot_token'],
-                    'chat_id' => $data['chat_id']
+                    'bot_token' => $botToken,
+                    'chat_id' => $chatId
                 ];
 
             case 'discord':
-                $webhookUrl = $data['discord_webhook_url'] ?? '';
-                if (empty($webhookUrl)) return null;
+                $webhookUrl = trim($data['discord_webhook_url'] ?? '');
+                if (empty($webhookUrl) || !filter_var($webhookUrl, FILTER_VALIDATE_URL)) {
+                    return null;
+                }
+                // Validate Discord webhook URL format
+                if (!str_contains($webhookUrl, 'discord.com/api/webhooks/')) {
+                    return null;
+                }
                 return ['webhook_url' => $webhookUrl];
 
             case 'slack':
-                $webhookUrl = $data['slack_webhook_url'] ?? '';
-                if (empty($webhookUrl)) return null;
+                $webhookUrl = trim($data['slack_webhook_url'] ?? '');
+                if (empty($webhookUrl) || !filter_var($webhookUrl, FILTER_VALIDATE_URL)) {
+                    return null;
+                }
+                // Validate Slack webhook URL format
+                if (!str_contains($webhookUrl, 'hooks.slack.com/services/')) {
+                    return null;
+                }
                 return ['webhook_url' => $webhookUrl];
 
             default:
@@ -268,17 +454,30 @@ class NotificationGroupController extends Controller
         }
 
         $deletedCount = 0;
+        $errors = [];
 
         foreach ($groupIds as $groupId) {
             try {
                 $this->groupModel->deleteWithRelations((int)$groupId);
                 $deletedCount++;
             } catch (\Exception $e) {
-                // Continue with next group
+                // Log individual errors but continue processing
+                $errorHandler = new \App\Services\ErrorHandler();
+                $errorHandler->handleException($e);
+                $errors[] = "Failed to delete group ID: $groupId";
             }
         }
 
-        $_SESSION['success'] = "Successfully deleted $deletedCount notification group(s)";
+        if ($deletedCount > 0) {
+            if (empty($errors)) {
+                $_SESSION['success'] = "Successfully deleted $deletedCount notification group(s)";
+            } else {
+                $_SESSION['warning'] = "Deleted $deletedCount group(s), but " . count($errors) . " failed. Check error logs for details.";
+            }
+        } else {
+            $_SESSION['error'] = 'Failed to delete any groups. Please check error logs for details.';
+        }
+
         $this->redirect('/groups');
     }
 }

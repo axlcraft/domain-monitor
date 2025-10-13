@@ -1,5 +1,5 @@
 <!-- Toast Notifications Container -->
-<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-3 max-w-sm">
+<div id="toast-container" class="fixed bottom-4 right-4 z-[9999] space-y-3 max-w-sm">
     
     <!-- Success Toast -->
     <?php if (isset($_SESSION['success'])): ?>

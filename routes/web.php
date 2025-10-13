@@ -85,6 +85,7 @@ $router->post('/groups/bulk-delete', [NotificationGroupController::class, 'bulkD
 $router->post('/channels/add', [NotificationGroupController::class, 'addChannel']);
 $router->get('/channels/delete', [NotificationGroupController::class, 'deleteChannel']);
 $router->get('/channels/toggle', [NotificationGroupController::class, 'toggleChannel']);
+$router->post('/channels/test', [NotificationGroupController::class, 'testChannel']);
 
 // TLD Registry
 $router->get('/tld-registry', [TldRegistryController::class, 'index']);
