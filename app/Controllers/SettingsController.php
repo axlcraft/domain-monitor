@@ -5,15 +5,19 @@ namespace App\Controllers;
 use Core\Controller;
 use Core\Auth;
 use App\Models\Setting;
+use App\Helpers\EmailHelper;
+use App\Services\Logger;
 
 class SettingsController extends Controller
 {
     private Setting $settingModel;
+    private Logger $logger;
 
     public function __construct()
     {
         Auth::requireAdmin();
         $this->settingModel = new Setting();
+        $this->logger = new Logger('settings');
     }
 
     public function index()
@@ -250,12 +254,36 @@ class SettingsController extends Controller
         $this->verifyCsrf('/settings#email');
 
         try {
+            $port = (int)trim($_POST['mail_port'] ?? '2525');
+            $encryption = trim($_POST['mail_encryption'] ?? 'tls');
+            
+            // Auto-detect encryption based on port if not explicitly set
+            $originalEncryption = $encryption;
+            if (empty($encryption) || $encryption === 'tls') {
+                if ($port === 465) {
+                    $encryption = 'ssl'; // Port 465 should use SSL
+                    $this->logger->info('Auto-detected SSL encryption for port 465', [
+                        'port' => $port,
+                        'original_encryption' => $originalEncryption,
+                        'detected_encryption' => $encryption
+                    ]);
+                } elseif ($port === 587) {
+                    $encryption = 'tls'; // Port 587 should use TLS
+                    $this->logger->info('Auto-detected TLS encryption for port 587', [
+                        'port' => $port,
+                        'original_encryption' => $originalEncryption,
+                        'detected_encryption' => $encryption
+                    ]);
+                }
+                // For other ports, keep the user's selection
+            }
+            
             $emailSettings = [
                 'mail_host' => trim($_POST['mail_host'] ?? ''),
-                'mail_port' => trim($_POST['mail_port'] ?? '2525'),
+                'mail_port' => $port,
                 'mail_username' => trim($_POST['mail_username'] ?? ''),
                 'mail_password' => trim($_POST['mail_password'] ?? ''),
-                'mail_encryption' => trim($_POST['mail_encryption'] ?? 'tls'),
+                'mail_encryption' => $encryption,
                 'mail_from_address' => trim($_POST['mail_from_address'] ?? ''),
                 'mail_from_name' => trim($_POST['mail_from_name'] ?? 'Domain Monitor')
             ];
@@ -381,111 +409,31 @@ class SettingsController extends Controller
             return;
         }
 
-        try {
-            // Get current email settings
-            $emailSettings = $this->settingModel->getEmailSettings();
-            $appSettings = $this->settingModel->getAppSettings();
-
-            // Create PHPMailer instance
-            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-
-            // Server settings
-            $mail->isSMTP();
-            $mail->Host = $emailSettings['mail_host'];
-            $mail->SMTPAuth = !empty($emailSettings['mail_username']);
-            $mail->Username = $emailSettings['mail_username'];
-            $mail->Password = $emailSettings['mail_password'];
-            $mail->SMTPSecure = $emailSettings['mail_encryption'];
-            $mail->Port = $emailSettings['mail_port'];
-
-            // Recipients
-            $mail->setFrom($emailSettings['mail_from_address'], $emailSettings['mail_from_name']);
-            $mail->addAddress($testEmail);
-
-            // Content
-            $mail->isHTML(true);
-            $mail->Subject = 'Test Email from ' . $appSettings['app_name'];
+        // Use EmailHelper to send test email
+        $result = EmailHelper::sendTestEmail($testEmail);
+        
+        if ($result['success']) {
+            $_SESSION['success'] = $result['message'];
+            $this->logger->info('Test email sent successfully', [
+                'email' => $testEmail
+            ]);
+        } else {
+            // Log detailed error information for debugging
+            $this->logger->error('Test email failed', [
+                'email' => $testEmail,
+                'debug_info' => $result['debug_info'] ?? null,
+                'error' => $result['error'] ?? null
+            ]);
             
-            $appName = htmlspecialchars($appSettings['app_name']);
-            $appUrl = htmlspecialchars($appSettings['app_url']);
-            $currentTime = date('F j, Y g:i A');
+            $_SESSION['error'] = $result['message'];
             
-            $mail->Body = "
-            <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: #4A90E2; color: white; padding: 20px; border-radius: 5px 5px 0 0; }
-                    .content { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; }
-                    .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px; border-radius: 4px; margin: 15px 0; }
-                    .info-table { width: 100%; margin-top: 15px; }
-                    .info-table td { padding: 8px; border-bottom: 1px solid #ddd; }
-                    .info-table td:first-child { font-weight: bold; width: 150px; }
-                    .footer { background: #333; color: white; padding: 10px; text-align: center; font-size: 12px; border-radius: 0 0 5px 5px; }
-                </style>
-            </head>
-            <body>
-                <div class='container'>
-                    <div class='header'>
-                        <h2>✅ Email Test Successful!</h2>
-                    </div>
-                    <div class='content'>
-                        <div class='success'>
-                            <strong>Success!</strong> Your email configuration is working correctly.
-                        </div>
-                        <p>This is a test email from <strong>{$appName}</strong>.</p>
-                        <p>If you're seeing this message, it means your SMTP settings are configured properly and emails are being delivered successfully.</p>
-                        
-                        <table class='info-table'>
-                            <tr>
-                                <td>SMTP Host:</td>
-                                <td>" . htmlspecialchars($emailSettings['mail_host']) . "</td>
-                            </tr>
-                            <tr>
-                                <td>SMTP Port:</td>
-                                <td>" . htmlspecialchars($emailSettings['mail_port']) . "</td>
-                            </tr>
-                            <tr>
-                                <td>Encryption:</td>
-                                <td>" . htmlspecialchars($emailSettings['mail_encryption'] ?: 'None') . "</td>
-                            </tr>
-                            <tr>
-                                <td>From Address:</td>
-                                <td>" . htmlspecialchars($emailSettings['mail_from_address']) . "</td>
-                            </tr>
-                            <tr>
-                                <td>Test Time:</td>
-                                <td>{$currentTime}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class='footer'>
-                        <p>This is an automated test message from {$appName}</p>
-                        <p style='margin-top: 5px;'><a href='{$appUrl}' style='color: #4A90E2;'>Visit Dashboard</a></p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            ";
-
-            $mail->AltBody = "Email Test Successful!\n\n" .
-                           "This is a test email from {$appName}.\n" .
-                           "Your SMTP configuration is working correctly.\n\n" .
-                           "SMTP Host: {$emailSettings['mail_host']}\n" .
-                           "SMTP Port: {$emailSettings['mail_port']}\n" .
-                           "From: {$emailSettings['mail_from_address']}\n" .
-                           "Test Time: {$currentTime}";
-
-            $mail->send();
-            
-            $_SESSION['success'] = "Test email sent successfully to {$testEmail}. Please check your inbox.";
-            $this->redirect('/settings#email');
-
-        } catch (\Exception $e) {
-            $_SESSION['error'] = "Failed to send test email: " . $e->getMessage();
-            $this->redirect('/settings#email');
+            // In development, show more detailed error
+            if (($_ENV['APP_ENV'] ?? 'production') === 'development') {
+                $_SESSION['error'] .= " (Debug: " . ($result['debug_info'] ?? $result['error']) . ")";
+            }
         }
+        
+        $this->redirect('/settings#email');
     }
 }
 

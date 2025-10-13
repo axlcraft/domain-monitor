@@ -7,16 +7,20 @@ use App\Models\User;
 use App\Models\Setting;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use App\Helpers\EmailHelper;
+use App\Services\Logger;
 
 class AuthController extends Controller
 {
     private User $userModel;
     private Setting $settingModel;
+    private Logger $logger;
 
     public function __construct()
     {
         $this->userModel = new User();
         $this->settingModel = new Setting();
+        $this->logger = new Logger('auth');
     }
 
     /**
@@ -690,43 +694,21 @@ class AuthController extends Controller
      */
     private function sendVerificationEmail($email, $fullName, $token)
     {
-        try {
-            $emailSettings = $this->settingModel->getEmailSettings();
-            $appSettings = $this->settingModel->getAppSettings();
-            
-            $verifyUrl = $appSettings['app_url'] . '/verify-email?token=' . $token;
-
-            $mail = new PHPMailer(true);
-            $mail->isSMTP();
-            $mail->Host = $emailSettings['mail_host'];
-            $mail->SMTPAuth = !empty($emailSettings['mail_username']);
-            $mail->Username = $emailSettings['mail_username'];
-            $mail->Password = $emailSettings['mail_password'];
-            $mail->SMTPSecure = $emailSettings['mail_encryption'];
-            $mail->Port = (int)$emailSettings['mail_port'];
-            $mail->CharSet = 'UTF-8';
-
-            $mail->setFrom($emailSettings['mail_from_address'], $emailSettings['mail_from_name']);
-            $mail->addAddress($email, $fullName);
-
-            $mail->isHTML(true);
-            $mail->Subject = 'Verify Your Email Address';
-            $mail->Body = "
-                <h2>Welcome to Domain Monitor!</h2>
-                <p>Hello {$fullName},</p>
-                <p>Thank you for registering. Please click the link below to verify your email address:</p>
-                <p><a href='{$verifyUrl}' style='background: #4A90E2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>Verify Email Address</a></p>
-                <p>Or copy and paste this URL into your browser:</p>
-                <p>{$verifyUrl}</p>
-                <p>This link will expire in 24 hours.</p>
-                <p>If you did not create an account, please ignore this email.</p>
-            ";
-
-            $mail->send();
-
-        } catch (Exception $e) {
+        $result = EmailHelper::sendVerificationEmail($email, $fullName, $token);
+        
+        if (!$result['success']) {
             // Log error but don't fail the registration
-            error_log('Failed to send verification email: ' . $e->getMessage());
+            $this->logger->error('Failed to send verification email', [
+                'email' => $email,
+                'full_name' => $fullName,
+                'debug_info' => $result['debug_info'] ?? null,
+                'error' => $result['error'] ?? null
+            ]);
+        } else {
+            $this->logger->info('Verification email sent successfully', [
+                'email' => $email,
+                'full_name' => $fullName
+            ]);
         }
     }
 
@@ -735,43 +717,21 @@ class AuthController extends Controller
      */
     private function sendPasswordResetEmail($email, $fullName, $token)
     {
-        try {
-            $emailSettings = $this->settingModel->getEmailSettings();
-            $appSettings = $this->settingModel->getAppSettings();
-            
-            $resetUrl = $appSettings['app_url'] . '/reset-password?token=' . $token;
-
-            $mail = new PHPMailer(true);
-            $mail->isSMTP();
-            $mail->Host = $emailSettings['mail_host'];
-            $mail->SMTPAuth = !empty($emailSettings['mail_username']);
-            $mail->Username = $emailSettings['mail_username'];
-            $mail->Password = $emailSettings['mail_password'];
-            $mail->SMTPSecure = $emailSettings['mail_encryption'];
-            $mail->Port = (int)$emailSettings['mail_port'];
-            $mail->CharSet = 'UTF-8';
-
-            $mail->setFrom($emailSettings['mail_from_address'], $emailSettings['mail_from_name']);
-            $mail->addAddress($email, $fullName);
-
-            $mail->isHTML(true);
-            $mail->Subject = 'Reset Your Password';
-            $mail->Body = "
-                <h2>Password Reset Request</h2>
-                <p>Hello {$fullName},</p>
-                <p>We received a request to reset your password. Click the link below to create a new password:</p>
-                <p><a href='{$resetUrl}' style='background: #4A90E2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>Reset Password</a></p>
-                <p>Or copy and paste this URL into your browser:</p>
-                <p>{$resetUrl}</p>
-                <p>This link will expire in 1 hour.</p>
-                <p>If you did not request a password reset, please ignore this email and your password will remain unchanged.</p>
-            ";
-
-            $mail->send();
-
-        } catch (Exception $e) {
+        $result = EmailHelper::sendPasswordResetEmail($email, $fullName, $token);
+        
+        if (!$result['success']) {
             // Log error
-            error_log('Failed to send password reset email: ' . $e->getMessage());
+            $this->logger->error('Failed to send password reset email', [
+                'email' => $email,
+                'full_name' => $fullName,
+                'debug_info' => $result['debug_info'] ?? null,
+                'error' => $result['error'] ?? null
+            ]);
+        } else {
+            $this->logger->info('Password reset email sent successfully', [
+                'email' => $email,
+                'full_name' => $fullName
+            ]);
         }
     }
 

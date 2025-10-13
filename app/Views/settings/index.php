@@ -203,23 +203,18 @@ foreach ($notificationPresets as $key => $preset) {
 
                 <div>
                     <label for="mail_encryption" class="block text-sm font-medium text-gray-700 mb-2">
-                        Encryption
+                        Encryption <span class="text-blue-500 text-xs">(Auto-detected by port)</span>
                     </label>
                     <select id="mail_encryption" name="mail_encryption"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
-                        <option value="tls" <?= $emailSettings['mail_encryption'] === 'tls' ? 'selected' : '' ?>>TLS</option>
-                        <option value="ssl" <?= $emailSettings['mail_encryption'] === 'ssl' ? 'selected' : '' ?>>SSL</option>
+                        <option value="tls" <?= $emailSettings['mail_encryption'] === 'tls' ? 'selected' : '' ?>>TLS (STARTTLS)</option>
+                        <option value="ssl" <?= $emailSettings['mail_encryption'] === 'ssl' ? 'selected' : '' ?>>SSL (SMTPS)</option>
                         <option value="" <?= empty($emailSettings['mail_encryption']) ? 'selected' : '' ?>>None</option>
                     </select>
-                </div>
-
-                <div class="md:col-span-2">
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                        <p class="text-xs text-gray-600">
-                            <i class="fas fa-info-circle text-gray-400 mr-1"></i>
-                            <strong>Protocol:</strong> This application uses SMTP (Simple Mail Transfer Protocol) for sending emails.
-                        </p>
-                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-magic text-blue-600 mr-1"></i>
+                        <span id="encryption-help">Will auto-update based on port selection</span>
+                    </p>
                 </div>
 
                 <div>
@@ -648,6 +643,48 @@ foreach ($notificationPresets as $key => $preset) {
 </div>
 
 <script>
+// Auto-update encryption based on port
+function updateEncryptionByPort() {
+    const portField = document.getElementById('mail_port');
+    const encryptionField = document.getElementById('mail_encryption');
+    const helpText = document.getElementById('encryption-help');
+    
+    if (!portField || !encryptionField) return;
+    
+    const port = parseInt(portField.value);
+    
+    // Auto-select encryption based on port
+    if (port === 465) {
+        encryptionField.value = 'ssl';
+        helpText.innerHTML = '<i class="fas fa-check text-green-600 mr-1"></i>Port 465 detected: SSL encryption selected';
+        helpText.className = 'text-xs text-green-600 mt-1';
+    } else if (port === 587) {
+        encryptionField.value = 'tls';
+        helpText.innerHTML = '<i class="fas fa-check text-green-600 mr-1"></i>Port 587 detected: TLS encryption selected';
+        helpText.className = 'text-xs text-green-600 mt-1';
+    } else if (port === 25 || port === 2525) {
+        // Keep current selection but show info
+        helpText.innerHTML = '<i class="fas fa-info text-blue-600 mr-1"></i>Port ' + port + ': Choose TLS or None based on your server';
+        helpText.className = 'text-xs text-blue-600 mt-1';
+    } else {
+        helpText.innerHTML = '<i class="fas fa-question text-gray-600 mr-1"></i>Custom port: Choose encryption manually';
+        helpText.className = 'text-xs text-gray-600 mt-1';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up port change listener
+    const portField = document.getElementById('mail_port');
+    if (portField) {
+        portField.addEventListener('input', updateEncryptionByPort);
+        portField.addEventListener('change', updateEncryptionByPort);
+        
+        // Run once on page load
+        updateEncryptionByPort();
+    }
+});
+
 // Tab switching
 function switchTab(tabName) {
     // Hide all tabs
