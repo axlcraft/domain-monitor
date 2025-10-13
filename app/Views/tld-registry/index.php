@@ -433,6 +433,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
             </p>
             <?php if (empty($currentFilters['search'])): ?>
             <form method="POST" action="/tld-registry/start-progressive-import" class="inline">
+                <?= csrf_field() ?>
                 <input type="hidden" name="import_type" value="complete_workflow">
                 <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium">
                     <i class="fas fa-rocket mr-2"></i>
