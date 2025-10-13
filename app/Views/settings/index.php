@@ -217,6 +217,15 @@ foreach ($notificationPresets as $key => $preset) {
                     </p>
                 </div>
 
+                <div class="md:col-span-2">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <p class="text-xs text-gray-600">
+                            <i class="fas fa-info-circle text-gray-400 mr-1"></i>
+                            <strong>Protocol:</strong> This application uses SMTP (Simple Mail Transfer Protocol) for sending emails.
+                        </p>
+                    </div>
+                </div>
+
                 <div>
                     <label for="mail_username" class="block text-sm font-medium text-gray-700 mb-2">
                         SMTP Username
