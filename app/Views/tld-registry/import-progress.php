@@ -223,7 +223,19 @@ function checkProgress() {
     }
     
     fetch(`/tld-registry/api/import-progress?log_id=${logId}`)
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    addLogMessage('Server returned non-JSON response. This might be a PHP error or session issue.', 'error');
+                    addLogMessage('Response preview: ' + text.substring(0, 200) + '...', 'error');
+                    isComplete = true;
+                    throw new Error('Non-JSON response received');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.error) {
                 addLogMessage('Error: ' + data.error, 'error');
@@ -238,8 +250,13 @@ function checkProgress() {
             }
         })
         .catch(error => {
-            addLogMessage('Network error: ' + error.message, 'error');
-            isComplete = true;
+            if (error.message.includes('Gateway Timeout') || error.message.includes('timeout')) {
+                addLogMessage('Gateway timeout detected. Retrying in 5 seconds...', 'warning');
+                setTimeout(checkProgress, 5000); // Retry after 5 seconds
+            } else {
+                addLogMessage('Network error: ' + error.message, 'error');
+                isComplete = true;
+            }
         });
 }
 
