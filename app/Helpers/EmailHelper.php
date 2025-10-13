@@ -334,18 +334,57 @@ class EmailHelper
             $verifyUrl = $appSettings['app_url'] . '/verify-email?token=' . $token;
             
             $subject = 'Verify Your Email Address';
-            $message = "
-                <h2>Welcome to Domain Monitor!</h2>
-                <p>Hello {$fullName},</p>
-                <p>Thank you for registering. Please click the link below to verify your email address:</p>
-                <p><a href='{$verifyUrl}' style='background: #4A90E2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>Verify Email Address</a></p>
-                <p>Or copy and paste this URL into your browser:</p>
-                <p>{$verifyUrl}</p>
-                <p>This link will expire in 24 hours.</p>
-                <p>If you did not create an account, please ignore this email.</p>
+            
+            // Create a properly formatted HTML email
+            $htmlContent = "
+            <div style='max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;'>
+                <div style='background: #4A90E2; color: white; padding: 20px; border-radius: 5px 5px 0 0; text-align: center;'>
+                    <h2 style='margin: 0; font-size: 24px;'>🔔 Welcome to {$appSettings['app_name']}!</h2>
+                </div>
+                
+                <div style='background: #f9f9f9; padding: 30px; border: 1px solid #ddd;'>
+                    <h3 style='color: #333; margin-top: 0;'>Hello {$fullName},</h3>
+                    
+                    <p style='color: #555; line-height: 1.6; margin-bottom: 20px;'>
+                        Thank you for registering with {$appSettings['app_name']}! To complete your account setup, 
+                        please verify your email address by clicking the button below:
+                    </p>
+                    
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='{$verifyUrl}' style='background: #4A90E2; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;'>
+                            ✅ Verify Email Address
+                        </a>
+                    </div>
+                    
+                    <div style='background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin: 20px 0;'>
+                        <p style='margin: 0 0 10px 0; color: #666; font-size: 14px;'>
+                            <strong>Or copy and paste this URL into your browser:</strong>
+                        </p>
+                        <p style='margin: 0; word-break: break-all; color: #4A90E2; font-size: 14px;'>
+                            {$verifyUrl}
+                        </p>
+                    </div>
+                    
+                    <div style='background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;'>
+                        <p style='margin: 0; color: #856404; font-size: 14px;'>
+                            <strong>⏰ Important:</strong> This verification link will expire in 24 hours for security reasons.
+                        </p>
+                    </div>
+                    
+                    <p style='color: #666; font-size: 14px; line-height: 1.6;'>
+                        If you did not create an account with {$appSettings['app_name']}, please ignore this email. 
+                        No further action is required.
+                    </p>
+                </div>
+                
+                <div style='background: #333; color: white; padding: 15px; text-align: center; font-size: 12px; border-radius: 0 0 5px 5px;'>
+                    <p style='margin: 0 0 10px 0;'>This is an automated message from {$appSettings['app_name']}</p>
+                    <a href='{$appSettings['app_url']}' style='color: #4A90E2; text-decoration: none;'>Visit Dashboard</a>
+                </div>
+            </div>
             ";
             
-            return self::sendNotificationEmail($email, $subject, $message);
+            return self::sendNotificationEmail($email, $subject, $htmlContent);
             
         } catch (\Exception $e) {
             $errorMessage = "Failed to send verification email: " . $e->getMessage();
@@ -376,18 +415,59 @@ class EmailHelper
             $resetUrl = $appSettings['app_url'] . '/reset-password?token=' . $token;
             
             $subject = 'Reset Your Password';
-            $message = "
-                <h2>Password Reset Request</h2>
-                <p>Hello {$fullName},</p>
-                <p>We received a request to reset your password. Click the link below to create a new password:</p>
-                <p><a href='{$resetUrl}' style='background: #4A90E2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>Reset Password</a></p>
-                <p>Or copy and paste this URL into your browser:</p>
-                <p>{$resetUrl}</p>
-                <p>This link will expire in 1 hour.</p>
-                <p>If you did not request a password reset, please ignore this email and your password will remain unchanged.</p>
+            
+            // Create a properly formatted HTML email
+            $htmlContent = "
+            <div style='max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;'>
+                <div style='background: #dc3545; color: white; padding: 20px; border-radius: 5px 5px 0 0; text-align: center;'>
+                    <h2 style='margin: 0; font-size: 24px;'>🔒 Password Reset Request</h2>
+                </div>
+                
+                <div style='background: #f9f9f9; padding: 30px; border: 1px solid #ddd;'>
+                    <h3 style='color: #333; margin-top: 0;'>Hello {$fullName},</h3>
+                    
+                    <p style='color: #555; line-height: 1.6; margin-bottom: 20px;'>
+                        We received a request to reset your password for your {$appSettings['app_name']} account. 
+                        If you made this request, click the button below to create a new password:
+                    </p>
+                    
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='{$resetUrl}' style='background: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;'>
+                            🔑 Reset Password
+                        </a>
+                    </div>
+                    
+                    <div style='background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin: 20px 0;'>
+                        <p style='margin: 0 0 10px 0; color: #666; font-size: 14px;'>
+                            <strong>Or copy and paste this URL into your browser:</strong>
+                        </p>
+                        <p style='margin: 0; word-break: break-all; color: #dc3545; font-size: 14px;'>
+                            {$resetUrl}
+                        </p>
+                    </div>
+                    
+                    <div style='background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;'>
+                        <p style='margin: 0; color: #856404; font-size: 14px;'>
+                            <strong>⏰ Important:</strong> This password reset link will expire in 1 hour for security reasons.
+                        </p>
+                    </div>
+                    
+                    <div style='background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; margin: 20px 0;'>
+                        <p style='margin: 0; color: #721c24; font-size: 14px;'>
+                            <strong>🔒 Security Notice:</strong> If you did not request a password reset, please ignore this email. 
+                            Your password will remain unchanged and no action is required.
+                        </p>
+                    </div>
+                </div>
+                
+                <div style='background: #333; color: white; padding: 15px; text-align: center; font-size: 12px; border-radius: 0 0 5px 5px;'>
+                    <p style='margin: 0 0 10px 0;'>This is an automated message from {$appSettings['app_name']}</p>
+                    <a href='{$appSettings['app_url']}' style='color: #4A90E2; text-decoration: none;'>Visit Dashboard</a>
+                </div>
+            </div>
             ";
             
-            return self::sendNotificationEmail($email, $subject, $message);
+            return self::sendNotificationEmail($email, $subject, $htmlContent);
             
         } catch (\Exception $e) {
             $errorMessage = "Failed to send password reset email: " . $e->getMessage();
