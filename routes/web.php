@@ -15,6 +15,7 @@ use App\Controllers\UserController;
 use App\Controllers\InstallerController;
 use App\Controllers\NotificationController;
 use App\Controllers\ErrorLogController;
+use App\Controllers\TwoFactorController;
 
 $router = Application::$router;
 
@@ -38,6 +39,11 @@ $router->get('/forgot-password', [AuthController::class, 'showForgotPassword']);
 $router->post('/forgot-password', [AuthController::class, 'forgotPassword']);
 $router->get('/reset-password', [AuthController::class, 'showResetPassword']);
 $router->post('/reset-password', [AuthController::class, 'resetPassword']);
+
+// Two-Factor Authentication routes (public during verification)
+$router->get('/2fa/verify', [TwoFactorController::class, 'showVerify']);
+$router->post('/2fa/verify', [TwoFactorController::class, 'verify']);
+$router->post('/2fa/send-email-code', [TwoFactorController::class, 'sendEmailCode']);
 
 // Debug route (public - remove in production!)
 $router->get('/debug/whois', [DebugController::class, 'whois']);
@@ -109,6 +115,7 @@ $router->post('/settings/update', [SettingsController::class, 'update']);
 $router->post('/settings/update-app', [SettingsController::class, 'updateApp']);
 $router->post('/settings/update-email', [SettingsController::class, 'updateEmail']);
 $router->post('/settings/update-captcha', [SettingsController::class, 'updateCaptcha']);
+$router->post('/settings/update-two-factor', [SettingsController::class, 'updateTwoFactor']);
 $router->post('/settings/test-email', [SettingsController::class, 'testEmail']);
 $router->post('/settings/test-cron', [SettingsController::class, 'testCron']);
 $router->post('/settings/clear-logs', [SettingsController::class, 'clearLogs']);
@@ -121,6 +128,14 @@ $router->get('/profile/delete', [ProfileController::class, 'delete']);
 $router->get('/profile/resend-verification', [ProfileController::class, 'resendVerification']);
 $router->post('/profile/logout-other-sessions', [ProfileController::class, 'logoutOtherSessions']);
 $router->post('/profile/logout-session/{sessionId}', [ProfileController::class, 'logoutSession']);
+
+// Two-Factor Authentication management (protected)
+$router->get('/2fa/setup', [TwoFactorController::class, 'setup']);
+$router->post('/2fa/verify-setup', [TwoFactorController::class, 'verifySetup']);
+$router->get('/2fa/cancel-setup', [TwoFactorController::class, 'cancelSetup']);
+$router->get('/2fa/backup-codes', [TwoFactorController::class, 'backupCodes']);
+$router->post('/2fa/disable', [TwoFactorController::class, 'disable']);
+$router->post('/2fa/regenerate-backup-codes', [TwoFactorController::class, 'regenerateBackupCodes']);
 
 // Notifications
 $router->get('/notifications', [NotificationController::class, 'index']);

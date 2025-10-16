@@ -256,5 +256,33 @@ class Setting extends Model
         
         return $result;
     }
+
+    /**
+     * Get 2FA settings
+     */
+    public function getTwoFactorSettings(): array
+    {
+        return [
+            'policy' => $this->getValue('two_factor_policy', 'optional'),
+            'rate_limit_minutes' => (int)$this->getValue('two_factor_rate_limit_minutes', 15),
+            'email_code_expiry_minutes' => (int)$this->getValue('two_factor_email_code_expiry_minutes', 10)
+        ];
+    }
+
+    /**
+     * Update 2FA settings
+     */
+    public function updateTwoFactorSettings(array $settings): bool
+    {
+        $result = true;
+        
+        foreach ($settings as $key => $value) {
+            if (!$this->setValue($key, $value)) {
+                $result = false;
+            }
+        }
+        
+        return $result;
+    }
 }
 

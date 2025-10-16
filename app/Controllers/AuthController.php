@@ -120,6 +120,34 @@ class AuthController extends Controller
             return;
         }
 
+        // Check if 2FA is required
+        $twoFactorService = new \App\Services\TwoFactorService();
+        $policy = $twoFactorService->getTwoFactorPolicy();
+        
+        if ($policy !== 'disabled' && $user['two_factor_enabled']) {
+            // User has 2FA enabled - require verification
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['full_name'] = $user['full_name'];
+            $_SESSION['email'] = $user['email'];
+            $_SESSION['role'] = $user['role'];
+            $_SESSION['2fa_required'] = true;
+            
+            // Clear any existing session messages before redirecting to 2FA
+            unset($_SESSION['error']);
+            unset($_SESSION['success']);
+            
+            $this->redirect('/2fa/verify');
+            return;
+        }
+
+        // Check if 2FA is forced for this user
+        if ($twoFactorService->isTwoFactorRequired($user['id'])) {
+            $_SESSION['error'] = 'You must enable two-factor authentication to continue. Please contact an administrator.';
+            $this->redirect('/login');
+            return;
+        }
+
         // Login successful - create session
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
@@ -342,10 +370,26 @@ class AuthController extends Controller
     private function verifyEmail($token)
     {
         try {
+            // Debug logging
+            $this->logger->info("Email verification attempt with token: " . substr($token, 0, 10) . "...");
+            
             // Find user by verification token using model
             $user = $this->userModel->findByVerificationToken($token);
 
             if (!$user) {
+                $this->logger->warning("No user found with verification token: " . substr($token, 0, 10) . "...");
+                
+                // Debug: Check if any user has this token (regardless of verification status)
+                $pdo = \Core\Database::getConnection();
+                $stmt = $pdo->prepare("SELECT id, email, email_verified, email_verification_token FROM users WHERE email_verification_token = ?");
+                $stmt->execute([$token]);
+                $debugUser = $stmt->fetch();
+                if ($debugUser) {
+                    $this->logger->info("Debug: Found user with token - ID: {$debugUser['id']}, Email: {$debugUser['email']}, Verified: {$debugUser['email_verified']}");
+                } else {
+                    $this->logger->warning("Debug: No user found with this token at all");
+                }
+                
                 $this->view('auth/verify-email', [
                     'title' => 'Verification Failed',
                     'error' => true,

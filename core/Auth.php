@@ -9,7 +9,7 @@ class Auth
      */
     public static function check(): bool
     {
-        return isset($_SESSION['user_id']);
+        return isset($_SESSION['user_id']) && !isset($_SESSION['2fa_required']);
     }
 
     /**
@@ -53,7 +53,9 @@ class Auth
             '/reset-password',
             '/verify-email',
             '/resend-verification',
-            '/install'
+            '/install',
+            '/2fa/verify',
+            '/2fa/send-email-code'
         ];
         
         // Don't redirect if on a public path
@@ -64,8 +66,13 @@ class Auth
         }
         
         if (!self::check()) {
-            $_SESSION['error'] = 'Please login to continue';
-            header('Location: /login');
+            if (isset($_SESSION['user_id']) && self::requiresTwoFactor()) {
+                $_SESSION['error'] = 'Please complete two-factor authentication';
+                header('Location: /2fa/verify');
+            } else {
+                $_SESSION['error'] = 'Please login to continue';
+                header('Location: /login');
+            }
             exit;
         }
     }
@@ -100,6 +107,14 @@ class Auth
     public static function role(): ?string
     {
         return $_SESSION['role'] ?? null;
+    }
+
+    /**
+     * Check if 2FA verification is required
+     */
+    public static function requiresTwoFactor(): bool
+    {
+        return isset($_SESSION['2fa_required']) && $_SESSION['2fa_required'];
     }
 }
 

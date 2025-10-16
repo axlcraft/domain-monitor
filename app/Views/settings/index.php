@@ -431,6 +431,7 @@ foreach ($notificationPresets as $key => $preset) {
             <p class="text-sm text-gray-600 mt-1">Configure CAPTCHA protection for authentication forms</p>
         </div>
 
+        <!-- CAPTCHA Settings -->
         <form method="POST" action="/settings/update-captcha" class="p-6">
             <?= csrf_field() ?>
             <div class="space-y-4">
@@ -535,6 +536,86 @@ foreach ($notificationPresets as $key => $preset) {
             </div>
         </form>
     </div>
+</div>
+
+<!-- Two-Factor Authentication Settings -->
+<div class="bg-white rounded-lg border border-gray-200 overflow-hidden mt-6">
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h3 class="text-lg font-semibold text-gray-900">Two-Factor Authentication</h3>
+        <p class="text-sm text-gray-600 mt-1">Configure 2FA policy and security settings</p>
+    </div>
+
+    <form method="POST" action="/settings/update-two-factor" class="p-6">
+        <?= csrf_field() ?>
+        <div class="space-y-4">
+            <div>
+                <label for="two_factor_policy" class="block text-sm font-medium text-gray-700 mb-2">
+                    2FA Policy
+                </label>
+                <select id="two_factor_policy" name="two_factor_policy" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                    <option value="disabled" <?= ($twoFactorSettings['policy'] ?? 'optional') === 'disabled' ? 'selected' : '' ?>>
+                        Disabled - No 2FA features available
+                    </option>
+                    <option value="optional" <?= ($twoFactorSettings['policy'] ?? 'optional') === 'optional' ? 'selected' : '' ?>>
+                        Optional - Users can choose to enable 2FA
+                    </option>
+                    <option value="forced" <?= ($twoFactorSettings['policy'] ?? 'optional') === 'forced' ? 'selected' : '' ?>>
+                        Forced - All users must enable 2FA (email verification required)
+                    </option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">
+                    <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+                    Users must have verified email addresses to enable 2FA
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="two_factor_rate_limit_minutes" class="block text-sm font-medium text-gray-700 mb-2">
+                        Rate Limit (minutes)
+                    </label>
+                    <input type="number" id="two_factor_rate_limit_minutes" name="two_factor_rate_limit_minutes"
+                           value="<?= htmlspecialchars($twoFactorSettings['rate_limit_minutes'] ?? 15) ?>"
+                           min="1" max="60"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                    <p class="text-xs text-gray-500 mt-1">Maximum failed attempts per IP address</p>
+                </div>
+
+                <div>
+                    <label for="two_factor_email_code_expiry_minutes" class="block text-sm font-medium text-gray-700 mb-2">
+                        Email Code Expiry (minutes)
+                    </label>
+                    <input type="number" id="two_factor_email_code_expiry_minutes" name="two_factor_email_code_expiry_minutes"
+                           value="<?= htmlspecialchars($twoFactorSettings['email_code_expiry_minutes'] ?? 10) ?>"
+                           min="1" max="30"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                    <p class="text-xs text-gray-500 mt-1">How long email backup codes remain valid</p>
+                </div>
+            </div>
+
+            <!-- 2FA Info Box -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p class="text-sm font-medium text-gray-900 mb-2">
+                    <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+                    Two-Factor Authentication Features
+                </p>
+                <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• <strong>TOTP Authenticator Apps:</strong> Google Authenticator, Authy, Microsoft Authenticator</li>
+                    <li>• <strong>Email Backup Codes:</strong> One-time codes sent to verified email addresses</li>
+                    <li>• <strong>Backup Recovery Codes:</strong> 8 single-use codes generated during setup</li>
+                    <li>• <strong>Rate Limiting:</strong> Prevents brute force attacks on verification codes</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">
+            <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium">
+                <i class="fas fa-shield-alt mr-2"></i>
+                Save 2FA Settings
+            </button>
+        </div>
+    </form>
 </div>
 
 <!-- Tab Content: System Information -->

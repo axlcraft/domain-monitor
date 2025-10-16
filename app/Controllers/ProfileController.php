@@ -7,18 +7,21 @@ use Core\Auth;
 use App\Models\User;
 use App\Models\SessionManager;
 use App\Models\RememberToken;
+use App\Services\Logger;
 
 class ProfileController extends Controller
 {
     private User $userModel;
     private SessionManager $sessionModel;
     private RememberToken $rememberTokenModel;
+    private Logger $logger;
 
     public function __construct()
     {
         $this->userModel = new User();
         $this->sessionModel = new SessionManager();
         $this->rememberTokenModel = new RememberToken();
+        $this->logger = new Logger('profile');
     }
 
     /**
@@ -66,6 +69,7 @@ class ProfileController extends Controller
         $this->view('profile/index', [
             'user' => $user,
             'sessions' => $formattedSessions,
+            'userModel' => $this->userModel,
             'title' => 'My Profile'
         ]);
     }
@@ -108,6 +112,10 @@ class ProfileController extends Controller
             return;
         }
 
+        // Get current user data to check if email changed
+        $currentUser = $this->userModel->find($userId);
+        $emailChanged = $currentUser['email'] !== $email;
+
         // Check if email is already taken by another user
         $existingUsers = $this->userModel->where('email', $email);
         foreach ($existingUsers as $existingUser) {
@@ -118,18 +126,46 @@ class ProfileController extends Controller
         }
         }
 
-        // Update user
-        $this->userModel->update($userId, [
+        // Prepare update data
+        $updateData = [
             'full_name' => $fullName,
             'email' => $email,
-        ]);
+        ];
+
+        // If email changed, mark as unverified and send verification email
+        if ($emailChanged) {
+            $updateData['email_verified'] = null;
+            
+            // Generate new verification token
+            $verificationToken = bin2hex(random_bytes(32));
+            $updateData['email_verification_token'] = $verificationToken;
+        }
+
+        // Update user
+        $this->userModel->update($userId, $updateData);
 
         // Update session
-            $_SESSION['full_name'] = $fullName;
-            $_SESSION['email'] = $email;
+        $_SESSION['full_name'] = $fullName;
+        $_SESSION['email'] = $email;
 
-                $_SESSION['success'] = 'Profile updated successfully';
-            $this->redirect('/profile');
+        // Send verification email if email changed
+        if ($emailChanged) {
+            try {
+                \App\Helpers\EmailHelper::sendVerificationEmail($email, $fullName, $verificationToken);
+                $_SESSION['success'] = 'Profile updated successfully. Please check your new email address for a verification link.';
+            } catch (\Exception $e) {
+                $_SESSION['success'] = 'Profile updated successfully, but verification email could not be sent. Please try resending verification.';
+                $this->logger->error("Failed to send verification email after profile update", [
+                    'user_id' => $userId,
+                    'email' => $email,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        } else {
+            $_SESSION['success'] = 'Profile updated successfully';
+        }
+        
+        $this->redirect('/profile');
     }
 
     /**
@@ -226,11 +262,29 @@ class ProfileController extends Controller
             return;
         }
 
-        // Use AuthController logic
-        $authController = new AuthController();
-        
-        $_SESSION['pending_verification_email'] = $user['email'];
-        $_SESSION['success'] = 'Verification email sent! Please check your inbox.';
+        try {
+            // Generate new verification token
+            $token = bin2hex(random_bytes(32));
+            
+            // Debug logging
+            $this->logger->info("Generated new verification token for user {$userId}: " . substr($token, 0, 10) . "...");
+            
+            // Update verification token in database
+            $this->userModel->updateEmailVerificationToken($userId, $token);
+
+            // Send verification email
+            \App\Helpers\EmailHelper::sendVerificationEmail($user['email'], $user['full_name'], $token);
+
+            $_SESSION['success'] = 'Verification email sent! Please check your inbox.';
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to resend verification email. Please try again.';
+            $this->logger->error("Failed to resend verification email", [
+                'user_id' => $userId,
+                'email' => $user['email'],
+                'error' => $e->getMessage()
+            ]);
+        }
         
         $this->redirect('/profile');
     }

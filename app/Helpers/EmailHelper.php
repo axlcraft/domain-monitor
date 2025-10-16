@@ -231,7 +231,7 @@ class EmailHelper
     /**
      * Send a notification email
      */
-    public static function sendNotificationEmail(string $toEmail, string $subject, string $message, array $data = []): array
+    public static function sendNotificationEmail(string $toEmail, string $subject, string $message, array $data = [], bool $isHtml = false): array
     {
         try {
             $emailSettings = self::getEmailSettings();
@@ -245,8 +245,16 @@ class EmailHelper
             // Content
             $mail->isHTML(true);
             $mail->Subject = $subject;
-            $mail->Body = self::formatHtmlBody($message, $data, $appSettings);
-            $mail->AltBody = strip_tags($message);
+            
+            if ($isHtml) {
+                // Message is already formatted HTML, use it directly
+                $mail->Body = $message;
+                $mail->AltBody = strip_tags($message);
+            } else {
+                // Message is plain text, format it with template
+                $mail->Body = self::formatHtmlBody($message, $data, $appSettings);
+                $mail->AltBody = strip_tags($message);
+            }
             
             $mail->send();
             
@@ -384,7 +392,7 @@ class EmailHelper
             </div>
             ";
             
-            return self::sendNotificationEmail($email, $subject, $htmlContent);
+            return self::sendNotificationEmail($email, $subject, $htmlContent, [], true);
             
         } catch (\Exception $e) {
             $errorMessage = "Failed to send verification email: " . $e->getMessage();
@@ -467,7 +475,7 @@ class EmailHelper
             </div>
             ";
             
-            return self::sendNotificationEmail($email, $subject, $htmlContent);
+            return self::sendNotificationEmail($email, $subject, $htmlContent, [], true);
             
         } catch (\Exception $e) {
             $errorMessage = "Failed to send password reset email: " . $e->getMessage();
@@ -505,5 +513,74 @@ class EmailHelper
         }
 
         return "Domain Monitor Alert";
+    }
+
+    /**
+     * Send 2FA verification code email
+     */
+    public static function sendTwoFactorCode(string $email, string $fullName, string $code): array
+    {
+        try {
+            $appSettings = self::getAppSettings();
+            $subject = 'Your Two-Factor Authentication Code';
+            
+            // Create a properly formatted HTML email
+            $htmlContent = "
+            <div style='max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;'>
+                <div style='background: #28a745; color: white; padding: 20px; border-radius: 5px 5px 0 0; text-align: center;'>
+                    <h2 style='margin: 0; font-size: 24px;'>🔐 Two-Factor Authentication</h2>
+                </div>
+                
+                <div style='background: #f9f9f9; padding: 30px; border: 1px solid #ddd;'>
+                    <h3 style='color: #333; margin-top: 0;'>Your Verification Code</h3>
+                    
+                    <p style='color: #555; line-height: 1.6; margin-bottom: 20px;'>Hello {$fullName},</p>
+                    
+                    <p style='color: #555; line-height: 1.6; margin-bottom: 20px;'>
+                        Use this code to complete your two-factor authentication:
+                    </p>
+                    
+                    <div style='background: white; border: 2px solid #28a745; border-radius: 5px; padding: 25px; text-align: center; margin: 25px 0;'>
+                        <div style='font-size: 32px; font-weight: bold; color: #28a745; letter-spacing: 8px; font-family: monospace;'>{$code}</div>
+                    </div>
+                    
+                    <div style='background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;'>
+                        <p style='margin: 0; color: #856404; font-size: 14px;'>
+                            <strong>⏰ Important:</strong> This code expires in 10 minutes for security reasons.
+                        </p>
+                    </div>
+                    
+                    <p style='color: #666; font-size: 14px; line-height: 1.6;'>
+                        If you did not request this code, please ignore this email. 
+                        No further action is required.
+                    </p>
+                </div>
+                
+                <div style='background: #333; color: white; padding: 15px; text-align: center; font-size: 12px; border-radius: 0 0 5px 5px;'>
+                    <p style='margin: 0 0 10px 0;'>This is an automated message from {$appSettings['app_name']}</p>
+                    <a href='{$appSettings['app_url']}' style='color: #4A90E2; text-decoration: none;'>Visit Dashboard</a>
+                </div>
+            </div>
+            ";
+            
+            return self::sendNotificationEmail($email, $subject, $htmlContent, [], true);
+            
+        } catch (\Exception $e) {
+            $errorMessage = "Failed to send 2FA verification email: " . $e->getMessage();
+            
+            // Log the error using the application's logger
+            self::getLogger()->error($errorMessage, [
+                'email' => $email,
+                'full_name' => $fullName,
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => $errorMessage,
+                'error' => $e->getMessage()
+            ];
+        }
     }
 }

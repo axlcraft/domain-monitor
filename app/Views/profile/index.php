@@ -4,6 +4,11 @@ $pageTitle = 'My Profile';
 $pageDescription = 'Manage your account settings and preferences';
 $pageIcon = 'fas fa-user-circle';
 ob_start();
+
+// Get 2FA status
+$twoFactorStatus = $userModel->getTwoFactorStatus($user['id']);
+$twoFactorService = new \App\Services\TwoFactorService();
+$twoFactorPolicy = $twoFactorService->getTwoFactorPolicy();
 ?>
 
 <!-- Main Profile Layout -->
@@ -53,6 +58,10 @@ ob_start();
                 <button onclick="showSection('security')" id="nav-security" class="nav-item w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors mb-1">
                     <i class="fas fa-shield-alt w-5 mr-3 text-sm"></i>
                     <span>Security</span>
+                </button>
+                <button onclick="showSection('twofactor')" id="nav-twofactor" class="nav-item w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors mb-1">
+                    <i class="fas fa-key w-5 mr-3 text-sm"></i>
+                    <span>Two-Factor Auth</span>
                 </button>
                 <button onclick="showSection('sessions')" id="nav-sessions" class="nav-item w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors mb-1">
                     <i class="fas fa-laptop w-5 mr-3 text-sm"></i>
@@ -169,6 +178,148 @@ ob_start();
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Two-Factor Authentication Section -->
+        <div id="section-twofactor" class="content-section hidden">
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <h3 class="text-lg font-semibold text-gray-900">Two-Factor Authentication</h3>
+                    <p class="text-sm text-gray-600 mt-1">Add an extra layer of security to your account</p>
+                </div>
+
+                <div class="p-6">
+                    <?php if ($twoFactorPolicy === 'disabled'): ?>
+                        <!-- 2FA Disabled by Admin -->
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-ban text-gray-400 text-xl mr-3"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">Two-Factor Authentication Disabled</p>
+                                    <p class="text-sm text-gray-600 mt-1">2FA has been disabled by the administrator.</p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php elseif (!$user['email_verified']): ?>
+                        <!-- Email Not Verified -->
+                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-exclamation-triangle text-amber-600 text-xl mr-3"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-amber-900">Email Verification Required</p>
+                                    <p class="text-sm text-amber-700 mt-1">You must verify your email address before enabling 2FA.</p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php elseif ($twoFactorStatus['enabled']): ?>
+                        <!-- 2FA Enabled -->
+                        <div class="space-y-4">
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-shield-alt text-green-600 text-xl mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-green-900">Two-Factor Authentication Enabled</p>
+                                        <p class="text-sm text-green-700 mt-1">
+                                            Your account is protected with 2FA since 
+                                            <?= date('M j, Y', strtotime($twoFactorStatus['setup_at'])) ?>.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">Backup Codes</p>
+                                            <p class="text-sm text-gray-600"><?= $twoFactorStatus['backup_codes_count'] ?> remaining</p>
+                                        </div>
+                                        <i class="fas fa-key text-gray-400"></i>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">Authenticator App</p>
+                                            <p class="text-sm text-gray-600">Active</p>
+                                        </div>
+                                        <i class="fas fa-mobile-alt text-gray-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <?php if ($twoFactorStatus['backup_codes_count'] < 3): ?>
+                                <form method="POST" action="/2fa/regenerate-backup-codes" onsubmit="return confirm('Generate new backup codes? Your current codes will stop working.')">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                        <i class="fas fa-refresh mr-2"></i>
+                                        Generate New Backup Codes
+                                    </button>
+                                </form>
+                                <?php endif; ?>
+
+                                <?php if ($twoFactorPolicy !== 'forced'): ?>
+                                <button type="button" onclick="showDisable2FAModal()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
+                                    <i class="fas fa-ban mr-2"></i>
+                                    Disable 2FA
+                                </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php elseif ($twoFactorStatus['required']): ?>
+                        <!-- 2FA Required -->
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-exclamation-circle text-red-600 text-xl mr-3"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-red-900">Two-Factor Authentication Required</p>
+                                    <p class="text-sm text-red-700 mt-1">You must enable 2FA to continue using your account.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <a href="/2fa/setup" class="inline-flex items-center px-6 py-3 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors font-medium">
+                                <i class="fas fa-shield-alt mr-2"></i>
+                                Enable Two-Factor Authentication
+                            </a>
+                        </div>
+                    <?php else: ?>
+                        <!-- 2FA Optional -->
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-info-circle text-blue-600 text-xl mr-3"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-blue-900">Enhanced Security Available</p>
+                                        <p class="text-sm text-blue-700 mt-1">
+                                            Enable two-factor authentication to add an extra layer of security to your account.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-center">
+                                <a href="/2fa/setup" class="inline-flex items-center px-6 py-3 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors font-medium">
+                                    <i class="fas fa-shield-alt mr-2"></i>
+                                    Enable Two-Factor Authentication
+                                </a>
+                            </div>
+
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-gray-900 mb-2">How 2FA Works</h4>
+                                <ul class="text-sm text-gray-700 space-y-1">
+                                    <li>• Generate time-based codes using an authenticator app</li>
+                                    <li>• Use backup codes if you lose access to your device</li>
+                                    <li>• Receive email codes as an alternative method</li>
+                                    <li>• Enhanced protection against unauthorized access</li>
+                                </ul>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
 
@@ -460,7 +611,7 @@ function showSection(section) {
 // On page load, check URL hash and show that section
 document.addEventListener('DOMContentLoaded', function() {
     const hash = window.location.hash.substring(1); // Remove #
-    const validSections = ['profile', 'security', 'sessions'<?php if ($user['role'] !== 'admin'): ?>, 'danger'<?php endif; ?>];
+    const validSections = ['profile', 'security', 'twofactor', 'sessions'<?php if ($user['role'] !== 'admin'): ?>, 'danger'<?php endif; ?>];
     
     if (hash && validSections.includes(hash)) {
         showSection(hash);
@@ -477,7 +628,62 @@ function confirmDelete() {
         }
     }
 }
+
+function showDisable2FAModal() {
+    document.getElementById('disable2FAModal').classList.remove('hidden');
+    document.getElementById('disable2FACode').focus();
+}
+
+function hideDisable2FAModal() {
+    document.getElementById('disable2FAModal').classList.add('hidden');
+    document.getElementById('disable2FAForm').reset();
+}
 </script>
+
+<!-- Disable 2FA Modal -->
+<div id="disable2FAModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                <i class="fas fa-ban text-red-600 text-xl"></i>
+            </div>
+            
+            <h3 class="text-lg font-medium text-gray-900 text-center mb-2">Disable Two-Factor Authentication</h3>
+            <p class="text-sm text-gray-500 text-center mb-6">
+                This will make your account less secure. Enter your 2FA code to confirm.
+            </p>
+            
+            <form id="disable2FAForm" method="POST" action="/2fa/disable" class="space-y-4">
+                <?= csrf_field() ?>
+                <div>
+                    <label for="disable2FACode" class="block text-sm font-medium text-gray-700 mb-1.5">
+                        Verification Code
+                    </label>
+                    <input type="text" 
+                           id="disable2FACode"
+                           name="verification_code" 
+                           maxlength="8"
+                           placeholder="Enter 2FA code"
+                           class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors text-sm"
+                           required>
+                    <p class="text-xs text-gray-500 mt-1">Enter your authenticator code, email code, or backup code</p>
+                </div>
+                
+                <div class="flex space-x-3 pt-4">
+                    <button type="submit" 
+                            class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg font-medium transition-colors text-sm">
+                        Disable 2FA
+                    </button>
+                    <button type="button" 
+                            onclick="hideDisable2FAModal()"
+                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2.5 rounded-lg font-medium transition-colors text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <?php
 $content = ob_get_clean();

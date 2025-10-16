@@ -26,6 +26,7 @@ class SettingsController extends Controller
         $appSettings = $this->settingModel->getAppSettings();
         $emailSettings = $this->settingModel->getEmailSettings();
         $captchaSettings = $this->settingModel->getCaptchaSettings();
+        $twoFactorSettings = $this->settingModel->getTwoFactorSettings();
         
         // Predefined notification day options
         $notificationPresets = [
@@ -69,6 +70,7 @@ class SettingsController extends Controller
             'appSettings' => $appSettings,
             'emailSettings' => $emailSettings,
             'captchaSettings' => $captchaSettings,
+            'twoFactorSettings' => $twoFactorSettings,
             'notificationPresets' => $notificationPresets,
             'checkIntervalPresets' => $checkIntervalPresets,
             'title' => 'Settings'
@@ -434,6 +436,60 @@ class SettingsController extends Controller
         }
         
         $this->redirect('/settings#email');
+    }
+
+    public function updateTwoFactor()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/settings');
+            return;
+        }
+
+        // CSRF Protection
+        $this->verifyCsrf('/settings#security');
+
+        try {
+            $twoFactorPolicy = trim($_POST['two_factor_policy'] ?? 'optional');
+            $rateLimitMinutes = (int)($_POST['two_factor_rate_limit_minutes'] ?? 15);
+            $emailCodeExpiryMinutes = (int)($_POST['two_factor_email_code_expiry_minutes'] ?? 10);
+
+            // Validate policy
+            $validPolicies = ['disabled', 'optional', 'forced'];
+            if (!in_array($twoFactorPolicy, $validPolicies)) {
+                $_SESSION['error'] = 'Invalid 2FA policy selected';
+                $this->redirect('/settings#security');
+                return;
+            }
+
+            // Validate rate limit (1-60 minutes)
+            if ($rateLimitMinutes < 1 || $rateLimitMinutes > 60) {
+                $_SESSION['error'] = 'Rate limit must be between 1 and 60 minutes';
+                $this->redirect('/settings#security');
+                return;
+            }
+
+            // Validate email code expiry (1-30 minutes)
+            if ($emailCodeExpiryMinutes < 1 || $emailCodeExpiryMinutes > 30) {
+                $_SESSION['error'] = 'Email code expiry must be between 1 and 30 minutes';
+                $this->redirect('/settings#security');
+                return;
+            }
+
+            $twoFactorSettings = [
+                'two_factor_policy' => $twoFactorPolicy,
+                'two_factor_rate_limit_minutes' => $rateLimitMinutes,
+                'two_factor_email_code_expiry_minutes' => $emailCodeExpiryMinutes
+            ];
+
+            $this->settingModel->updateTwoFactorSettings($twoFactorSettings);
+            
+            $_SESSION['success'] = 'Two-Factor Authentication settings updated successfully';
+            $this->redirect('/settings#security');
+
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to update 2FA settings: ' . $e->getMessage();
+            $this->redirect('/settings#security');
+        }
     }
 }
 

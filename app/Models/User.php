@@ -182,7 +182,7 @@ class User extends Model
     public function findByVerificationToken(string $token): ?array
     {
         $stmt = $this->db->prepare(
-            "SELECT * FROM users WHERE email_verification_token = ? AND email_verified = 0"
+            "SELECT * FROM users WHERE email_verification_token = ? AND (email_verified IS NULL OR email_verified = 0)"
         );
         $stmt->execute([$token]);
         $result = $stmt->fetch();
@@ -253,6 +253,36 @@ class User extends Model
     {
         $stmt = $this->db->prepare("DELETE FROM remember_tokens WHERE token = ?");
         return $stmt->execute([$token]);
+    }
+
+    /**
+     * Get user's 2FA status
+     */
+    public function getTwoFactorStatus(int $userId): array
+    {
+        $user = $this->find($userId);
+        if (!$user) {
+            return ['enabled' => false, 'can_enable' => false, 'required' => false];
+        }
+
+        $twoFactorService = new \App\Services\TwoFactorService();
+        
+        return [
+            'enabled' => (bool)$user['two_factor_enabled'],
+            'can_enable' => $twoFactorService->canEnableTwoFactor($userId),
+            'required' => $twoFactorService->isTwoFactorRequired($userId),
+            'setup_at' => $user['two_factor_setup_at'],
+            'backup_codes_count' => $user['two_factor_backup_codes'] ? count(json_decode($user['two_factor_backup_codes'], true)) : 0
+        ];
+    }
+
+    /**
+     * Check if user has verified email (required for 2FA)
+     */
+    public function hasVerifiedEmail(int $userId): bool
+    {
+        $user = $this->find($userId);
+        return $user && $user['email_verified'];
     }
 }
 
