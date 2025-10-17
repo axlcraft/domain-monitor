@@ -3,10 +3,12 @@
 namespace App\Services\Channels;
 
 use GuzzleHttp\Client;
+use App\Services\Logger;
 
 class TelegramChannel implements NotificationChannelInterface
 {
     private Client $client;
+    private Logger $logger;
 
     public function __construct()
     {
@@ -14,6 +16,7 @@ class TelegramChannel implements NotificationChannelInterface
             'base_uri' => 'https://api.telegram.org',
             'timeout' => 10,
         ]);
+        $this->logger = new Logger('telegram_channel');
     }
 
     public function send(array $config, string $message, array $data = []): bool
@@ -32,9 +35,24 @@ class TelegramChannel implements NotificationChannelInterface
                 ]
             ]);
 
-            return $response->getStatusCode() === 200;
+            $ok = $response->getStatusCode() === 200;
+            if ($ok) {
+                $this->logger->info('Telegram message sent', [
+                    'chat_id' => $config['chat_id'],
+                    'status' => $response->getStatusCode()
+                ]);
+            } else {
+                $this->logger->error('Telegram non-200 status', [
+                    'chat_id' => $config['chat_id'],
+                    'status' => $response->getStatusCode()
+                ]);
+            }
+            return $ok;
         } catch (\Exception $e) {
-            error_log("Telegram send failed: " . $e->getMessage());
+            $this->logger->error('Telegram send failed', [
+                'chat_id' => $config['chat_id'] ?? null,
+                'exception' => $e->getMessage()
+            ]);
             return false;
         }
     }

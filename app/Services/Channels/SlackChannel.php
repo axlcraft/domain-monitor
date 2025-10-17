@@ -3,14 +3,17 @@
 namespace App\Services\Channels;
 
 use GuzzleHttp\Client;
+use App\Services\Logger;
 
 class SlackChannel implements NotificationChannelInterface
 {
     private Client $client;
+    private Logger $logger;
 
     public function __construct()
     {
         $this->client = new Client(['timeout' => 10]);
+        $this->logger = new Logger('slack_channel');
     }
 
     public function send(array $config, string $message, array $data = []): bool
@@ -29,9 +32,21 @@ class SlackChannel implements NotificationChannelInterface
                 'json' => $payload
             ]);
 
-            return $response->getStatusCode() === 200;
+            $ok = $response->getStatusCode() === 200;
+            if ($ok) {
+                $this->logger->info('Slack message sent', [
+                    'status' => $response->getStatusCode()
+                ]);
+            } else {
+                $this->logger->error('Slack non-200 status', [
+                    'status' => $response->getStatusCode()
+                ]);
+            }
+            return $ok;
         } catch (\Exception $e) {
-            error_log("Slack send failed: " . $e->getMessage());
+            $this->logger->error('Slack send failed', [
+                'exception' => $e->getMessage()
+            ]);
             return false;
         }
     }

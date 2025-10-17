@@ -3,14 +3,17 @@
 namespace App\Services\Channels;
 
 use GuzzleHttp\Client;
+use App\Services\Logger;
 
 class WebhookChannel implements NotificationChannelInterface
 {
     private Client $httpClient;
+    private Logger $logger;
 
     public function __construct()
     {
         $this->httpClient = new Client(['timeout' => 10]);
+        $this->logger = new Logger('webhook_channel');
     }
 
     public function send(array $config, string $message, array $data = []): bool
@@ -37,9 +40,24 @@ class WebhookChannel implements NotificationChannelInterface
             ]);
 
             $status = $response->getStatusCode();
-            return $status >= 200 && $status < 300;
+            $ok = $status >= 200 && $status < 300;
+            if ($ok) {
+                $this->logger->info('Webhook sent successfully', [
+                    'url' => $url,
+                    'status' => $status
+                ]);
+            } else {
+                $this->logger->error('Webhook responded with non-2xx', [
+                    'url' => $url,
+                    'status' => $status
+                ]);
+            }
+            return $ok;
         } catch (\Exception $e) {
-            error_log('Webhook send failed: ' . $e->getMessage());
+            $this->logger->error('Webhook send failed', [
+                'url' => $url,
+                'exception' => $e->getMessage()
+            ]);
             return false;
         }
     }

@@ -3,14 +3,17 @@
 namespace App\Services\Channels;
 
 use GuzzleHttp\Client;
+use App\Services\Logger;
 
 class DiscordChannel implements NotificationChannelInterface
 {
     private Client $client;
+    private Logger $logger;
 
     public function __construct()
     {
         $this->client = new Client(['timeout' => 10]);
+        $this->logger = new Logger('discord_channel');
     }
 
     public function send(array $config, string $message, array $data = []): bool
@@ -28,9 +31,21 @@ class DiscordChannel implements NotificationChannelInterface
                 ]
             ]);
 
-            return $response->getStatusCode() === 204;
+            $ok = $response->getStatusCode() === 204;
+            if ($ok) {
+                $this->logger->info('Discord message sent', [
+                    'status' => $response->getStatusCode()
+                ]);
+            } else {
+                $this->logger->error('Discord non-204 status', [
+                    'status' => $response->getStatusCode()
+                ]);
+            }
+            return $ok;
         } catch (\Exception $e) {
-            error_log("Discord send failed: " . $e->getMessage());
+            $this->logger->error('Discord send failed', [
+                'exception' => $e->getMessage()
+            ]);
             return false;
         }
     }
