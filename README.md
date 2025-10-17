@@ -217,6 +217,34 @@ All application and email settings are now managed through the **Settings** page
 4. Copy the webhook URL
 5. Add it in the notification group settings
 
+#### 🌐 Webhook (Custom)
+
+Send JSON payloads to any HTTP endpoint (e.g., n8n, Zapier, Make, your own API):
+
+1. Go to Notification Groups → Edit → Add Channel
+2. Choose "Webhook (Custom)"
+3. Paste your endpoint URL (HTTPS recommended)
+4. Click "Test Channel" to verify
+
+Payload example sent on domain alerts:
+
+```json
+{
+  "event": "domain_expiration_alert",
+  "message": "⚠️ WARNING: Domain 'example.com' expires in 7 days (January 30, 2026)!\n\nRegistrar: Example Registrar\nPlease renew soon.",
+  "data": {
+    "domain": "example.com",
+    "domain_id": 123,
+    "days_left": 7,
+    "expiration_date": "2026-01-30",
+    "registrar": "Example Registrar"
+  },
+  "sent_at": "2025-10-17T12:34:56Z"
+}
+```
+
+Use this with n8n's "Webhook" trigger to start flows.
+
 ## 📅 Setting Up Cron Jobs
 
 The application requires a cron job to check domains periodically.

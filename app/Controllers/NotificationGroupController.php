@@ -214,6 +214,7 @@ class NotificationGroupController extends Controller
                     break;
                 case 'discord':
                 case 'slack':
+                case 'webhook':
                     $missingField = 'webhook URL';
                     break;
             }
@@ -423,6 +424,17 @@ class NotificationGroupController extends Controller
                 }
                 // Validate Slack webhook URL format
                 if (!str_contains($webhookUrl, 'hooks.slack.com/services/')) {
+                    return null;
+                }
+                return ['webhook_url' => $webhookUrl];
+
+            case 'webhook':
+                $webhookUrl = trim($data['webhook_url'] ?? '');
+                if (empty($webhookUrl) || !filter_var($webhookUrl, FILTER_VALIDATE_URL)) {
+                    return null;
+                }
+                // Optional: Allow any HTTPS URL; prefer HTTPS for security
+                if (!str_starts_with($webhookUrl, 'https://') && !str_starts_with($webhookUrl, 'http://')) {
                     return null;
                 }
                 return ['webhook_url' => $webhookUrl];

@@ -78,9 +78,9 @@ ob_start();
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     <?php foreach ($group['channels'] as $channel): 
                         $config = json_decode($channel['channel_config'], true);
-                        $icons = ['email' => 'fa-envelope', 'telegram' => 'fa-telegram', 'discord' => 'fa-discord', 'slack' => 'fa-slack'];
-                        $iconClasses = ['email' => 'fas', 'telegram' => 'fab', 'discord' => 'fab', 'slack' => 'fab'];
-                        $colors = ['email' => 'blue', 'telegram' => 'blue', 'discord' => 'indigo', 'slack' => 'teal'];
+                        $icons = ['email' => 'fa-envelope', 'telegram' => 'fa-telegram', 'discord' => 'fa-discord', 'slack' => 'fa-slack', 'webhook' => 'fa-link'];
+                        $iconClasses = ['email' => 'fas', 'telegram' => 'fab', 'discord' => 'fab', 'slack' => 'fab', 'webhook' => 'fas'];
+                        $colors = ['email' => 'blue', 'telegram' => 'blue', 'discord' => 'indigo', 'slack' => 'teal', 'webhook' => 'purple'];
                         $icon = $icons[$channel['channel_type']] ?? 'fa-bell';
                         $iconClass = $iconClasses[$channel['channel_type']] ?? 'fas';
                         $color = $colors[$channel['channel_type']] ?? 'gray';
@@ -152,6 +152,7 @@ ob_start();
                             <option value="telegram">Telegram</option>
                             <option value="discord">Discord</option>
                             <option value="slack">Slack</option>
+                            <option value="webhook">Webhook (Custom)</option>
                         </select>
                     </div>
 
@@ -236,6 +237,24 @@ ob_start();
                         </div>
                     </div>
 
+                    <!-- Generic Webhook Fields -->
+                    <div id="webhook_fields" class="hidden space-y-4">
+                        <div>
+                            <label for="generic_webhook_url" class="block text-sm font-medium text-gray-700 mb-1.5">
+                                Webhook URL
+                            </label>
+                            <input type="text" 
+                                   id="generic_webhook_url" 
+                                   name="webhook_url" 
+                                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm font-mono" 
+                                   placeholder="https://example.com/webhook-endpoint"
+                                   autocomplete="off">
+                            <p class="mt-1.5 text-xs text-gray-500">
+                                Will receive JSON payload compatible with n8n/Zapier/Make.
+                            </p>
+                        </div>
+                    </div>
+
                     <div class="flex gap-3">
                         <button type="submit" 
                                 class="inline-flex items-center px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors text-sm">
@@ -314,6 +333,7 @@ function toggleChannelFields() {
     const chatIdField = document.getElementById('chat_id');
     const discordWebhook = document.getElementById('discord_webhook');
     const slackWebhook = document.getElementById('slack_webhook');
+    const genericWebhook = document.getElementById('generic_webhook_url');
     
     // Remove required from all
     emailField.removeAttribute('required');
@@ -321,12 +341,14 @@ function toggleChannelFields() {
     chatIdField.removeAttribute('required');
     discordWebhook.removeAttribute('required');
     slackWebhook.removeAttribute('required');
+    if (genericWebhook) genericWebhook.removeAttribute('required');
     
     // Hide all fields
     document.getElementById('email_fields').classList.add('hidden');
     document.getElementById('telegram_fields').classList.add('hidden');
     document.getElementById('discord_fields').classList.add('hidden');
     document.getElementById('slack_fields').classList.add('hidden');
+    document.getElementById('webhook_fields').classList.add('hidden');
     
     // Hide test button by default
     testBtn.classList.add('hidden');
@@ -351,6 +373,12 @@ function toggleChannelFields() {
             case 'slack':
                 slackWebhook.setAttribute('required', 'required');
                 slackWebhook.focus();
+                break;
+            case 'webhook':
+                if (genericWebhook) {
+                    genericWebhook.setAttribute('required', 'required');
+                    genericWebhook.focus();
+                }
                 break;
         }
         
@@ -397,6 +425,17 @@ if (addChannelForm) {
             e.preventDefault();
             alert('Please enter the Slack webhook URL');
             document.getElementById('slack_webhook').focus();
+            return false;
+        }
+    }
+
+    // Validate Generic webhook
+    if (channelType === 'webhook') {
+        const webhookUrl = document.getElementById('generic_webhook_url').value.trim();
+        if (!webhookUrl) {
+            e.preventDefault();
+            alert('Please enter the Webhook URL');
+            document.getElementById('generic_webhook_url').focus();
             return false;
         }
     }
@@ -473,6 +512,13 @@ function testChannel(channelType, existingConfig = null) {
                     errorMessage = 'Please enter a Slack webhook URL';
                 }
                 break;
+            case 'webhook':
+                const genericWebhook = document.getElementById('generic_webhook_url').value.trim();
+                if (!genericWebhook) {
+                    isValid = false;
+                    errorMessage = 'Please enter a Webhook URL';
+                }
+                break;
         }
         
         if (!isValid) {
@@ -530,6 +576,9 @@ function testChannel(channelType, existingConfig = null) {
                 break;
             case 'slack':
                 formData.append('slack_webhook_url', document.getElementById('slack_webhook').value);
+                break;
+            case 'webhook':
+                formData.append('webhook_url', document.getElementById('generic_webhook_url').value);
                 break;
         }
     }
