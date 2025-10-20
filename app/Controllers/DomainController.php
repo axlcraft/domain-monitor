@@ -121,6 +121,7 @@ class DomainController extends Controller
         $domainName = trim($_POST['domain_name'] ?? '');
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
         $tagsInput = trim($_POST['tags'] ?? '');
+        $userId = \Core\Auth::id();
 
         // Validate
         if (empty($domainName)) {
@@ -147,7 +148,6 @@ class DomainController extends Controller
 
         // Validate notification group in isolation mode
         if ($groupId) {
-            $userId = \Core\Auth::id();
             $settingModel = new \App\Models\Setting();
             $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
             
@@ -269,6 +269,7 @@ class DomainController extends Controller
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
         $isActive = isset($_POST['is_active']) ? 1 : 0;
         $tagsInput = trim($_POST['tags'] ?? '');
+        $userId = \Core\Auth::id();
         
         // Validate tags
         $tagValidation = \App\Helpers\InputValidator::validateTags($tagsInput);
@@ -281,7 +282,6 @@ class DomainController extends Controller
 
         // Validate notification group in isolation mode
         if ($groupId) {
-            $userId = \Core\Auth::id();
             $settingModel = new \App\Models\Setting();
             $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
             
@@ -480,6 +480,7 @@ class DomainController extends Controller
         $domainsText = trim($_POST['domains'] ?? '');
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
         $tagsInput = trim($_POST['tags'] ?? '');
+        $userId = \Core\Auth::id();
 
         if (empty($domainsText)) {
             $_SESSION['error'] = 'Please enter at least one domain';
@@ -498,7 +499,6 @@ class DomainController extends Controller
 
         // Validate notification group in isolation mode
         if ($groupId) {
-            $userId = \Core\Auth::id();
             $settingModel = new \App\Models\Setting();
             $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
             
@@ -701,6 +701,7 @@ class DomainController extends Controller
 
         $domainIds = $_POST['domain_ids'] ?? [];
         $groupId = !empty($_POST['group_id']) ? (int)$_POST['group_id'] : null;
+        $userId = \Core\Auth::id();
         
         if (empty($domainIds)) {
             $_SESSION['error'] = 'No domains selected';
@@ -718,7 +719,6 @@ class DomainController extends Controller
 
         // Validate notification group in isolation mode
         if ($groupId) {
-            $userId = \Core\Auth::id();
             $settingModel = new \App\Models\Setting();
             $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
             
