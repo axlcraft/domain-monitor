@@ -104,6 +104,15 @@ class NotificationGroupController extends Controller
             
             $id = $this->groupModel->create($groupData);
 
+            // Log group creation
+            $logger = new \App\Services\Logger();
+            $logger->info('Notification group created', [
+                'group_id' => $id,
+                'group_name' => $name,
+                'user_id' => $userId,
+                'isolation_mode' => $isolationMode
+            ]);
+
             $_SESSION['success'] = "Group '$name' created successfully";
             $this->redirect("/groups/edit?id=$id");
         } catch (\Exception $e) {
@@ -174,6 +183,14 @@ class NotificationGroupController extends Controller
                 'description' => $description
             ]);
 
+            // Log group update
+            $logger = new \App\Services\Logger();
+            $logger->info('Notification group updated', [
+                'group_id' => $id,
+                'group_name' => $name,
+                'user_id' => \Core\Auth::id()
+            ]);
+
             $_SESSION['success'] = 'Group updated successfully';
             $this->redirect("/groups/edit?id=$id");
         } catch (\Exception $e) {
@@ -198,6 +215,14 @@ class NotificationGroupController extends Controller
         }
 
         try {
+            // Log group deletion
+            $logger = new \App\Services\Logger();
+            $logger->info('Notification group deleted', [
+                'group_id' => $id,
+                'group_name' => $group['name'],
+                'user_id' => \Core\Auth::id()
+            ]);
+
             $this->groupModel->deleteWithRelations($id);
             $_SESSION['success'] = 'Group deleted successfully';
             $this->redirect('/groups');

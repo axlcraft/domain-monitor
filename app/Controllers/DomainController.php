@@ -145,6 +145,22 @@ class DomainController extends Controller
         }
         $tags = $tagValidation['tags'];
 
+        // Validate notification group in isolation mode
+        if ($groupId) {
+            $userId = \Core\Auth::id();
+            $settingModel = new \App\Models\Setting();
+            $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+            
+            if ($isolationMode === 'isolated') {
+                $group = $this->groupModel->find($groupId);
+                if (!$group || $group['user_id'] != $userId) {
+                    $_SESSION['error'] = 'You can only assign domains to your own notification groups';
+                    $this->redirect('/domains/create');
+                    return;
+                }
+            }
+        }
+
         // Check if domain already exists
         if ($this->domainModel->existsByDomain($domainName)) {
             $_SESSION['error'] = 'Domain already exists';
@@ -181,7 +197,19 @@ class DomainController extends Controller
             'last_checked' => date('Y-m-d H:i:s'),
             'status' => $status,
             'whois_data' => json_encode($whoisData),
-            'is_active' => 1
+            'is_active' => 1,
+            'user_id' => $userId
+        ]);
+
+        // Log domain creation
+        $logger = new \App\Services\Logger();
+        $logger->info('Domain created', [
+            'domain_id' => $id,
+            'domain_name' => $domainName,
+            'user_id' => $userId,
+            'status' => $status,
+            'expiration_date' => $whoisData['expiration_date'],
+            'notification_group_id' => $groupId
         ]);
 
         if ($status !== 'available') {
@@ -250,6 +278,22 @@ class DomainController extends Controller
             return;
         }
         $tags = $tagValidation['tags'];
+
+        // Validate notification group in isolation mode
+        if ($groupId) {
+            $userId = \Core\Auth::id();
+            $settingModel = new \App\Models\Setting();
+            $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+            
+            if ($isolationMode === 'isolated') {
+                $group = $this->groupModel->find($groupId);
+                if (!$group || $group['user_id'] != $userId) {
+                    $_SESSION['error'] = 'You can only assign domains to your own notification groups';
+                    $this->redirect('/domains/' . $id . '/edit');
+                    return;
+                }
+            }
+        }
         
         // Check if monitoring status changed
         $statusChanged = ($domain['is_active'] != $isActive);
@@ -452,6 +496,22 @@ class DomainController extends Controller
         }
         $tags = $tagValidation['tags'];
 
+        // Validate notification group in isolation mode
+        if ($groupId) {
+            $userId = \Core\Auth::id();
+            $settingModel = new \App\Models\Setting();
+            $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+            
+            if ($isolationMode === 'isolated') {
+                $group = $this->groupModel->find($groupId);
+                if (!$group || $group['user_id'] != $userId) {
+                    $_SESSION['error'] = 'You can only assign domains to your own notification groups';
+                    $this->redirect('/domains/bulk-add');
+                    return;
+                }
+            }
+        }
+
         // Split by new lines and clean
         $domainNames = array_filter(array_map('trim', explode("\n", $domainsText)));
         
@@ -459,6 +519,16 @@ class DomainController extends Controller
         $skipped = 0;
         $availableCount = 0;
         $errors = [];
+        $userId = \Core\Auth::id();
+        
+        // Log bulk add start
+        $logger = new \App\Services\Logger();
+        $logger->info('Bulk domain add started', [
+            'user_id' => $userId,
+            'domain_count' => count($domainNames),
+            'notification_group_id' => $groupId,
+            'tags' => $tags
+        ]);
 
         foreach ($domainNames as $domainName) {
             // Skip if already exists
@@ -494,11 +564,21 @@ class DomainController extends Controller
                 'last_checked' => date('Y-m-d H:i:s'),
                 'status' => $status,
                 'whois_data' => json_encode($whoisData),
-                'is_active' => 1
+                'is_active' => 1,
+                'user_id' => \Core\Auth::id()
             ]);
 
             $added++;
         }
+
+        // Log bulk add completion
+        $logger->info('Bulk domain add completed', [
+            'user_id' => $userId,
+            'added' => $added,
+            'skipped' => $skipped,
+            'errors' => count($errors),
+            'available_count' => $availableCount
+        ]);
 
         $message = "Added $added domain(s)";
         if ($skipped > 0) $message .= ", skipped $skipped duplicate(s)";
@@ -634,6 +714,22 @@ class DomainController extends Controller
             $_SESSION['error'] = $sizeError;
             $this->redirect('/domains');
             return;
+        }
+
+        // Validate notification group in isolation mode
+        if ($groupId) {
+            $userId = \Core\Auth::id();
+            $settingModel = new \App\Models\Setting();
+            $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+            
+            if ($isolationMode === 'isolated') {
+                $group = $this->groupModel->find($groupId);
+                if (!$group || $group['user_id'] != $userId) {
+                    $_SESSION['error'] = 'You can only assign domains to your own notification groups';
+                    $this->redirect('/domains');
+                    return;
+                }
+            }
         }
 
         $updated = 0;
