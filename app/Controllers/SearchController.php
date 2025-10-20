@@ -27,12 +27,17 @@ class SearchController extends Controller
             return;
         }
 
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+
         // Pagination parameters
         $page = max(1, (int)($_GET['page'] ?? 1));
         $perPage = max(10, min(100, (int)($_GET['per_page'] ?? 25)));
 
         // Search existing domains in database
-        $allResults = $this->searchDomains($query);
+        $allResults = $this->searchDomains($query, $isolationMode === 'isolated' ? $userId : null);
         $totalResults = count($allResults);
 
         // Calculate pagination
@@ -144,23 +149,45 @@ class SearchController extends Controller
     /**
      * Search domains in database
      */
-    private function searchDomains(string $query): array
+    private function searchDomains(string $query, ?int $userId = null): array
     {
         $db = \Core\Database::getConnection();
         $sql = "SELECT d.*, ng.name as group_name 
                 FROM domains d 
                 LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id 
-                WHERE d.domain_name LIKE ? 
+                WHERE (d.domain_name LIKE ? 
                    OR d.registrar LIKE ?
-                   OR ng.name LIKE ?
-                ORDER BY d.domain_name ASC
-                LIMIT 50";
+                   OR ng.name LIKE ?)";
+        
+        $params = ['%' . $query . '%', '%' . $query . '%', '%' . $query . '%'];
+        
+        if ($userId && !$this->isAdmin($userId)) {
+            $sql .= " AND d.user_id = ?";
+            $params[] = $userId;
+        }
+        
+        $sql .= " ORDER BY d.domain_name ASC LIMIT 50";
 
-        $searchTerm = '%' . $query . '%';
         $stmt = $db->prepare($sql);
-        $stmt->execute([$searchTerm, $searchTerm, $searchTerm]);
+        $stmt->execute($params);
         
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Check if user is admin
+     */
+    private function isAdmin(?int $userId): bool
+    {
+        if (!$userId) {
+            return false;
+        }
+        
+        $db = \Core\Database::getConnection();
+        $stmt = $db->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        return $user && $user['role'] === 'admin';
     }
 
     /**

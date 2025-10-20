@@ -70,6 +70,8 @@ $router->post('/domains/bulk-assign-group', [DomainController::class, 'bulkAssig
 $router->post('/domains/bulk-toggle-status', [DomainController::class, 'bulkToggleStatus']);
 $router->post('/domains/bulk-add-tags', [DomainController::class, 'bulkAddTags']);
 $router->post('/domains/bulk-remove-tags', [DomainController::class, 'bulkRemoveTags']);
+$router->post('/domains/transfer', [DomainController::class, 'transfer']);
+$router->post('/domains/bulk-transfer', [DomainController::class, 'bulkTransfer']);
 $router->post('/domains/store', [DomainController::class, 'store']);
 $router->get('/domains/{id}', [DomainController::class, 'show']);
 $router->get('/domains/{id}/edit', [DomainController::class, 'edit']);
@@ -86,6 +88,8 @@ $router->get('/groups/edit', [NotificationGroupController::class, 'edit']);
 $router->post('/groups/update', [NotificationGroupController::class, 'update']);
 $router->get('/groups/delete', [NotificationGroupController::class, 'delete']);
 $router->post('/groups/bulk-delete', [NotificationGroupController::class, 'bulkDelete']);
+$router->post('/groups/transfer', [NotificationGroupController::class, 'transfer']);
+$router->post('/groups/bulk-transfer', [NotificationGroupController::class, 'bulkTransfer']);
 
 // Notification Channels
 $router->post('/channels/add', [NotificationGroupController::class, 'addChannel']);
@@ -119,6 +123,7 @@ $router->post('/settings/update-two-factor', [SettingsController::class, 'update
 $router->post('/settings/test-email', [SettingsController::class, 'testEmail']);
 $router->post('/settings/test-cron', [SettingsController::class, 'testCron']);
 $router->post('/settings/clear-logs', [SettingsController::class, 'clearLogs']);
+$router->post('/settings/toggle-isolation', [SettingsController::class, 'toggleIsolationMode']);
 
 // Profile
 $router->get('/profile', [ProfileController::class, 'index']);

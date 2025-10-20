@@ -10,8 +10,11 @@ CREATE TABLE IF NOT EXISTS notification_groups (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    user_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_notification_groups_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Domains table
@@ -30,15 +33,18 @@ CREATE TABLE IF NOT EXISTS domains (
     notes TEXT,
     tags TEXT NULL COMMENT 'Comma-separated tags for organization',
     is_active BOOLEAN DEFAULT TRUE,
+    user_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (notification_group_id) REFERENCES notification_groups(id) ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_notification_group_id (notification_group_id),
     INDEX idx_domain_name (domain_name),
     INDEX idx_expiration_date (expiration_date),
     INDEX idx_status (status),
     INDEX idx_is_active (is_active),
-    INDEX idx_tags (tags(255))
+    INDEX idx_tags (tags(255)),
+    INDEX idx_domains_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Notification channels table
@@ -256,7 +262,10 @@ INSERT INTO settings (setting_key, setting_value, `type`, `description`) VALUES
 ('captcha_provider', 'disabled', 'string', 'CAPTCHA provider (disabled, recaptcha_v2, recaptcha_v3, turnstile)'),
 ('captcha_site_key', '', 'string', 'CAPTCHA site/public key'),
 ('captcha_secret_key', '', 'encrypted', 'CAPTCHA secret key (encrypted)'),
-('recaptcha_v3_score_threshold', '0.5', 'string', 'reCAPTCHA v3 minimum score threshold (0.0 to 1.0)')
+('recaptcha_v3_score_threshold', '0.5', 'string', 'reCAPTCHA v3 minimum score threshold (0.0 to 1.0)'),
+
+-- User isolation settings
+('user_isolation_mode', 'shared', 'string', 'User data visibility mode: shared (all users see all data) or isolated (users see only their own data)')
 
 ON DUPLICATE KEY UPDATE setting_key=setting_key;
 

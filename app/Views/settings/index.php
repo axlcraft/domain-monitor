@@ -48,6 +48,10 @@ foreach ($notificationPresets as $key => $preset) {
                 <i class="fas fa-bell mr-2"></i>
                 Monitoring
             </button>
+            <button onclick="switchTab('isolation')" id="tab-isolation" class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                <i class="fas fa-users mr-2"></i>
+                User Isolation
+            </button>
             <button onclick="switchTab('security')" id="tab-security" class="tab-button px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
                 <i class="fas fa-shield-alt mr-2"></i>
                 Security
@@ -418,6 +422,77 @@ foreach ($notificationPresets as $key => $preset) {
                     <i class="fas fa-save mr-2"></i>
                     Save Monitoring Settings
                 </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tab Content: User Isolation Settings -->
+<div id="content-isolation" class="tab-content hidden">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-lg font-semibold text-gray-900">User Isolation Settings</h3>
+            <p class="text-sm text-gray-600 mt-1">Configure how users see domains, groups, and tags</p>
+        </div>
+
+        <form method="POST" action="/settings/toggle-isolation" class="p-6">
+            <?= csrf_field() ?>
+            
+            <div class="space-y-6">
+                <!-- Isolation Mode -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        User Data Visibility
+                    </label>
+                    <select name="user_isolation_mode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                        <option value="shared" <?= $isolationSettings['user_isolation_mode'] === 'shared' ? 'selected' : '' ?>>
+                            🔓 Shared - All users see all domains, groups, and tags
+                        </option>
+                        <option value="isolated" <?= $isolationSettings['user_isolation_mode'] === 'isolated' ? 'selected' : '' ?>>
+                            🔒 Isolated - Users only see their own domains, groups, and tags
+                        </option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <strong>Shared:</strong> Current behavior - everyone sees everything<br>
+                        <strong>Isolated:</strong> Users only see what they created
+                    </p>
+                </div>
+
+                <?php if ($isolationSettings['user_isolation_mode'] === 'shared'): ?>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div class="flex">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 mt-1"></i>
+                            <div class="ml-3">
+                                <h4 class="text-sm font-medium text-yellow-800">Migration Notice</h4>
+                                <p class="text-sm text-yellow-700 mt-1">
+                                    When switching to isolated mode, all existing domains and groups will be assigned to the first admin user. 
+                                    You can then transfer them to other users as needed.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($isolationSettings['user_isolation_mode'] === 'isolated'): ?>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex">
+                            <i class="fas fa-info-circle text-blue-600 mt-1"></i>
+                            <div class="ml-3">
+                                <h4 class="text-sm font-medium text-blue-800">Isolation Mode Active</h4>
+                                <p class="text-sm text-blue-700 mt-1">
+                                    Users can only see their own domains, groups, and tags. Admins can transfer domains and groups between users.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-2"></i>
+                        Update Isolation Mode
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -795,7 +870,7 @@ function switchTab(tabName) {
 // Load tab from URL hash on page load
 window.addEventListener('DOMContentLoaded', function() {
     const hash = window.location.hash.substring(1); // Remove the #
-    const validTabs = ['app', 'email', 'monitoring', 'security', 'system', 'maintenance'];
+    const validTabs = ['app', 'email', 'monitoring', 'isolation', 'security', 'system', 'maintenance'];
     
     if (hash && validTabs.includes(hash)) {
         switchTab(hash);

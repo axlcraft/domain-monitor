@@ -27,6 +27,7 @@ class SettingsController extends Controller
         $emailSettings = $this->settingModel->getEmailSettings();
         $captchaSettings = $this->settingModel->getCaptchaSettings();
         $twoFactorSettings = $this->settingModel->getTwoFactorSettings();
+        $isolationSettings = $this->getIsolationSettings();
         
         // Predefined notification day options
         $notificationPresets = [
@@ -71,6 +72,7 @@ class SettingsController extends Controller
             'emailSettings' => $emailSettings,
             'captchaSettings' => $captchaSettings,
             'twoFactorSettings' => $twoFactorSettings,
+            'isolationSettings' => $isolationSettings,
             'notificationPresets' => $notificationPresets,
             'checkIntervalPresets' => $checkIntervalPresets,
             'title' => 'Settings'
@@ -489,6 +491,108 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Failed to update 2FA settings: ' . $e->getMessage();
             $this->redirect('/settings#security');
+        }
+    }
+
+    /**
+     * Get isolation settings
+     */
+    private function getIsolationSettings(): array
+    {
+        return [
+            'user_isolation_mode' => $this->settingModel->getValue('user_isolation_mode', 'shared')
+        ];
+    }
+
+    /**
+     * Toggle isolation mode
+     */
+    public function toggleIsolationMode()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/settings');
+            return;
+        }
+
+        $this->verifyCsrf('/settings#isolation');
+
+        $newMode = $_POST['user_isolation_mode'] ?? 'shared';
+
+        try {
+            if ($newMode === 'isolated') {
+                // Check if we have any admin users
+                $domainModel = new \App\Models\Domain();
+                $adminUser = $domainModel->getFirstAdminUser();
+                if (!$adminUser) {
+                    $_SESSION['error'] = 'No admin users found. Please create an admin user first.';
+                    $this->redirect('/settings#isolation');
+                    return;
+                }
+
+                // Run migration
+                $migrationResult = $this->migrateToIsolatedMode();
+                if (!$migrationResult['success']) {
+                    $_SESSION['error'] = 'Migration failed: ' . $migrationResult['error'];
+                    $this->redirect('/settings#isolation');
+                    return;
+                }
+
+                $_SESSION['success'] = "Isolation mode enabled. {$migrationResult['domains_assigned']} domains and {$migrationResult['groups_assigned']} groups assigned to admin.";
+            } else {
+                // Switching back to shared mode
+                $this->settingModel->setValue('user_isolation_mode', 'shared');
+                $_SESSION['success'] = 'Switched to shared mode. All users can now see all domains and groups.';
+            }
+
+            $this->redirect('/settings#isolation');
+
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Error updating isolation mode: ' . $e->getMessage();
+            $this->redirect('/settings#isolation');
+        }
+    }
+
+    /**
+     * Migrate existing data to isolated mode
+     */
+    private function migrateToIsolatedMode(): array
+    {
+        try {
+            // Get the first admin user
+            $domainModel = new \App\Models\Domain();
+            $adminUser = $domainModel->getFirstAdminUser();
+            
+            if (!$adminUser) {
+                throw new \Exception('No admin user found. Please create an admin user first.');
+            }
+            
+            $adminId = $adminUser['id'];
+            
+            // Assign all domains to admin
+            $domainStmt = $this->settingModel->db->prepare("UPDATE domains SET user_id = ? WHERE user_id IS NULL");
+            $domainStmt->execute([$adminId]);
+            $domainCount = $domainStmt->rowCount();
+            
+            // Assign all groups to admin
+            $groupStmt = $this->settingModel->db->prepare("UPDATE notification_groups SET user_id = ? WHERE user_id IS NULL");
+            $groupStmt->execute([$adminId]);
+            $groupCount = $groupStmt->rowCount();
+            
+            // Set isolation mode
+            $this->settingModel->setValue('user_isolation_mode', 'isolated');
+            
+            return [
+                'success' => true,
+                'admin_id' => $adminId,
+                'domains_assigned' => $domainCount,
+                'groups_assigned' => $groupCount
+            ];
+            
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         }
     }
 }

@@ -22,6 +22,11 @@ class DomainController extends Controller
 
     public function index()
     {
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
         // Get filter parameters
         $search = \App\Helpers\InputValidator::sanitizeSearch($_GET['search'] ?? '', 100);
         $status = $_GET['status'] ?? '';
@@ -33,7 +38,6 @@ class DomainController extends Controller
         $perPage = max(10, min(100, (int)($_GET['per_page'] ?? 25))); // Between 10 and 100
 
         // Get expiring threshold from settings
-        $settingModel = new \App\Models\Setting();
         $notificationDays = $settingModel->getNotificationDays();
         $expiringThreshold = !empty($notificationDays) ? max($notificationDays) : 30;
 
@@ -46,12 +50,16 @@ class DomainController extends Controller
         ];
 
         // Get filtered and paginated domains using model
-        $result = $this->domainModel->getFilteredPaginated($filters, $sortBy, $sortOrder, $page, $perPage, $expiringThreshold);
+        $result = $this->domainModel->getFilteredPaginated($filters, $sortBy, $sortOrder, $page, $perPage, $expiringThreshold, $isolationMode === 'isolated' ? $userId : null);
 
-        $groups = $this->groupModel->all();
-        
-        // Get all unique tags for filter dropdown
-        $allTags = $this->domainModel->getAllTags();
+        // Get groups and tags based on isolation mode
+        if ($isolationMode === 'isolated') {
+            $groups = $this->groupModel->getAllWithChannelCount($userId);
+            $allTags = $this->domainModel->getAllTags($userId);
+        } else {
+            $groups = $this->groupModel->getAllWithChannelCount();
+            $allTags = $this->domainModel->getAllTags();
+        }
         
         // Format domains for display
         $formattedDomains = \App\Helpers\DomainHelper::formatMultiple($result['domains']);
@@ -754,6 +762,107 @@ class DomainController extends Controller
         }
 
         $_SESSION['success'] = "Tags removed from $updated domain(s)";
+        $this->redirect('/domains');
+    }
+
+    /**
+     * Transfer domain to another user (Admin only)
+     */
+    public function transfer()
+    {
+        \Core\Auth::requireAdmin();
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/domains');
+            return;
+        }
+
+        $this->verifyCsrf('/domains');
+
+        $domainId = (int)($_POST['domain_id'] ?? 0);
+        $targetUserId = (int)($_POST['target_user_id'] ?? 0);
+
+        if (!$domainId || !$targetUserId) {
+            $_SESSION['error'] = 'Invalid domain or user selected';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Validate domain exists
+        $domain = $this->domainModel->find($domainId);
+        if (!$domain) {
+            $_SESSION['error'] = 'Domain not found';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Validate target user exists
+        $userModel = new \App\Models\User();
+        $targetUser = $userModel->find($targetUserId);
+        if (!$targetUser) {
+            $_SESSION['error'] = 'Target user not found';
+            $this->redirect('/domains');
+            return;
+        }
+
+        try {
+            // Transfer domain
+            $this->domainModel->update($domainId, ['user_id' => $targetUserId]);
+            
+            $_SESSION['success'] = "Domain '{$domain['domain_name']}' transferred to {$targetUser['username']}";
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to transfer domain. Please try again.';
+        }
+
+        $this->redirect('/domains');
+    }
+
+    /**
+     * Bulk transfer domains to another user (Admin only)
+     */
+    public function bulkTransfer()
+    {
+        \Core\Auth::requireAdmin();
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/domains');
+            return;
+        }
+
+        $this->verifyCsrf('/domains');
+
+        $domainIds = $_POST['domain_ids'] ?? [];
+        $targetUserId = (int)($_POST['target_user_id'] ?? 0);
+
+        if (empty($domainIds) || !$targetUserId) {
+            $_SESSION['error'] = 'No domains selected or invalid user';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Validate target user exists
+        $userModel = new \App\Models\User();
+        $targetUser = $userModel->find($targetUserId);
+        if (!$targetUser) {
+            $_SESSION['error'] = 'Target user not found';
+            $this->redirect('/domains');
+            return;
+        }
+
+        $transferred = 0;
+        foreach ($domainIds as $domainId) {
+            $domainId = (int)$domainId;
+            if ($domainId > 0) {
+                try {
+                    $this->domainModel->update($domainId, ['user_id' => $targetUserId]);
+                    $transferred++;
+                } catch (\Exception $e) {
+                    // Continue with other domains
+                }
+            }
+        }
+
+        $_SESSION['success'] = "$transferred domain(s) transferred to {$targetUser['username']}";
         $this->redirect('/domains');
     }
 }

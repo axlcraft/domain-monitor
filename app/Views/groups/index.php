@@ -37,6 +37,13 @@ ob_start();
         <div class="flex items-center gap-4">
             <span id="selected-count" class="text-sm font-medium text-blue-900"></span>
             
+            <?php if (\Core\Auth::user()['role'] === 'admin'): ?>
+                <button type="button" onclick="bulkTransfer()" class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    <i class="fas fa-exchange-alt mr-2"></i>
+                    Transfer Selected
+                </button>
+            <?php endif; ?>
+            
             <button type="button" onclick="bulkDelete()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
                 <i class="fas fa-trash mr-2"></i>
                 Delete Selected
@@ -106,6 +113,13 @@ ob_start();
                                     <a href="/groups/edit?id=<?= $group['id'] ?>" class="text-blue-600 hover:text-blue-800" title="Manage">
                                         <i class="fas fa-cog"></i>
                                     </a>
+                                    <?php if (\Core\Auth::user()['role'] === 'admin'): ?>
+                                        <button onclick="transferGroup(<?= $group['id'] ?>, '<?= htmlspecialchars($group['name']) ?>')" 
+                                                class="text-green-600 hover:text-green-800" 
+                                                title="Transfer Group">
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </button>
+                                    <?php endif; ?>
                                     <a href="/groups/delete?id=<?= $group['id'] ?>" 
                                        class="text-red-600 hover:text-red-800" 
                                        title="Delete"
@@ -251,6 +265,110 @@ function bulkDelete() {
     
     document.body.appendChild(form);
     form.submit();
+}
+
+// Transfer single group
+function transferGroup(groupId, groupName) {
+    const users = <?= json_encode($users ?? []) ?>;
+    
+    if (users.length === 0) {
+        alert('No users available for transfer');
+        return;
+    }
+    
+    const userOptions = users.map(user => 
+        `<option value="${user.id}">${user.username} (${user.full_name || 'No name'})</option>`
+    ).join('');
+            
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg p-6 w-96">
+                    <h3 class="text-lg font-semibold mb-4">Transfer Group</h3>
+                    <p class="text-sm text-gray-600 mb-4">Transfer group "${groupName}" to another user:</p>
+                    
+                    <form method="POST" action="/groups/transfer">
+                        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                        <input type="hidden" name="group_id" value="${groupId}">
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Transfer to User:</label>
+                            <select name="target_user_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                <option value="">Select User</option>
+                                ${userOptions}
+                            </select>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="this.closest('.fixed').remove()" 
+                                    class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                Transfer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+    document.body.appendChild(modal);
+}
+
+// Bulk transfer groups
+function bulkTransfer() {
+    const selectedCheckboxes = document.querySelectorAll('input[name="group_ids[]"]:checked');
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select groups to transfer');
+        return;
+    }
+    
+    const users = <?= json_encode($users ?? []) ?>;
+    
+    if (users.length === 0) {
+        alert('No users available for transfer');
+        return;
+    }
+    
+    const userOptions = users.map(user => 
+        `<option value="${user.id}">${user.username} (${user.full_name || 'No name'})</option>`
+    ).join('');
+            
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg p-6 w-96">
+                    <h3 class="text-lg font-semibold mb-4">Transfer Groups</h3>
+                    <p class="text-sm text-gray-600 mb-4">Transfer ${selectedCheckboxes.length} selected group(s) to another user:</p>
+                    
+                    <form method="POST" action="/groups/bulk-transfer">
+                        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                        ${Array.from(selectedCheckboxes).map(cb => 
+                            `<input type="hidden" name="group_ids[]" value="${cb.value}">`
+                        ).join('')}
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Transfer to User:</label>
+                            <select name="target_user_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                <option value="">Select User</option>
+                                ${userOptions}
+                            </select>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="this.closest('.fixed').remove()" 
+                                    class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                Transfer All
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+    document.body.appendChild(modal);
 }
 </script>
 

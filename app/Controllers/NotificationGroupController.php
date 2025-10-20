@@ -19,10 +19,28 @@ class NotificationGroupController extends Controller
 
     public function index()
     {
-        $groups = $this->groupModel->getAllWithChannelCount();
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
+        // Get groups based on isolation mode
+        if ($isolationMode === 'isolated') {
+            $groups = $this->groupModel->getAllWithChannelCount($userId);
+        } else {
+            $groups = $this->groupModel->getAllWithChannelCount();
+        }
+
+        // Get users for transfer functionality (admin only)
+        $users = [];
+        if (\Core\Auth::user()['role'] === 'admin') {
+            $userModel = new \App\Models\User();
+            $users = $userModel->all();
+        }
 
         $this->view('groups/index', [
             'groups' => $groups,
+            'users' => $users,
             'title' => 'Notification Groups'
         ]);
     }
@@ -69,10 +87,22 @@ class NotificationGroupController extends Controller
         }
 
         try {
-            $id = $this->groupModel->create([
+            // Get current user and isolation mode
+            $userId = \Core\Auth::id();
+            $settingModel = new \App\Models\Setting();
+            $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+            
+            $groupData = [
                 'name' => $name,
                 'description' => $description
-            ]);
+            ];
+            
+            // Assign to current user if in isolated mode
+            if ($isolationMode === 'isolated') {
+                $groupData['user_id'] = $userId;
+            }
+            
+            $id = $this->groupModel->create($groupData);
 
             $_SESSION['success'] = "Group '$name' created successfully";
             $this->redirect("/groups/edit?id=$id");
@@ -490,6 +520,117 @@ class NotificationGroupController extends Controller
             $_SESSION['error'] = 'Failed to delete any groups. Please check error logs for details.';
         }
 
+        $this->redirect('/groups');
+    }
+
+    /**
+     * Transfer group to another user (Admin only)
+     */
+    public function transfer()
+    {
+        \Core\Auth::requireAdmin();
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/groups');
+            return;
+        }
+
+        $this->verifyCsrf('/groups');
+
+        $groupId = (int)($_POST['group_id'] ?? 0);
+        $targetUserId = (int)($_POST['target_user_id'] ?? 0);
+
+        if (!$groupId || !$targetUserId) {
+            $_SESSION['error'] = 'Invalid group or user selected';
+            $this->redirect('/groups');
+            return;
+        }
+
+        // Validate group exists
+        $group = $this->groupModel->find($groupId);
+        if (!$group) {
+            $_SESSION['error'] = 'Group not found';
+            $this->redirect('/groups');
+            return;
+        }
+
+        // Validate target user exists
+        $userModel = new \App\Models\User();
+        $targetUser = $userModel->find($targetUserId);
+        if (!$targetUser) {
+            $_SESSION['error'] = 'Target user not found';
+            $this->redirect('/groups');
+            return;
+        }
+
+        try {
+            // Transfer group
+            $this->groupModel->update($groupId, ['user_id' => $targetUserId]);
+            
+            // Also transfer all domains in this group
+            $domainModel = new \App\Models\Domain();
+            $domainModel->updateWhere(['notification_group_id' => $groupId], ['user_id' => $targetUserId]);
+            
+            $_SESSION['success'] = "Group '{$group['name']}' and its domains transferred to {$targetUser['username']}";
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to transfer group. Please try again.';
+        }
+
+        $this->redirect('/groups');
+    }
+
+    /**
+     * Bulk transfer groups to another user (Admin only)
+     */
+    public function bulkTransfer()
+    {
+        \Core\Auth::requireAdmin();
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/groups');
+            return;
+        }
+
+        $this->verifyCsrf('/groups');
+
+        $groupIds = $_POST['group_ids'] ?? [];
+        $targetUserId = (int)($_POST['target_user_id'] ?? 0);
+
+        if (empty($groupIds) || !$targetUserId) {
+            $_SESSION['error'] = 'No groups selected or invalid user';
+            $this->redirect('/groups');
+            return;
+        }
+
+        // Validate target user exists
+        $userModel = new \App\Models\User();
+        $targetUser = $userModel->find($targetUserId);
+        if (!$targetUser) {
+            $_SESSION['error'] = 'Target user not found';
+            $this->redirect('/groups');
+            return;
+        }
+
+        $transferred = 0;
+        foreach ($groupIds as $groupId) {
+            $groupId = (int)$groupId;
+            if ($groupId > 0) {
+                try {
+                    // Transfer group
+                    $this->groupModel->update($groupId, ['user_id' => $targetUserId]);
+                    
+                    // Also transfer all domains in this group
+                    $domainModel = new \App\Models\Domain();
+                    $domainModel->updateWhere(['notification_group_id' => $groupId], ['user_id' => $targetUserId]);
+                    
+                    $transferred++;
+                } catch (\Exception $e) {
+                    // Continue with other groups
+                }
+            }
+        }
+
+        $_SESSION['success'] = "$transferred group(s) and their domains transferred to {$targetUser['username']}";
         $this->redirect('/groups');
     }
 }
