@@ -19,15 +19,7 @@ if ($userId) {
 
 // Get stats for sidebar (available on all pages)
 if (!isset($stats)) {
-    $domainModel = new \App\Models\Domain();
-    $settingModel = new \App\Models\Setting();
-    $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
-    
-    if ($isolationMode === 'isolated') {
-        $stats = $domainModel->getStatistics($userId);
-    } else {
-        $stats = $domainModel->getStatistics();
-    }
+    $stats = \App\Helpers\LayoutHelper::getDomainStats();
 }
 
 // Get application settings from database

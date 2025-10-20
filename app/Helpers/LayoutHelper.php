@@ -36,6 +36,23 @@ class LayoutHelper
     
     
     /**
+     * Get domain statistics (centralized function for views)
+     */
+    public static function getDomainStats(): array
+    {
+        $domainModel = new \App\Models\Domain();
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
+        if ($isolationMode === 'isolated') {
+            return $domainModel->getStatistics($userId);
+        } else {
+            return $domainModel->getStatistics();
+        }
+    }
+
+    /**
      * Convert timestamp to "time ago" format
      */
     private static function timeAgo(string $datetime): string

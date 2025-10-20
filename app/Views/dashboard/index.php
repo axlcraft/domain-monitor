@@ -3,6 +3,12 @@ $title = 'Dashboard';
 $pageTitle = 'Dashboard Overview';
 $pageDescription = 'Monitor your domains and expiration dates';
 $pageIcon = 'fas fa-chart-line';
+
+// Get stats for dashboard (if not already set by base.php)
+if (!isset($stats)) {
+    $stats = \App\Helpers\LayoutHelper::getDomainStats();
+}
+
 ob_start();
 ?>
 
@@ -261,7 +267,6 @@ ob_start();
         </div>
     </div>
 </div>
-
 
 <?php
 $content = ob_get_clean();
