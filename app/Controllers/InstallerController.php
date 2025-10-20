@@ -351,6 +351,43 @@ class InstallerController extends Controller
                     $this->logger->info("Consolidated schema executed with fallback method - $successCount statements successful");
                     $results[] = '000_initial_schema_v1.1.0.sql';
                 }
+                
+                // Mark all individual migrations as executed since the consolidated schema includes them all
+                $allIndividualMigrations = [
+                    '001_create_tables.sql',
+                    '002_create_users_table.sql',
+                    '003_add_whois_fields.sql',
+                    '004_create_tld_registry_table.sql',
+                    '005_update_tld_import_logs.sql',
+                    '006_add_complete_workflow_import_type.sql',
+                    '007_add_app_and_email_settings.sql',
+                    '008_add_notes_to_domains.sql',
+                    '009_add_authentication_features.sql',
+                    '010_add_app_version_setting.sql',
+                    '011_create_sessions_table.sql',
+                    '012_link_remember_tokens_to_sessions.sql',
+                    '013_create_user_notifications_table.sql',
+                    '014_add_captcha_settings.sql',
+                    '015_create_error_logs_table.sql',
+                    '016_add_tags_to_domains.sql',
+                    '017_add_two_factor_authentication.sql',
+                    '018_add_user_isolation.sql',
+                ];
+                
+                $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (?) ON DUPLICATE KEY UPDATE migration=migration");
+                foreach ($allIndividualMigrations as $migration) {
+                    try {
+                        $stmt->execute([$migration]);
+                    } catch (\Exception $e) {
+                        $this->logger->warning("Failed to mark migration as executed: " . $migration, [
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+                
+                $this->logger->info("All individual migrations marked as executed", [
+                    'count' => count($allIndividualMigrations)
+                ]);
             } else {
                 // For incremental updates, create migrations table and execute migrations normally
                 $this->logger->debug("Incremental update - ensuring migrations table exists");
