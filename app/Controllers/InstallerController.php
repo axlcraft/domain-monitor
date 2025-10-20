@@ -55,7 +55,8 @@ class InstallerController extends Controller
         try {
             $pdo = \Core\Database::getConnection();
             
-            // First, check if this is a fresh install by looking for any existing tables
+            // First, check if this is a fresh install by looking for core application tables
+            // Core tables that indicate a real installation: users, domains, settings, notification_groups
             $hasUsers = false;
             $hasDomains = false;
             $hasSettings = false;
@@ -97,9 +98,28 @@ class InstallerController extends Controller
                 // Migrations table doesn't exist
             }
             
-            // If no tables exist at all - this is a fresh install
-            if (!$hasUsers && !$hasDomains && !$hasSettings && !$hasNotificationGroups && !$hasMigrations) {
+            // If no core application tables exist - this is a fresh install
+            // Core tables are: users, domains, settings, notification_groups
+            // Note: sessions, password_reset_tokens, etc. might exist from app startup but don't indicate real installation
+            if (!$hasUsers && !$hasDomains && !$hasSettings && !$hasNotificationGroups) {
                 return $freshInstallMigration;
+            }
+            
+            // Additional check: if we have some tables but no actual data in core tables, treat as fresh install
+            // This handles cases where tables might be created by app startup but no real data exists
+            if ($hasUsers && !$hasDomains && !$hasSettings && !$hasNotificationGroups) {
+                // Only users table exists, check if it has any real data
+                try {
+                    $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
+                    $adminCount = $stmt->fetchColumn();
+                    if ($adminCount == 0) {
+                        // No admin users, treat as fresh install
+                        return $freshInstallMigration;
+                    }
+                } catch (\Exception $e) {
+                    // Error checking users, treat as fresh install
+                    return $freshInstallMigration;
+                }
             }
             
             // Create migrations table if it doesn't exist
@@ -278,17 +298,25 @@ class InstallerController extends Controller
                     $sql = str_replace('{{ADMIN_EMAIL}}', $adminEmail, $sql);
                 }
                 
-                // Execute SQL
-                $statements = array_filter(array_map('trim', explode(';', $sql)));
-                foreach ($statements as $statement) {
-                    if (!empty($statement)) {
-                        try {
-                            $pdo->exec($statement);
-                        } catch (\PDOException $e) {
-                            // Ignore duplicate/already exists errors
-                            if (strpos($e->getMessage(), 'Duplicate') === false && 
-                                strpos($e->getMessage(), 'already exists') === false) {
-                                throw $e;
+                // Execute SQL - use a more robust method for complex SQL files
+                try {
+                    // For complex migration files, execute the entire SQL at once
+                    // This handles multi-line statements, comments, and complex syntax properly
+                    $pdo->exec($sql);
+                } catch (\PDOException $e) {
+                    // If that fails, try the statement-by-statement approach as fallback
+                    $statements = $this->parseSqlStatements($sql);
+                    foreach ($statements as $statement) {
+                        if (!empty(trim($statement))) {
+                            try {
+                                $pdo->exec($statement);
+                            } catch (\PDOException $e2) {
+                                // Ignore duplicate/already exists errors
+                                if (strpos($e2->getMessage(), 'Duplicate') === false && 
+                                    strpos($e2->getMessage(), 'already exists') === false &&
+                                    strpos($e2->getMessage(), 'Table') === false) {
+                                    throw $e2;
+                                }
                             }
                         }
                     }
@@ -497,6 +525,51 @@ class InstallerController extends Controller
         ]);
     }
     
+    /**
+     * Parse SQL statements from a SQL file (fallback method)
+     */
+    private function parseSqlStatements(string $sql): array
+    {
+        // Remove comments
+        $sql = preg_replace('/--.*$/m', '', $sql);
+        $sql = preg_replace('/\/\*.*?\*\//s', '', $sql);
+        
+        // Split by semicolon, but be more careful about it
+        $statements = [];
+        $current = '';
+        $inString = false;
+        $stringChar = '';
+        
+        for ($i = 0; $i < strlen($sql); $i++) {
+            $char = $sql[$i];
+            
+            if (!$inString && ($char === '"' || $char === "'")) {
+                $inString = true;
+                $stringChar = $char;
+            } elseif ($inString && $char === $stringChar) {
+                // Check for escaped quotes
+                if ($i > 0 && $sql[$i-1] !== '\\') {
+                    $inString = false;
+                }
+            } elseif (!$inString && $char === ';') {
+                $statements[] = trim($current);
+                $current = '';
+                continue;
+            }
+            
+            $current .= $char;
+        }
+        
+        // Add the last statement if it doesn't end with semicolon
+        if (!empty(trim($current))) {
+            $statements[] = trim($current);
+        }
+        
+        return array_filter($statements, function($stmt) {
+            return !empty(trim($stmt));
+        });
+    }
+
     /**
      * Generate encryption key
      */
