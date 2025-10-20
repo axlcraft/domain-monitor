@@ -16,7 +16,8 @@ if (isset($_SESSION['user_id'])) {
 
 // Fetch global stats for sidebar (available on all pages)
 if (!isset($globalStats)) {
-    $globalStats = \App\Helpers\LayoutHelper::getGlobalStats();
+    $userId = \Core\Auth::id();
+    $globalStats = \App\Helpers\LayoutHelper::getGlobalStats($userId);
 }
 
 // Get application settings from database

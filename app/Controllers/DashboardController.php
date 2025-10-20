@@ -60,7 +60,7 @@ class DashboardController extends Controller
         $formattedExpiringDomains = \App\Helpers\DomainHelper::formatMultiple($expiringThisMonth);
         
         // Get global stats for dashboard cards
-        $globalStats = \App\Helpers\LayoutHelper::getGlobalStats();
+        $globalStats = \App\Helpers\LayoutHelper::getGlobalStats($userId);
 
         $this->view('dashboard/index', [
             'stats' => $stats,
