@@ -58,6 +58,8 @@ class InstallerController extends Controller
             // Check if this is a v1.0.0 install (has tables but no migrations tracking)
             $hasUsers = false;
             $hasDomains = false;
+            $hasSettings = false;
+            $hasNotificationGroups = false;
             
             try {
                 $stmt = $pdo->query("SELECT COUNT(*) FROM users");
@@ -65,6 +67,12 @@ class InstallerController extends Controller
                 
                 $stmt = $pdo->query("SELECT COUNT(*) FROM domains");
                 $hasDomains = true; // Table exists
+                
+                $stmt = $pdo->query("SELECT COUNT(*) FROM settings");
+                $hasSettings = true; // Table exists
+                
+                $stmt = $pdo->query("SELECT COUNT(*) FROM notification_groups");
+                $hasNotificationGroups = true; // Table exists
             } catch (\Exception $e) {
                 // Tables don't exist - fresh install
             }
@@ -83,8 +91,14 @@ class InstallerController extends Controller
             $stmt = $pdo->query("SELECT migration FROM migrations");
             $executed = $stmt->fetchAll(\PDO::FETCH_COLUMN);
             
-            // If no migrations executed but has data - v1.0.0 upgrade
+            // If no migrations executed but has data - check if it's a complete v1.0.0 install or broken fresh install
             if (empty($executed) && ($hasUsers || $hasDomains)) {
+                // If critical tables are missing, treat as broken fresh install and use consolidated schema
+                if (!$hasSettings || !$hasNotificationGroups) {
+                    // Clear the migrations table and use fresh install
+                    $pdo->exec("DELETE FROM migrations");
+                    return $freshInstallMigration;
+                }
                 // Mark 001-008 as executed (v1.0.0 migrations)
                 $v1Migrations = [
                     '001_create_tables.sql',
@@ -110,7 +124,10 @@ class InstallerController extends Controller
                     '012_link_remember_tokens_to_sessions.sql',
                     '013_create_user_notifications_table.sql',
                     '014_add_captcha_settings.sql',
-                    '015_create_error_logs_table.sql'
+                    '015_create_error_logs_table.sql',
+                    '016_add_tags_to_domains.sql',
+                    '017_add_two_factor_authentication.sql',
+                    '018_add_user_isolation.sql'
                 ];
             }
             
@@ -120,7 +137,16 @@ class InstallerController extends Controller
             }
             
             // If has executed migrations - check for pending incremental ones
-            return array_diff($incrementalMigrations, $executed);
+            $pending = array_diff($incrementalMigrations, $executed);
+            
+            // If we have executed migrations but critical tables are missing, something went wrong
+            // Clear migrations and use fresh install
+            if (!empty($executed) && (!$hasSettings || !$hasNotificationGroups)) {
+                $pdo->exec("DELETE FROM migrations");
+                return $freshInstallMigration;
+            }
+            
+            return $pending;
             
         } catch (\Exception $e) {
             // If critical error - assume fresh install
