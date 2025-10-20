@@ -385,5 +385,38 @@ class Domain extends Model
         
         return $stmt->fetchAll();
     }
+
+    /**
+     * Update multiple domains based on WHERE conditions
+     */
+    public function updateWhere(array $conditions, array $data): int
+    {
+        if (empty($conditions) || empty($data)) {
+            return 0;
+        }
+
+        // Build WHERE clause
+        $whereClause = [];
+        $params = [];
+        
+        foreach ($conditions as $field => $value) {
+            $whereClause[] = "{$field} = ?";
+            $params[] = $value;
+        }
+
+        // Build SET clause
+        $setClause = [];
+        foreach ($data as $field => $value) {
+            $setClause[] = "{$field} = ?";
+            $params[] = $value;
+        }
+
+        $sql = "UPDATE domains SET " . implode(', ', $setClause) . " WHERE " . implode(' AND ', $whereClause);
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        return $stmt->rowCount();
+    }
 }
 
