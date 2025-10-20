@@ -14,12 +14,35 @@ class TldRegistryService
     private TldRegistry $tldModel;
     private TldImportLog $importLogModel;
     private Logger $logger;
+    private static ?bool $brotliSupported = null;
 
     // IANA URLs
     private const IANA_RDAP_URL = 'https://data.iana.org/rdap/dns.json';
     private const IANA_TLD_BASE_URL = 'https://www.iana.org/domains/root/db/';
     private const IANA_TLD_LIST_URL = 'https://data.iana.org/TLD/tlds-alpha-by-domain.txt';
     private const IANA_RDAP_DOMAIN_URL = 'https://rdap.iana.org/domain/';
+
+    /**
+     * Check if Brotli compression is supported by the system
+     */
+    private static function isBrotliSupported(): bool
+    {
+        static $supported = null;
+        if ($supported !== null) return $supported;
+        
+        if (extension_loaded('brotli') || function_exists('brotli_compress')) {
+            return $supported = true;
+        }
+        
+        try {
+            $curlInfo = curl_version();
+            if (isset($curlInfo['encoding']) && stripos($curlInfo['encoding'], 'br') !== false) {
+                return $supported = true;
+            }
+        } catch (\Exception $e) {}
+        
+        return $supported = false;
+    }
 
     public function __construct()
     {
@@ -37,7 +60,7 @@ class TldRegistryService
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => 'gzip, deflate, br',
+                'Accept-Encoding' => self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate',
                 'DNT' => '1',
                 'Connection' => 'keep-alive',
                 'Upgrade-Insecure-Requests' => '1',
@@ -71,7 +94,7 @@ class TldRegistryService
                 'User-Agent' => 'DomainMonitor/1.0 (TLD Registry Bot; compatible with IANA RDAP)',
                 'Accept' => 'application/json, application/rdap+json, */*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => 'gzip, deflate, br',
+                'Accept-Encoding' => self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate',
                 'Connection' => 'keep-alive',
                 'Cache-Control' => 'no-cache'
             ],
@@ -103,7 +126,7 @@ class TldRegistryService
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => 'gzip, deflate, br',
+                'Accept-Encoding' => self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate',
                 'DNT' => '1',
                 'Connection' => 'keep-alive',
                 'Upgrade-Insecure-Requests' => '1',
