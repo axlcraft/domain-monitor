@@ -4,9 +4,12 @@
  * Contains: HTML structure, meta tags, CSS/JS includes, global stats
  */
 
+// Get current user ID (used for both notifications and stats)
+$userId = \Core\Auth::id();
+
 // Fetch notifications for top nav (available on all pages)
-if (isset($_SESSION['user_id'])) {
-    $notificationData = \App\Helpers\LayoutHelper::getNotifications($_SESSION['user_id']);
+if ($userId) {
+    $notificationData = \App\Helpers\LayoutHelper::getNotifications($userId);
     $recentNotifications = $notificationData['items'];
     $unreadNotifications = $notificationData['unread_count'];
 } else {
@@ -14,10 +17,17 @@ if (isset($_SESSION['user_id'])) {
     $unreadNotifications = 0;
 }
 
-// Fetch global stats for sidebar (available on all pages)
-if (!isset($globalStats)) {
-    $userId = \Core\Auth::id();
-    $globalStats = \App\Helpers\LayoutHelper::getGlobalStats($userId);
+// Get stats for sidebar (available on all pages)
+if (!isset($stats)) {
+    $domainModel = new \App\Models\Domain();
+    $settingModel = new \App\Models\Setting();
+    $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+    
+    if ($isolationMode === 'isolated') {
+        $stats = $domainModel->getStatistics($userId);
+    } else {
+        $stats = $domainModel->getStatistics();
+    }
 }
 
 // Get application settings from database

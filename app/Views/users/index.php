@@ -197,7 +197,7 @@ $pagination = $pagination ?? [
                 <?php foreach ($users as $user): ?>
                     <tr class="hover:bg-gray-50 transition-colors duration-150">
                         <td class="px-6 py-4">
-                            <?php if ($user['id'] != $_SESSION['user_id']): ?>
+                            <?php if ($user['id'] != \Core\Auth::id()): ?>
                                 <input type="checkbox" class="user-checkbox rounded border-gray-300 text-primary focus:ring-primary" value="<?= $user['id'] ?>" onchange="updateBulkActions()">
                             <?php else: ?>
                                 <span class="text-gray-300" title="Cannot select your own account">
@@ -261,7 +261,7 @@ $pagination = $pagination ?? [
                                 <a href="/users/edit?id=<?= $user['id'] ?>" class="text-blue-600 hover:text-blue-800" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <?php if ($user['id'] != $_SESSION['user_id']): ?>
+                                <?php if ($user['id'] != \Core\Auth::id()): ?>
                                     <a href="/users/toggle-status?id=<?= $user['id'] ?>" 
                                        class="text-orange-600 hover:text-orange-800" 
                                        title="<?= $user['is_active'] ? 'Deactivate' : 'Activate' ?>">

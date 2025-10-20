@@ -39,8 +39,8 @@ ob_start();
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Expiring Soon</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $globalStats['expiring_soon'] ?? 0 ?></p>
-                <p class="text-xs text-gray-400 mt-1">within <?= $globalStats['expiring_threshold'] ?? 30 ?> days</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['expiring_soon'] ?? 0 ?></p>
+                <p class="text-xs text-gray-400 mt-1">within <?= $stats['expiring_threshold'] ?? 30 ?> days</p>
             </div>
             <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-exclamation-triangle text-orange-600 text-lg"></i>
@@ -255,7 +255,7 @@ ob_start();
                 <div class="p-6 text-center">
                     <i class="fas fa-check-circle text-green-500 text-3xl mb-2"></i>
                     <p class="text-sm text-gray-600">No domains expiring soon</p>
-                    <p class="text-xs text-gray-400 mt-1">within <?= $globalStats['expiring_threshold'] ?? 30 ?> days</p>
+                    <p class="text-xs text-gray-400 mt-1">within <?= $stats['expiring_threshold'] ?? 30 ?> days</p>
                 </div>
             <?php endif; ?>
         </div>

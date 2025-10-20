@@ -100,7 +100,7 @@ class ErrorLogController extends Controller
         $notes = $_POST['notes'] ?? null;
 
         // Mark error as resolved using model
-        $this->errorLogModel->markErrorResolved($errorId, $_SESSION['user_id'], $notes);
+        $this->errorLogModel->markErrorResolved($errorId, \Core\Auth::id(), $notes);
 
         $_SESSION['success'] = 'Error marked as resolved';
         header('Location: /errors/' . urlencode($errorId));

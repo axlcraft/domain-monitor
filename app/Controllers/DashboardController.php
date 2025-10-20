@@ -27,13 +27,11 @@ class DashboardController extends Controller
         $settingModel = new \App\Models\Setting();
         $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
         
-        // Get statistics based on isolation mode
+        // Get data based on isolation mode (stats are now handled in base.php)
         if ($isolationMode === 'isolated') {
-            $stats = $this->domainModel->getStatistics($userId);
             $recentDomains = $this->domainModel->getRecent(5, $userId);
             $groups = $this->groupModel->getAllWithChannelCount($userId);
         } else {
-            $stats = $this->domainModel->getStatistics();
             $recentDomains = $this->domainModel->getRecent(5);
             $groups = $this->groupModel->getAllWithChannelCount();
         }
@@ -59,12 +57,7 @@ class DashboardController extends Controller
         $formattedRecentDomains = \App\Helpers\DomainHelper::formatMultiple($recentDomains);
         $formattedExpiringDomains = \App\Helpers\DomainHelper::formatMultiple($expiringThisMonth);
         
-        // Get global stats for dashboard cards
-        $globalStats = \App\Helpers\LayoutHelper::getGlobalStats($userId);
-
         $this->view('dashboard/index', [
-            'stats' => $stats,
-            'globalStats' => $globalStats,
             'recentDomains' => $formattedRecentDomains,
             'expiringThisMonth' => $formattedExpiringDomains,
             'expiringCount' => count($allExpiringDomains),

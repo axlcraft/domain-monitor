@@ -164,6 +164,7 @@ class Domain extends Model
             'expiring_soon' => 0,
             'expired' => 0,
             'inactive' => 0,
+            'expiring_threshold' => 30,
         ];
 
         // Build WHERE clause for user filtering
@@ -203,6 +204,25 @@ class Domain extends Model
 
         // Add inactive count to total
         $stats['total'] += $stats['inactive'];
+
+        // Get expiring soon count
+        $settingModel = new \App\Models\Setting();
+        $notificationDays = $settingModel->getNotificationDays();
+        $threshold = !empty($notificationDays) ? max($notificationDays) : 30;
+        $stats['expiring_threshold'] = $threshold;
+
+        $expiringWhereClause = "WHERE is_active = 1 AND expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(NOW(), INTERVAL ? DAY) AND expiration_date >= NOW()";
+        $expiringParams = [$threshold];
+        
+        if ($userId) {
+            $expiringWhereClause .= " AND user_id = ?";
+            $expiringParams[] = $userId;
+        }
+        
+        $expiringStmt = $this->db->prepare("SELECT COUNT(*) as count FROM domains $expiringWhereClause");
+        $expiringStmt->execute($expiringParams);
+        $expiringResult = $expiringStmt->fetch();
+        $stats['expiring_soon'] = $expiringResult['count'] ?? 0;
 
         return $stats;
     }
