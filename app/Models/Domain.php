@@ -25,8 +25,8 @@ class Domain extends Model
                 FROM domains d 
                 LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id";
         
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
-            $sql .= " WHERE d.user_id = ?";
+        if ($userId) {
+            $sql .= " WHERE d.user_id = ? ORDER BY d.status DESC, d.expiration_date ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$userId]);
         } else {
@@ -52,7 +52,7 @@ class Domain extends Model
         
         $params = [$days];
         
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+        if ($userId) {
             $sql .= " AND d.user_id = ?";
             $params[] = $userId;
         }
@@ -76,7 +76,7 @@ class Domain extends Model
         
         $params = [$status];
         
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+        if ($userId) {
             $sql .= " AND d.user_id = ?";
             $params[] = $userId;
         }
@@ -140,7 +140,7 @@ class Domain extends Model
         
         $params = [];
         
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+        if ($userId) {
             $sql .= " AND d.user_id = ?";
             $params[] = $userId;
         }
@@ -170,7 +170,7 @@ class Domain extends Model
         $whereClause = "WHERE is_active = 1";
         $params = [];
         
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+        if ($userId) {
             $whereClause .= " AND user_id = ?";
             $params[] = $userId;
         }
@@ -191,7 +191,7 @@ class Domain extends Model
         $inactiveWhereClause = "WHERE is_active = 0";
         $inactiveParams = [];
         
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+        if ($userId) {
             $inactiveWhereClause .= " AND user_id = ?";
             $inactiveParams[] = $userId;
         }
@@ -372,7 +372,7 @@ class Domain extends Model
         
         $params = ['%' . $query . '%', '%' . $query . '%', '%' . $query . '%'];
         
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+        if ($userId) {
             $sql .= " AND d.user_id = ?";
             $params[] = $userId;
         }

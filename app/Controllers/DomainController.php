@@ -50,16 +50,11 @@ class DomainController extends Controller
         ];
 
         // Get filtered and paginated domains using model
-        $result = $this->domainModel->getFilteredPaginated($filters, $sortBy, $sortOrder, $page, $perPage, $expiringThreshold, $isolationMode === 'isolated' ? $userId : null);
+        $result = $this->domainModel->getFilteredPaginated($filters, $sortBy, $sortOrder, $page, $perPage, $expiringThreshold, $userId);
 
-        // Get groups and tags based on isolation mode
-        if ($isolationMode === 'isolated') {
-            $groups = $this->groupModel->getAllWithChannelCount($userId);
-            $allTags = $this->domainModel->getAllTags($userId);
-        } else {
-            $groups = $this->groupModel->getAllWithChannelCount();
-            $allTags = $this->domainModel->getAllTags();
-        }
+        // Get groups and tags (always user-specific)
+        $groups = $this->groupModel->getAllWithChannelCount($userId);
+        $allTags = $this->domainModel->getAllTags($userId);
         
         // Format domains for display
         $formattedDomains = \App\Helpers\DomainHelper::formatMultiple($result['domains']);

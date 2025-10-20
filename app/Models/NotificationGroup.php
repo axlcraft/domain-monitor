@@ -28,7 +28,7 @@ class NotificationGroup extends Model
                 LEFT JOIN notification_channels nc ON ng.id = nc.notification_group_id
                 LEFT JOIN domains d ON ng.id = d.notification_group_id";
         
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+        if ($userId) {
             $sql .= " WHERE ng.user_id = ? GROUP BY ng.id ORDER BY ng.name ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$userId]);
@@ -52,7 +52,7 @@ class NotificationGroup extends Model
         }
 
         // Check if user has access to this group
-        if ($userId && !$this->getUserModel()->isAdmin($userId) && $group['user_id'] != $userId) {
+        if ($userId && $group['user_id'] != $userId) {
             return null;
         }
 
@@ -62,7 +62,7 @@ class NotificationGroup extends Model
 
         // Get domains (filtered by user if needed)
         $domainModel = new Domain();
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+        if ($userId) {
             $group['domains'] = $domainModel->where('notification_group_id', $id, $userId);
         } else {
             $group['domains'] = $domainModel->where('notification_group_id', $id);
