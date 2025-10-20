@@ -91,7 +91,16 @@ class DomainController extends Controller
 
     public function create()
     {
-        $groups = $this->groupModel->all();
+        // Get groups based on isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
+        if ($isolationMode === 'isolated') {
+            $groups = $this->groupModel->getAllWithChannelCount($userId);
+        } else {
+            $groups = $this->groupModel->getAllWithChannelCount();
+        }
 
         $this->view('domains/create', [
             'groups' => $groups,
@@ -192,7 +201,16 @@ class DomainController extends Controller
             return;
         }
 
-        $groups = $this->groupModel->all();
+        // Get groups based on isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
+        if ($isolationMode === 'isolated') {
+            $groups = $this->groupModel->getAllWithChannelCount($userId);
+        } else {
+            $groups = $this->groupModel->getAllWithChannelCount();
+        }
 
         $this->view('domains/edit', [
             'domain' => $domain,
@@ -393,7 +411,17 @@ class DomainController extends Controller
     public function bulkAdd()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $groups = $this->groupModel->all();
+            // Get groups based on isolation mode
+            $userId = \Core\Auth::id();
+            $settingModel = new \App\Models\Setting();
+            $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+            
+            if ($isolationMode === 'isolated') {
+                $groups = $this->groupModel->getAllWithChannelCount($userId);
+            } else {
+                $groups = $this->groupModel->getAllWithChannelCount();
+            }
+            
             $this->view('domains/bulk-add', [
                 'groups' => $groups,
                 'title' => 'Bulk Add Domains'
