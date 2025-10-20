@@ -305,7 +305,7 @@ class Domain extends Model
         $sql = "SELECT DISTINCT tags FROM domains WHERE tags IS NOT NULL AND tags != ''";
         $params = [];
         
-        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+        if ($userId) {
             $sql .= " AND user_id = ?";
             $params[] = $userId;
         }
