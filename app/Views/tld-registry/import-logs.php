@@ -27,7 +27,7 @@ ob_start();
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Imports</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['total_imports'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $importStats['total_imports'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-download text-blue-600 text-lg"></i>
@@ -40,7 +40,7 @@ ob_start();
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Successful</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['successful_imports'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $importStats['successful_imports'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-check-circle text-green-600 text-lg"></i>
@@ -53,7 +53,7 @@ ob_start();
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Failed</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['failed_imports'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $importStats['failed_imports'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-times-circle text-red-600 text-lg"></i>
@@ -67,8 +67,8 @@ ob_start();
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Import</p>
                 <p class="text-sm font-semibold text-gray-900 mt-1">
-                    <?php if (!empty($stats['last_import'])): ?>
-                        <?= date('M j, H:i', strtotime($stats['last_import'])) ?>
+                    <?php if (!empty($importStats['last_import'])): ?>
+                        <?= date('M j, H:i', strtotime($importStats['last_import'])) ?>
                     <?php else: ?>
                         Never
                     <?php endif; ?>

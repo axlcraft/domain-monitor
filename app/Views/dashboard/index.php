@@ -4,9 +4,9 @@ $pageTitle = 'Dashboard Overview';
 $pageDescription = 'Monitor your domains and expiration dates';
 $pageIcon = 'fas fa-chart-line';
 
-// Get stats for dashboard (if not already set by base.php)
-if (!isset($stats)) {
-    $stats = \App\Helpers\LayoutHelper::getDomainStats();
+// Get domain stats for dashboard (if not already set by base.php)
+if (!isset($domainStats)) {
+    $domainStats = \App\Helpers\LayoutHelper::getDomainStats();
 }
 
 ob_start();
@@ -19,7 +19,7 @@ ob_start();
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Domains</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['total'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $domainStats['total'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-globe text-blue-600 text-lg"></i>
@@ -32,7 +32,7 @@ ob_start();
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Active</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['active'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $domainStats['active'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-check-circle text-green-600 text-lg"></i>
@@ -45,8 +45,8 @@ ob_start();
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Expiring Soon</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['expiring_soon'] ?? 0 ?></p>
-                <p class="text-xs text-gray-400 mt-1">within <?= $stats['expiring_threshold'] ?? 30 ?> days</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $domainStats['expiring_soon'] ?? 0 ?></p>
+                <p class="text-xs text-gray-400 mt-1">within <?= $domainStats['expiring_threshold'] ?? 30 ?> days</p>
             </div>
             <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-exclamation-triangle text-orange-600 text-lg"></i>
@@ -59,7 +59,7 @@ ob_start();
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Inactive</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['inactive'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $domainStats['inactive'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-times-circle text-gray-600 text-lg"></i>
@@ -261,7 +261,7 @@ ob_start();
                 <div class="p-6 text-center">
                     <i class="fas fa-check-circle text-green-500 text-3xl mb-2"></i>
                     <p class="text-sm text-gray-600">No domains expiring soon</p>
-                    <p class="text-xs text-gray-400 mt-1">within <?= $stats['expiring_threshold'] ?? 30 ?> days</p>
+                    <p class="text-xs text-gray-400 mt-1">within <?= $domainStats['expiring_threshold'] ?? 30 ?> days</p>
                 </div>
             <?php endif; ?>
         </div>

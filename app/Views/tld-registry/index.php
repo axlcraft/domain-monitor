@@ -37,7 +37,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
     <form method="POST" action="/tld-registry/start-progressive-import" class="inline">
         <?= csrf_field() ?>
         <input type="hidden" name="import_type" value="check_updates">
-        <button type="submit" <?= $stats['total'] == 0 ? 'disabled' : '' ?> class="inline-flex items-center px-4 py-2 <?= $stats['total'] == 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700' ?> text-white text-sm rounded-lg transition-colors font-medium" title="<?= $stats['total'] == 0 ? 'Import TLDs first' : 'Check for IANA updates' ?>">
+        <button type="submit" <?= $tldStats['total'] == 0 ? 'disabled' : '' ?> class="inline-flex items-center px-4 py-2 <?= $tldStats['total'] == 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700' ?> text-white text-sm rounded-lg transition-colors font-medium" title="<?= $tldStats['total'] == 0 ? 'Import TLDs first' : 'Check for IANA updates' ?>">
             <i class="fas fa-sync-alt mr-2"></i>
             Check Updates
         </button>
@@ -69,7 +69,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total TLDs</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['total'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $tldStats['total'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-globe text-blue-600 text-lg"></i>
@@ -82,7 +82,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Active</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['active'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $tldStats['active'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-check-circle text-green-600 text-lg"></i>
@@ -95,7 +95,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">With RDAP</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['with_rdap'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $tldStats['with_rdap'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-database text-indigo-600 text-lg"></i>
@@ -108,7 +108,7 @@ $currentFilters = $filters ?? ['search' => '', 'sort' => 'tld', 'order' => 'asc'
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">With WHOIS</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['with_whois'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $tldStats['with_whois'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-server text-orange-600 text-lg"></i>

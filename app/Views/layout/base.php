@@ -17,9 +17,9 @@ if ($userId) {
     $unreadNotifications = 0;
 }
 
-// Get stats for sidebar (available on all pages)
-if (!isset($stats)) {
-    $stats = \App\Helpers\LayoutHelper::getDomainStats();
+// Get domain stats for sidebar (available on all pages)
+if (!isset($domainStats)) {
+    $domainStats = \App\Helpers\LayoutHelper::getDomainStats();
 }
 
 // Get application settings from database

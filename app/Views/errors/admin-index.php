@@ -34,7 +34,7 @@ $currentFilters = $filters ?? ['resolved' => '', 'type' => '', 'sort' => 'last_o
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Errors</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['total_errors'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $errorStats['total_errors'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-exclamation-triangle text-red-600 text-lg"></i>
@@ -47,7 +47,7 @@ $currentFilters = $filters ?? ['resolved' => '', 'type' => '', 'sort' => 'last_o
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Unresolved</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['unresolved'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $errorStats['unresolved'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-exclamation-circle text-orange-600 text-lg"></i>
@@ -60,7 +60,7 @@ $currentFilters = $filters ?? ['resolved' => '', 'type' => '', 'sort' => 'last_o
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Last 24h</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['last_24h'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $errorStats['last_24h'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-clock text-blue-600 text-lg"></i>
@@ -73,7 +73,7 @@ $currentFilters = $filters ?? ['resolved' => '', 'type' => '', 'sort' => 'last_o
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Occurrences</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $stats['total_occurrences'] ?? 0 ?></p>
+                <p class="text-2xl font-semibold text-gray-900 mt-1"><?= $errorStats['total_occurrences'] ?? 0 ?></p>
             </div>
             <div class="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center">
                 <i class="fas fa-layer-group text-indigo-600 text-lg"></i>

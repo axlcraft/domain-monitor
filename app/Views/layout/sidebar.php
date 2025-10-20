@@ -84,7 +84,7 @@
                             </div>
                             <span class="text-gray-400 text-xs">Total</span>
                         </div>
-                        <span class="text-white font-semibold text-sm"><?= $stats['total'] ?? 0 ?></span>
+                        <span class="text-white font-semibold text-sm"><?= $domainStats['total'] ?? 0 ?></span>
                     </div>
                 </div>
                 
@@ -94,9 +94,9 @@
                             <div class="w-7 h-7 bg-orange-500/20 rounded flex items-center justify-center mr-2.5">
                                 <i class="fas fa-exclamation-triangle text-orange-400 text-xs"></i>
                             </div>
-                            <span class="text-gray-400 text-xs" title="Within <?= $stats['expiring_threshold'] ?? 30 ?> days">Expiring</span>
+                            <span class="text-gray-400 text-xs" title="Within <?= $domainStats['expiring_threshold'] ?? 30 ?> days">Expiring</span>
                         </div>
-                        <span class="text-orange-400 font-semibold text-sm"><?= $stats['expiring_soon'] ?? 0 ?></span>
+                        <span class="text-orange-400 font-semibold text-sm"><?= $domainStats['expiring_soon'] ?? 0 ?></span>
                     </div>
                 </div>
                 
@@ -108,7 +108,7 @@
                             </div>
                             <span class="text-gray-400 text-xs">Active</span>
                         </div>
-                        <span class="text-green-400 font-semibold text-sm"><?= $stats['active'] ?? 0 ?></span>
+                        <span class="text-green-400 font-semibold text-sm"><?= $domainStats['active'] ?? 0 ?></span>
                     </div>
                 </div>
             </div>

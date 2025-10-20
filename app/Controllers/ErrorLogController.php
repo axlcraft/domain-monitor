@@ -41,7 +41,7 @@ class ErrorLogController extends Controller
         $errors = $this->errorLogModel->getPaginatedErrors($filters, $perPage, $offset);
 
         // Get statistics using model
-        $stats = $this->errorLogModel->getAdminStats();
+        $errorStats = $this->errorLogModel->getAdminStats();
 
         // Pagination data
         $totalPages = ceil($totalErrors / $perPage);
@@ -54,7 +54,7 @@ class ErrorLogController extends Controller
             'showing_to' => min($offset + $perPage, $totalErrors)
         ];
 
-        $this->view('errors/admin-index', compact('errors', 'stats', 'filters', 'pagination'));
+        $this->view('errors/admin-index', compact('errors', 'errorStats', 'filters', 'pagination'));
     }
 
     /**

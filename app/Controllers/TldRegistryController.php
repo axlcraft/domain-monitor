@@ -37,12 +37,12 @@ class TldRegistryController extends Controller
         $order = $_GET['order'] ?? 'asc';
 
         $result = $this->tldModel->getPaginated($page, $perPage, $search, $sort, $order, $status, $dataType);
-        $stats = $this->tldModel->getStatistics();
+        $tldStats = $this->tldModel->getStatistics();
 
         $this->view('tld-registry/index', [
             'tlds' => $result['tlds'],
             'pagination' => $result['pagination'],
-            'stats' => $stats,
+            'tldStats' => $tldStats,
             'filters' => [
                 'search' => $search,
                 'status' => $status,
@@ -584,7 +584,7 @@ class TldRegistryController extends Controller
         $this->view('tld-registry/import-logs', [
             'imports' => $result['logs'],
             'pagination' => $result['pagination'],
-            'stats' => $importStats,
+            'importStats' => $importStats,
             'title' => 'TLD Import Logs'
         ]);
     }
