@@ -2,85 +2,10 @@
 -- This consolidated migration includes all features for fresh installations
 
 -- =====================================================
--- CORE TABLES
+-- USER MANAGEMENT & AUTHENTICATION (must be first)
 -- =====================================================
 
--- Notification groups table (must be created first - referenced by domains)
-CREATE TABLE IF NOT EXISTS notification_groups (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    user_id INT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_notification_groups_user_id (user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Domains table
-CREATE TABLE IF NOT EXISTS domains (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    domain_name VARCHAR(255) NOT NULL UNIQUE,
-    notification_group_id INT NULL,
-    registrar VARCHAR(255),
-    registrar_url VARCHAR(255),
-    expiration_date DATE,
-    updated_date DATE,
-    abuse_email VARCHAR(255),
-    last_checked TIMESTAMP NULL,
-    status ENUM('active', 'expiring_soon', 'expired', 'error', 'available') DEFAULT 'active',
-    whois_data JSON,
-    notes TEXT,
-    tags TEXT NULL COMMENT 'Comma-separated tags for organization',
-    is_active BOOLEAN DEFAULT TRUE,
-    user_id INT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (notification_group_id) REFERENCES notification_groups(id) ON DELETE SET NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_notification_group_id (notification_group_id),
-    INDEX idx_domain_name (domain_name),
-    INDEX idx_expiration_date (expiration_date),
-    INDEX idx_status (status),
-    INDEX idx_is_active (is_active),
-    INDEX idx_tags (tags(255)),
-    INDEX idx_domains_user_id (user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Notification channels table
-CREATE TABLE IF NOT EXISTS notification_channels (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    notification_group_id INT NOT NULL,
-    channel_type ENUM('email', 'telegram', 'discord', 'slack') NOT NULL,
-    channel_config JSON NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (notification_group_id) REFERENCES notification_groups(id) ON DELETE CASCADE,
-    INDEX idx_group_id (notification_group_id),
-    INDEX idx_channel_type (channel_type)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Notification logs table
-CREATE TABLE IF NOT EXISTS notification_logs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    domain_id INT NOT NULL,
-    notification_type VARCHAR(50) NOT NULL,
-    channel_type VARCHAR(50) NOT NULL,
-    message TEXT NOT NULL,
-    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('sent', 'failed') DEFAULT 'sent',
-    error_message TEXT,
-    FOREIGN KEY (domain_id) REFERENCES domains(id) ON DELETE CASCADE,
-    INDEX idx_domain_id (domain_id),
-    INDEX idx_sent_at (sent_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- =====================================================
--- USER MANAGEMENT & AUTHENTICATION
--- =====================================================
-
--- Users table
+-- Users table (must be created first - referenced by other tables)
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
@@ -205,6 +130,81 @@ CREATE TABLE IF NOT EXISTS user_notifications (
     INDEX idx_is_read (is_read),
     INDEX idx_created_at (created_at),
     INDEX idx_type (type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- CORE TABLES
+-- =====================================================
+
+-- Notification groups table (must be created first - referenced by domains)
+CREATE TABLE IF NOT EXISTS notification_groups (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    user_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_notification_groups_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Domains table
+CREATE TABLE IF NOT EXISTS domains (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    domain_name VARCHAR(255) NOT NULL UNIQUE,
+    notification_group_id INT NULL,
+    registrar VARCHAR(255),
+    registrar_url VARCHAR(255),
+    expiration_date DATE,
+    updated_date DATE,
+    abuse_email VARCHAR(255),
+    last_checked TIMESTAMP NULL,
+    status ENUM('active', 'expiring_soon', 'expired', 'error', 'available') DEFAULT 'active',
+    whois_data JSON,
+    notes TEXT,
+    tags TEXT NULL COMMENT 'Comma-separated tags for organization',
+    is_active BOOLEAN DEFAULT TRUE,
+    user_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (notification_group_id) REFERENCES notification_groups(id) ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_notification_group_id (notification_group_id),
+    INDEX idx_domain_name (domain_name),
+    INDEX idx_expiration_date (expiration_date),
+    INDEX idx_status (status),
+    INDEX idx_is_active (is_active),
+    INDEX idx_tags (tags(255)),
+    INDEX idx_domains_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Notification channels table
+CREATE TABLE IF NOT EXISTS notification_channels (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    notification_group_id INT NOT NULL,
+    channel_type ENUM('email', 'telegram', 'discord', 'slack') NOT NULL,
+    channel_config JSON NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (notification_group_id) REFERENCES notification_groups(id) ON DELETE CASCADE,
+    INDEX idx_group_id (notification_group_id),
+    INDEX idx_channel_type (channel_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Notification logs table
+CREATE TABLE IF NOT EXISTS notification_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    domain_id INT NOT NULL,
+    notification_type VARCHAR(50) NOT NULL,
+    channel_type VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('sent', 'failed') DEFAULT 'sent',
+    error_message TEXT,
+    FOREIGN KEY (domain_id) REFERENCES domains(id) ON DELETE CASCADE,
+    INDEX idx_domain_id (domain_id),
+    INDEX idx_sent_at (sent_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Error logs table for debugging and error tracking
