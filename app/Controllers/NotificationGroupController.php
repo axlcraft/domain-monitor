@@ -24,8 +24,12 @@ class NotificationGroupController extends Controller
         $settingModel = new \App\Models\Setting();
         $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
         
-        // Get groups (always user-specific)
-        $groups = $this->groupModel->getAllWithChannelCount($userId);
+        // Get groups based on isolation mode
+        if ($isolationMode === 'isolated') {
+            $groups = $this->groupModel->getAllWithChannelCount($userId);
+        } else {
+            $groups = $this->groupModel->getAllWithChannelCount();
+        }
 
         // Get users for transfer functionality (admin only)
         $users = [];

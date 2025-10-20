@@ -27,17 +27,27 @@ class DashboardController extends Controller
         $settingModel = new \App\Models\Setting();
         $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
         
-        // Get user-specific statistics (always user-specific)
-        $stats = $this->domainModel->getStatistics($userId);
-        $recentDomains = $this->domainModel->getRecent(5, $userId);
-        $groups = $this->groupModel->getAllWithChannelCount($userId);
+        // Get statistics based on isolation mode
+        if ($isolationMode === 'isolated') {
+            $stats = $this->domainModel->getStatistics($userId);
+            $recentDomains = $this->domainModel->getRecent(5, $userId);
+            $groups = $this->groupModel->getAllWithChannelCount($userId);
+        } else {
+            $stats = $this->domainModel->getStatistics();
+            $recentDomains = $this->domainModel->getRecent(5);
+            $groups = $this->groupModel->getAllWithChannelCount();
+        }
         
         // Get expiring threshold from settings
         $notificationDays = $settingModel->getNotificationDays();
         $expiringThreshold = !empty($notificationDays) ? max($notificationDays) : 30;
         
         // Get expiring domains limited to top 5
-        $allExpiringDomains = $this->domainModel->getExpiringDomains($expiringThreshold, $userId);
+        if ($isolationMode === 'isolated') {
+            $allExpiringDomains = $this->domainModel->getExpiringDomains($expiringThreshold, $userId);
+        } else {
+            $allExpiringDomains = $this->domainModel->getExpiringDomains($expiringThreshold);
+        }
         $expiringThisMonth = array_slice($allExpiringDomains, 0, 5);
         
         $recentLogs = $this->logModel->getRecent(10);
