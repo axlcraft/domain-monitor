@@ -144,7 +144,7 @@
 
         <!-- Footer -->
         <div class="text-center mt-6">
-            <p class="text-gray-500 text-xs">© <?= date('Y') ?> Domain Monitor</p>
+            <p class="text-gray-500 text-xs">© <?= date('Y') ?> <a href="https://github.com/Hosteroid/domain-monitor" target="_blank" class="hover:text-blue-600 transition-colors duration-150" title="Visit Domain Monitor on GitHub">Domain Monitor</a></p>
         </div>
     </div>
 

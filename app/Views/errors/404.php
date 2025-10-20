@@ -77,7 +77,7 @@
         <div class="text-center mt-8">
             <p class="text-gray-600">
                 <i class="fas fa-globe text-primary"></i>
-                <span class="ml-2">Domain Monitor © <?= date('Y') ?></span>
+                <span class="ml-2"><a href="https://github.com/Hosteroid/domain-monitor" target="_blank" class="hover:text-blue-600 transition-colors duration-150" title="Visit Domain Monitor on GitHub">Domain Monitor</a> © <?= date('Y') ?></span>
             </p>
         </div>
     </div>
