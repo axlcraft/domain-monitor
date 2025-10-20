@@ -118,7 +118,7 @@ class NotificationGroupController extends Controller
 
     public function edit()
     {
-        $id = $_GET['id'] ?? 0;
+        $id = (int)($_GET['id'] ?? 0);
         $group = $this->groupModel->getWithDetails($id);
 
         if (!$group) {
@@ -188,7 +188,7 @@ class NotificationGroupController extends Controller
 
     public function delete()
     {
-        $id = $_GET['id'] ?? 0;
+        $id = (int)($_GET['id'] ?? 0);
         $group = $this->groupModel->find($id);
 
         if (!$group) {
@@ -270,8 +270,8 @@ class NotificationGroupController extends Controller
 
     public function deleteChannel()
     {
-        $id = $_GET['id'] ?? 0;
-        $groupId = $_GET['group_id'] ?? 0;
+        $id = (int)($_GET['id'] ?? 0);
+        $groupId = (int)($_GET['group_id'] ?? 0);
 
         try {
             $this->channelModel->delete($id);
@@ -289,8 +289,8 @@ class NotificationGroupController extends Controller
 
     public function toggleChannel()
     {
-        $id = $_GET['id'] ?? 0;
-        $groupId = $_GET['group_id'] ?? 0;
+        $id = (int)($_GET['id'] ?? 0);
+        $groupId = (int)($_GET['group_id'] ?? 0);
 
         try {
             $this->channelModel->toggleActive($id);

@@ -29,7 +29,7 @@ class NotificationGroup extends Model
                 LEFT JOIN domains d ON ng.id = d.notification_group_id";
         
         if ($userId && !$this->getUserModel()->isAdmin($userId)) {
-            $sql .= " WHERE ng.user_id = ?";
+            $sql .= " WHERE ng.user_id = ? GROUP BY ng.id ORDER BY ng.name ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$userId]);
         } else {
