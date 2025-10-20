@@ -49,14 +49,28 @@ class TldRegistryService
         // Check curl support for brotli
         try {
             $curlInfo = curl_version();
+            $curlVersion = $curlInfo['version'] ?? 'unknown';
             $curlEncoding = $curlInfo['encoding'] ?? 'unknown';
-            $curlSupportsBrotli = stripos($curlEncoding, 'br') !== false;
+            $curlFeatures = $curlInfo['features'] ?? 0;
             
-            $detectionResults['curl_version'] = $curlInfo['version'] ?? 'unknown';
+            $detectionResults['curl_version'] = $curlVersion;
             $detectionResults['curl_encoding'] = $curlEncoding;
-            $detectionResults['curl_supports_brotli'] = $curlSupportsBrotli;
+            $detectionResults['curl_features_raw'] = $curlFeatures;
             
-            if ($curlSupportsBrotli) {
+            // Method 1: Check encoding field
+            $encodingSupportsBrotli = stripos($curlEncoding, 'br') !== false;
+            $detectionResults['curl_encoding_check'] = $encodingSupportsBrotli;
+            
+            // Method 2: Check features bitmask (CURL_VERSION_BROTLI = 8388608)
+            $featuresSupportsBrotli = ($curlFeatures & 8388608) !== 0;
+            $detectionResults['curl_features_check'] = $featuresSupportsBrotli;
+            
+            // Method 3: Check if curl version is recent enough (brotli support added in 7.57.0)
+            $versionSupportsBrotli = version_compare($curlVersion, '7.57.0', '>=');
+            $detectionResults['curl_version_check'] = $versionSupportsBrotli;
+            
+            if ($encodingSupportsBrotli || $featuresSupportsBrotli || $versionSupportsBrotli) {
+                $detectionResults['final_decision'] = 'supported';
                 $logger->info("Brotli support detected via cURL", $detectionResults);
                 return $supported = true;
             }
