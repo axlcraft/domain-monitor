@@ -55,26 +55,51 @@ class InstallerController extends Controller
         try {
             $pdo = \Core\Database::getConnection();
             
-            // Check if this is a v1.0.0 install (has tables but no migrations tracking)
+            // First, check if this is a fresh install by looking for any existing tables
             $hasUsers = false;
             $hasDomains = false;
             $hasSettings = false;
             $hasNotificationGroups = false;
+            $hasMigrations = false;
             
             try {
                 $stmt = $pdo->query("SELECT COUNT(*) FROM users");
                 $hasUsers = $stmt->fetchColumn() > 0;
-                
+            } catch (\Exception $e) {
+                // Users table doesn't exist
+            }
+            
+            try {
                 $stmt = $pdo->query("SELECT COUNT(*) FROM domains");
                 $hasDomains = true; // Table exists
-                
+            } catch (\Exception $e) {
+                // Domains table doesn't exist
+            }
+            
+            try {
                 $stmt = $pdo->query("SELECT COUNT(*) FROM settings");
                 $hasSettings = true; // Table exists
-                
+            } catch (\Exception $e) {
+                // Settings table doesn't exist
+            }
+            
+            try {
                 $stmt = $pdo->query("SELECT COUNT(*) FROM notification_groups");
                 $hasNotificationGroups = true; // Table exists
             } catch (\Exception $e) {
-                // Tables don't exist - fresh install
+                // Notification groups table doesn't exist
+            }
+            
+            try {
+                $stmt = $pdo->query("SELECT COUNT(*) FROM migrations");
+                $hasMigrations = true; // Table exists
+            } catch (\Exception $e) {
+                // Migrations table doesn't exist
+            }
+            
+            // If no tables exist at all - this is a fresh install
+            if (!$hasUsers && !$hasDomains && !$hasSettings && !$hasNotificationGroups && !$hasMigrations) {
+                return $freshInstallMigration;
             }
             
             // Create migrations table if it doesn't exist
