@@ -30,22 +30,86 @@ class TldRegistryService
         static $supported = null;
         if ($supported !== null) return $supported;
         
-        if (extension_loaded('brotli') || function_exists('brotli_compress')) {
+        $logger = new Logger('tld_import');
+        $detectionResults = [];
+        
+        // Check for brotli extension
+        $brotliExtension = extension_loaded('brotli');
+        $detectionResults['brotli_extension'] = $brotliExtension;
+        
+        // Check for brotli function
+        $brotliFunction = function_exists('brotli_compress');
+        $detectionResults['brotli_function'] = $brotliFunction;
+        
+        if ($brotliExtension || $brotliFunction) {
+            $logger->info("Brotli support detected", $detectionResults);
             return $supported = true;
         }
         
+        // Check curl support for brotli
         try {
             $curlInfo = curl_version();
-            if (isset($curlInfo['encoding']) && stripos($curlInfo['encoding'], 'br') !== false) {
+            $curlEncoding = $curlInfo['encoding'] ?? 'unknown';
+            $curlSupportsBrotli = stripos($curlEncoding, 'br') !== false;
+            
+            $detectionResults['curl_version'] = $curlInfo['version'] ?? 'unknown';
+            $detectionResults['curl_encoding'] = $curlEncoding;
+            $detectionResults['curl_supports_brotli'] = $curlSupportsBrotli;
+            
+            if ($curlSupportsBrotli) {
+                $logger->info("Brotli support detected via cURL", $detectionResults);
                 return $supported = true;
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+            $detectionResults['curl_error'] = $e->getMessage();
+        }
         
+        $logger->info("Brotli support NOT detected - using gzip/deflate fallback", $detectionResults);
         return $supported = false;
+    }
+
+    /**
+     * Log HTTP request and response details for debugging
+     */
+    private function logHttpRequest(string $method, string $url, array $headers, int $statusCode, array $responseHeaders, int $contentLength, float $requestTime): void
+    {
+        $acceptEncoding = $headers['Accept-Encoding'] ?? 'not-set';
+        $contentEncoding = $responseHeaders['content-encoding'] ?? 'none';
+        $contentType = $responseHeaders['content-type'] ?? 'unknown';
+        
+        $logData = [
+            'method' => $method,
+            'url' => $url,
+            'request_accept_encoding' => $acceptEncoding,
+            'response_status' => $statusCode,
+            'response_content_encoding' => $contentEncoding,
+            'response_content_type' => $contentType,
+            'response_content_length' => $contentLength,
+            'request_time_seconds' => round($requestTime, 3),
+            'brotli_supported' => self::isBrotliSupported(),
+            'compression_used' => $contentEncoding !== 'none' ? $contentEncoding : 'none'
+        ];
+        
+        if ($statusCode >= 200 && $statusCode < 300) {
+            $this->logger->info("HTTP request successful", $logData);
+        } else {
+            $this->logger->warning("HTTP request failed", $logData);
+        }
     }
 
     public function __construct()
     {
+        $acceptEncoding = self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate';
+        
+        $this->tldModel = new TldRegistry();
+        $this->importLogModel = new TldImportLog();
+        $this->logger = new Logger('tld_import');
+        
+        $this->logger->debug("Creating main HTTP client", [
+            'accept_encoding' => $acceptEncoding,
+            'brotli_supported' => self::isBrotliSupported()
+        ]);
+        
         $this->httpClient = new Client([
             'timeout' => 15, // Reduced for faster processing
             'connect_timeout' => 5, // Reduced for faster processing
@@ -60,7 +124,7 @@ class TldRegistryService
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate',
+                'Accept-Encoding' => $acceptEncoding,
                 'DNT' => '1',
                 'Connection' => 'keep-alive',
                 'Upgrade-Insecure-Requests' => '1',
@@ -68,11 +132,19 @@ class TldRegistryService
                 'Sec-Fetch-Mode' => 'navigate',
                 'Sec-Fetch-Site' => 'none',
                 'Cache-Control' => 'max-age=0'
-            ]
+            ],
+            'on_stats' => function ($stats) {
+                $this->logHttpRequest(
+                    $stats->getRequest()->getMethod(),
+                    (string) $stats->getRequest()->getUri(),
+                    $stats->getRequest()->getHeaders(),
+                    $stats->getResponse()->getStatusCode(),
+                    $stats->getResponse()->getHeaders(),
+                    $stats->getResponse()->getBody()->getSize() ?? 0,
+                    $stats->getTransferTime()
+                );
+            }
         ]);
-        $this->tldModel = new TldRegistry();
-        $this->importLogModel = new TldImportLog();
-        $this->logger = new Logger('tld_import');
     }
 
     /**
@@ -80,6 +152,13 @@ class TldRegistryService
      */
     private function getJsonClient(): Client
     {
+        $acceptEncoding = self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate';
+        
+        $this->logger->debug("Creating JSON HTTP client", [
+            'accept_encoding' => $acceptEncoding,
+            'brotli_supported' => self::isBrotliSupported()
+        ]);
+        
         return new Client([
             'timeout' => 15, // Reduced for faster processing
             'connect_timeout' => 5, // Reduced for faster processing
@@ -94,7 +173,7 @@ class TldRegistryService
                 'User-Agent' => 'DomainMonitor/1.0 (TLD Registry Bot; compatible with IANA RDAP)',
                 'Accept' => 'application/json, application/rdap+json, */*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate',
+                'Accept-Encoding' => $acceptEncoding,
                 'Connection' => 'keep-alive',
                 'Cache-Control' => 'no-cache'
             ],
@@ -103,7 +182,18 @@ class TldRegistryService
                 'max' => 2, // Reduced retries for speed
                 'delay' => 500, // 0.5 second delay between retries (reduced)
                 'multiplier' => 1.5
-            ]
+            ],
+            'on_stats' => function ($stats) {
+                $this->logHttpRequest(
+                    $stats->getRequest()->getMethod(),
+                    (string) $stats->getRequest()->getUri(),
+                    $stats->getRequest()->getHeaders(),
+                    $stats->getResponse()->getStatusCode(),
+                    $stats->getResponse()->getHeaders(),
+                    $stats->getResponse()->getBody()->getSize() ?? 0,
+                    $stats->getTransferTime()
+                );
+            }
         ]);
     }
 
@@ -112,6 +202,13 @@ class TldRegistryService
      */
     private function getHtmlClient(): Client
     {
+        $acceptEncoding = self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate';
+        
+        $this->logger->debug("Creating HTML HTTP client", [
+            'accept_encoding' => $acceptEncoding,
+            'brotli_supported' => self::isBrotliSupported()
+        ]);
+        
         return new Client([
             'timeout' => 8, // Further reduced for faster processing
             'connect_timeout' => 3, // Further reduced for faster processing
@@ -126,7 +223,7 @@ class TldRegistryService
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate',
+                'Accept-Encoding' => $acceptEncoding,
                 'DNT' => '1',
                 'Connection' => 'keep-alive',
                 'Upgrade-Insecure-Requests' => '1',
@@ -140,7 +237,18 @@ class TldRegistryService
                 'max' => 0, // No retries for HTML to avoid timeouts
                 'delay' => 0,
                 'multiplier' => 1
-            ]
+            ],
+            'on_stats' => function ($stats) {
+                $this->logHttpRequest(
+                    $stats->getRequest()->getMethod(),
+                    (string) $stats->getRequest()->getUri(),
+                    $stats->getRequest()->getHeaders(),
+                    $stats->getResponse()->getStatusCode(),
+                    $stats->getResponse()->getHeaders(),
+                    $stats->getResponse()->getBody()->getSize() ?? 0,
+                    $stats->getTransferTime()
+                );
+            }
         ]);
     }
 
