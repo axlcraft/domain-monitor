@@ -320,7 +320,7 @@ class UserController extends Controller
 
         // Prevent deleting the last admin
         if ($user['role'] === 'admin') {
-            $allAdmins = $this->userModel->where('role', 'admin');
+            $allAdmins = $this->userModel->getAllAdmins();
             if (count($allAdmins) <= 1) {
                 $_SESSION['error'] = 'Cannot delete the last admin user';
                 $this->redirect('/users');
@@ -457,7 +457,7 @@ class UserController extends Controller
             // Prevent deleting if this is the last admin
             $user = $this->userModel->find((int)$userId);
             if ($user && $user['role'] === 'admin') {
-                $allAdmins = $this->userModel->where('role', 'admin');
+                $allAdmins = $this->userModel->getAllAdmins();
                 if (count($allAdmins) <= 1) {
                     continue; // Skip - can't delete last admin
                 }

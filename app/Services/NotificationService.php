@@ -276,9 +276,8 @@ class NotificationService
     public function notifyAdminsUpgrade(string $fromVersion, string $toVersion, int $migrationsCount): void
     {
         try {
-            $pdo = \Core\Database::getConnection();
-            $stmt = $pdo->query("SELECT id FROM users WHERE role = 'admin'");
-            $admins = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $userModel = new \App\Models\User();
+            $admins = $userModel->getAllAdmins();
             
             foreach ($admins as $admin) {
                 $this->notifySystemUpgrade($admin['id'], $fromVersion, $toVersion, $migrationsCount);

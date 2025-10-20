@@ -446,10 +446,10 @@ foreach ($notificationPresets as $key => $preset) {
                     </label>
                     <select name="user_isolation_mode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
                         <option value="shared" <?= $isolationSettings['user_isolation_mode'] === 'shared' ? 'selected' : '' ?>>
-                            🔓 Shared - All users see all domains, groups, and tags
+                            Shared - All users see all domains, groups, and tags
                         </option>
                         <option value="isolated" <?= $isolationSettings['user_isolation_mode'] === 'isolated' ? 'selected' : '' ?>>
-                            🔒 Isolated - Users only see their own domains, groups, and tags
+                            Isolated - Users only see their own domains, groups, and tags
                         </option>
                     </select>
                     <p class="text-xs text-gray-500 mt-1">
@@ -487,8 +487,8 @@ foreach ($notificationPresets as $key => $preset) {
                     </div>
                 <?php endif; ?>
 
-                <div class="flex justify-end">
-                    <button type="submit" class="btn btn-primary">
+                <div class="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">
+                    <button type="submit" class="inline-flex items-center px-4 py-2.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors font-medium">
                         <i class="fas fa-save mr-2"></i>
                         Update Isolation Mode
                     </button>

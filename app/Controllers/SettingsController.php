@@ -174,11 +174,7 @@ class SettingsController extends Controller
 
         try {
             // Clear notification logs older than 30 days
-            $stmt = $this->settingModel->db->prepare(
-                "DELETE FROM notification_logs WHERE sent_at < DATE_SUB(NOW(), INTERVAL 30 DAY)"
-            );
-            $stmt->execute();
-            $deleted = $stmt->rowCount();
+            $deleted = $this->settingModel->clearOldNotificationLogs(30);
 
             $_SESSION['success'] = "Cleared $deleted old notification log(s)";
             $this->redirect('/settings#maintenance');
@@ -521,8 +517,8 @@ class SettingsController extends Controller
         try {
             if ($newMode === 'isolated') {
                 // Check if we have any admin users
-                $domainModel = new \App\Models\Domain();
-                $adminUser = $domainModel->getFirstAdminUser();
+                $userModel = new \App\Models\User();
+                $adminUser = $userModel->getFirstAdminUser();
                 if (!$adminUser) {
                     $_SESSION['error'] = 'No admin users found. Please create an admin user first.';
                     $this->redirect('/settings#isolation');
@@ -559,8 +555,8 @@ class SettingsController extends Controller
     {
         try {
             // Get the first admin user
-            $domainModel = new \App\Models\Domain();
-            $adminUser = $domainModel->getFirstAdminUser();
+            $userModel = new \App\Models\User();
+            $adminUser = $userModel->getFirstAdminUser();
             
             if (!$adminUser) {
                 throw new \Exception('No admin user found. Please create an admin user first.');
@@ -569,14 +565,12 @@ class SettingsController extends Controller
             $adminId = $adminUser['id'];
             
             // Assign all domains to admin
-            $domainStmt = $this->settingModel->db->prepare("UPDATE domains SET user_id = ? WHERE user_id IS NULL");
-            $domainStmt->execute([$adminId]);
-            $domainCount = $domainStmt->rowCount();
+            $domainModel = new \App\Models\Domain();
+            $domainCount = $domainModel->assignUnassignedDomainsToUser($adminId);
             
             // Assign all groups to admin
-            $groupStmt = $this->settingModel->db->prepare("UPDATE notification_groups SET user_id = ? WHERE user_id IS NULL");
-            $groupStmt->execute([$adminId]);
-            $groupCount = $groupStmt->rowCount();
+            $groupModel = new \App\Models\NotificationGroup();
+            $groupCount = $groupModel->assignUnassignedGroupsToUser($adminId);
             
             // Set isolation mode
             $this->settingModel->setValue('user_isolation_mode', 'isolated');

@@ -380,10 +380,7 @@ class AuthController extends Controller
                 $this->logger->warning("No user found with verification token: " . substr($token, 0, 10) . "...");
                 
                 // Debug: Check if any user has this token (regardless of verification status)
-                $pdo = \Core\Database::getConnection();
-                $stmt = $pdo->prepare("SELECT id, email, email_verified, email_verification_token FROM users WHERE email_verification_token = ?");
-                $stmt->execute([$token]);
-                $debugUser = $stmt->fetch();
+                $debugUser = $this->userModel->findByVerificationTokenDebug($token);
                 if ($debugUser) {
                     $this->logger->info("Debug: Found user with token - ID: {$debugUser['id']}, Email: {$debugUser['email']}, Verified: {$debugUser['email_verified']}");
                 } else {

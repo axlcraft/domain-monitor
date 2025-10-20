@@ -9,6 +9,14 @@ class Domain extends Model
     protected static string $table = 'domains';
 
     /**
+     * Get User model instance
+     */
+    private function getUserModel(): \App\Models\User
+    {
+        return new \App\Models\User();
+    }
+
+    /**
      * Get all domains with their notification group
      */
     public function getAllWithGroups(?int $userId = null): array
@@ -17,7 +25,7 @@ class Domain extends Model
                 FROM domains d 
                 LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id";
         
-        if ($userId && !$this->isAdmin($userId)) {
+        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
             $sql .= " WHERE d.user_id = ?";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$userId]);
@@ -44,7 +52,7 @@ class Domain extends Model
         
         $params = [$days];
         
-        if ($userId && !$this->isAdmin($userId)) {
+        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
             $sql .= " AND d.user_id = ?";
             $params[] = $userId;
         }
@@ -68,7 +76,7 @@ class Domain extends Model
         
         $params = [$status];
         
-        if ($userId && !$this->isAdmin($userId)) {
+        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
             $sql .= " AND d.user_id = ?";
             $params[] = $userId;
         }
@@ -132,7 +140,7 @@ class Domain extends Model
         
         $params = [];
         
-        if ($userId && !$this->isAdmin($userId)) {
+        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
             $sql .= " AND d.user_id = ?";
             $params[] = $userId;
         }
@@ -162,7 +170,7 @@ class Domain extends Model
         $whereClause = "WHERE is_active = 1";
         $params = [];
         
-        if ($userId && !$this->isAdmin($userId)) {
+        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
             $whereClause .= " AND user_id = ?";
             $params[] = $userId;
         }
@@ -183,7 +191,7 @@ class Domain extends Model
         $inactiveWhereClause = "WHERE is_active = 0";
         $inactiveParams = [];
         
-        if ($userId && !$this->isAdmin($userId)) {
+        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
             $inactiveWhereClause .= " AND user_id = ?";
             $inactiveParams[] = $userId;
         }
@@ -297,7 +305,7 @@ class Domain extends Model
         $sql = "SELECT DISTINCT tags FROM domains WHERE tags IS NOT NULL AND tags != ''";
         $params = [];
         
-        if ($userId && !$this->isAdmin($userId)) {
+        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
             $sql .= " AND user_id = ?";
             $params[] = $userId;
         }
@@ -320,28 +328,62 @@ class Domain extends Model
         return $allTags;
     }
 
+
     /**
-     * Check if user is admin
+     * Assign all domains without user_id to a specific user
      */
-    private function isAdmin(?int $userId): bool
+    public function assignUnassignedDomainsToUser(int $userId): int
     {
-        if (!$userId) {
-            return false;
-        }
-        
-        $stmt = $this->db->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt = $this->db->prepare("UPDATE domains SET user_id = ? WHERE user_id IS NULL");
         $stmt->execute([$userId]);
-        $user = $stmt->fetch();
-        return $user && $user['role'] === 'admin';
+        return $stmt->rowCount();
     }
 
     /**
-     * Get first admin user
+     * Search domains for suggestions (quick search)
      */
-    public function getFirstAdminUser(): ?array
+    public function searchSuggestions(string $query, int $limit = 5): array
     {
-        $stmt = $this->db->query("SELECT * FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1");
-        return $stmt->fetch() ?: null;
+        $sql = "SELECT d.id, d.domain_name, d.registrar, d.expiration_date, d.status, ng.name as group_name 
+                FROM domains d 
+                LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id 
+                WHERE d.domain_name LIKE ? 
+                   OR d.registrar LIKE ?
+                ORDER BY d.domain_name ASC
+                LIMIT ?";
+
+        $searchTerm = '%' . $query . '%';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$searchTerm, $searchTerm, $limit]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Search domains with user isolation support
+     */
+    public function searchDomains(string $query, ?int $userId = null, int $limit = 50): array
+    {
+        $sql = "SELECT d.*, ng.name as group_name 
+                FROM domains d 
+                LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id 
+                WHERE (d.domain_name LIKE ? 
+                   OR d.registrar LIKE ?
+                   OR ng.name LIKE ?)";
+        
+        $params = ['%' . $query . '%', '%' . $query . '%', '%' . $query . '%'];
+        
+        if ($userId && !$this->getUserModel()->isAdmin($userId)) {
+            $sql .= " AND d.user_id = ?";
+            $params[] = $userId;
+        }
+        
+        $sql .= " ORDER BY d.domain_name ASC LIMIT ?";
+        $params[] = $limit;
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        return $stmt->fetchAll();
     }
 }
 

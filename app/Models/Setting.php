@@ -284,5 +284,17 @@ class Setting extends Model
         
         return $result;
     }
+
+    /**
+     * Clear old notification logs
+     */
+    public function clearOldNotificationLogs(int $daysOld = 30): int
+    {
+        $stmt = $this->db->prepare(
+            "DELETE FROM notification_logs WHERE sent_at < DATE_SUB(NOW(), INTERVAL ? DAY)"
+        );
+        $stmt->execute([$daysOld]);
+        return $stmt->rowCount();
+    }
 }
 

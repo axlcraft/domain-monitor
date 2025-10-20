@@ -284,5 +284,58 @@ class User extends Model
         $user = $this->find($userId);
         return $user && $user['email_verified'];
     }
+
+    /**
+     * Check if user is admin
+     */
+    public function isAdmin(?int $userId): bool
+    {
+        if (!$userId) {
+            return false;
+        }
+        
+        $stmt = $this->db->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        return $user && $user['role'] === 'admin';
+    }
+
+    /**
+     * Get first admin user
+     */
+    public function getFirstAdminUser(): ?array
+    {
+        $stmt = $this->db->query("SELECT * FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1");
+        return $stmt->fetch() ?: null;
+    }
+
+    /**
+     * Get all admin users
+     */
+    public function getAllAdmins(): array
+    {
+        return $this->where('role', 'admin');
+    }
+
+    /**
+     * Count admin users
+     */
+    public function countAdmins(): int
+    {
+        $stmt = $this->db->query("SELECT COUNT(*) as count FROM users WHERE role = 'admin'");
+        $result = $stmt->fetch();
+        return (int)$result['count'];
+    }
+
+    /**
+     * Find user by verification token (debug version - includes all users regardless of verification status)
+     */
+    public function findByVerificationTokenDebug(string $token): ?array
+    {
+        $stmt = $this->db->prepare("SELECT id, email, email_verified, email_verification_token FROM users WHERE email_verification_token = ?");
+        $stmt->execute([$token]);
+        $result = $stmt->fetch();
+        return $result ?: null;
+    }
 }
 
