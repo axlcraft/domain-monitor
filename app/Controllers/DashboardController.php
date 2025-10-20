@@ -43,9 +43,13 @@ class DashboardController extends Controller
         // Format domains for display
         $formattedRecentDomains = \App\Helpers\DomainHelper::formatMultiple($recentDomains);
         $formattedExpiringDomains = \App\Helpers\DomainHelper::formatMultiple($expiringThisMonth);
+        
+        // Get global stats for dashboard cards
+        $globalStats = \App\Helpers\LayoutHelper::getGlobalStats();
 
         $this->view('dashboard/index', [
             'stats' => $stats,
+            'globalStats' => $globalStats,
             'recentDomains' => $formattedRecentDomains,
             'expiringThisMonth' => $formattedExpiringDomains,
             'expiringCount' => count($allExpiringDomains),

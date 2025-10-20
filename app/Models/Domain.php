@@ -127,6 +127,7 @@ class Domain extends Model
             'inactive' => 0,
         ];
 
+        // Get status counts for active domains only
         $sql = "SELECT status, COUNT(*) as count FROM domains WHERE is_active = 1 GROUP BY status";
         $stmt = $this->db->query($sql);
         $results = $stmt->fetchAll();
@@ -136,6 +137,14 @@ class Domain extends Model
         foreach ($results as $row) {
             $stats[strtolower($row['status'])] = $row['count'];
         }
+
+        // Get count of inactive domains (is_active = 0)
+        $inactiveStmt = $this->db->query("SELECT COUNT(*) as count FROM domains WHERE is_active = 0");
+        $inactiveResult = $inactiveStmt->fetch();
+        $stats['inactive'] = $inactiveResult['count'] ?? 0;
+
+        // Add inactive count to total
+        $stats['total'] += $stats['inactive'];
 
         return $stats;
     }
@@ -166,6 +175,14 @@ class Domain extends Model
                         return $daysLeft <= $expiringThreshold && $daysLeft >= 0;
                     }
                     return false;
+                }
+                // Handle inactive filter (based on is_active field)
+                if ($filters['status'] === 'inactive') {
+                    return $domain['is_active'] == 0;
+                }
+                // Handle available and error status filters
+                if ($filters['status'] === 'available' || $filters['status'] === 'error') {
+                    return $domain['status'] === $filters['status'];
                 }
                 return $domain['status'] === $filters['status'];
             });
