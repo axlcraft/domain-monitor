@@ -3,10 +3,17 @@
 namespace App\Controllers;
 
 use Core\Controller;
+use App\Services\Logger;
 
 class InstallerController extends Controller
 {
     private $db = null;
+    private Logger $logger;
+    
+    public function __construct()
+    {
+        $this->logger = new Logger('installer');
+    }
     
     /**
      * Check if system is already installed
@@ -25,7 +32,7 @@ class InstallerController extends Controller
     /**
      * Check pending migrations
      */
-    private function getPendingMigrations(): array
+    private function getPendingMigrations(bool $createMigrationsTable = true): array
     {
         // For fresh installs - use consolidated schema
         $freshInstallMigration = ['000_initial_schema_v1.1.0.sql'];
@@ -55,13 +62,13 @@ class InstallerController extends Controller
         try {
             $pdo = \Core\Database::getConnection();
             
-            // First, check if this is a fresh install by looking for core application tables
-            // Core tables that indicate a real installation: users, domains, settings, notification_groups
+            // FIRST: Check ONLY for core application tables BEFORE creating migrations table
+            // Core tables: users, domains, settings, notification_groups
+            // These are the only reliable indicators of a real installation
             $hasUsers = false;
             $hasDomains = false;
             $hasSettings = false;
             $hasNotificationGroups = false;
-            $hasMigrations = false;
             
             try {
                 $stmt = $pdo->query("SELECT COUNT(*) FROM users");
@@ -91,19 +98,21 @@ class InstallerController extends Controller
                 // Notification groups table doesn't exist
             }
             
-            try {
-                $stmt = $pdo->query("SELECT COUNT(*) FROM migrations");
-                $hasMigrations = true; // Table exists
-            } catch (\Exception $e) {
-                // Migrations table doesn't exist
-            }
-            
             // If no core application tables exist - this is a fresh install
             // Core tables are: users, domains, settings, notification_groups
             // Note: sessions, password_reset_tokens, etc. might exist from app startup but don't indicate real installation
             if (!$hasUsers && !$hasDomains && !$hasSettings && !$hasNotificationGroups) {
+                $this->logger->info("Fresh install detected - no core tables exist, returning fresh install migration only");
+                // Return immediately WITHOUT creating migrations table to avoid partial table creation
                 return $freshInstallMigration;
             }
+            
+            $this->logger->debug("Not fresh install", [
+                'hasUsers' => $hasUsers,
+                'hasDomains' => $hasDomains,
+                'hasSettings' => $hasSettings,
+                'hasNotificationGroups' => $hasNotificationGroups
+            ]);
             
             // Additional check: if we have some tables but no actual data in core tables, treat as fresh install
             // This handles cases where tables might be created by app startup but no real data exists
@@ -122,19 +131,29 @@ class InstallerController extends Controller
                 }
             }
             
-            // Create migrations table if it doesn't exist
-            $pdo->exec("
-                CREATE TABLE IF NOT EXISTS migrations (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    migration VARCHAR(255) NOT NULL UNIQUE,
-                    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_migration (migration)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            ");
+            // Create migrations table if it doesn't exist (only when actually installing)
+            if ($createMigrationsTable) {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS migrations (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        migration VARCHAR(255) NOT NULL UNIQUE,
+                        executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_migration (migration)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                ");
+            }
             
-            // Get executed migrations
-            $stmt = $pdo->query("SELECT migration FROM migrations");
-            $executed = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            // Get executed migrations (only if migrations table exists)
+            $executed = [];
+            if ($createMigrationsTable) {
+                try {
+                    $stmt = $pdo->query("SELECT migration FROM migrations");
+                    $executed = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+                } catch (\Exception $e) {
+                    // Migrations table doesn't exist yet
+                    $executed = [];
+                }
+            }
             
             // If no migrations executed but has data - check if it's a complete v1.0.0 install or broken fresh install
             if (empty($executed) && ($hasUsers || $hasDomains)) {
@@ -205,7 +224,8 @@ class InstallerController extends Controller
     public function index()
     {
         if ($this->isInstalled()) {
-            $pending = $this->getPendingMigrations();
+            // Check for pending migrations without executing them
+            $pending = $this->getPendingMigrations(false);
             if (empty($pending)) {
                 $_SESSION['info'] = 'System is already installed and up to date';
                 $this->redirect('/');
@@ -284,92 +304,118 @@ class InstallerController extends Controller
             $migrations = $this->getPendingMigrations();
             $results = [];
             
-            foreach ($migrations as $migration) {
-                $file = __DIR__ . '/../../database/migrations/' . $migration;
-                if (!file_exists($file)) continue;
+            // Debug: Log what migrations are being executed
+            $this->logger->debug("Executing migrations: " . implode(', ', $migrations));
+            
+            // For fresh installs, ONLY execute the consolidated schema
+            // It already includes the migrations table and marks itself as executed
+            if (count($migrations) === 1 && $migrations[0] === '000_initial_schema_v1.1.0.sql') {
+                $this->logger->debug("Fresh install - executing consolidated schema only");
                 
+                $file = __DIR__ . '/../../database/migrations/000_initial_schema_v1.1.0.sql';
                 $sql = file_get_contents($file);
                 
-                // Replace placeholders for user migration or consolidated schema
-                if ($migration === '002_create_users_table.sql' || $migration === '000_initial_schema_v1.1.0.sql') {
-                    $passwordHash = password_hash($adminPassword, PASSWORD_BCRYPT);
-                    $sql = str_replace('{{ADMIN_PASSWORD_HASH}}', $passwordHash, $sql);
-                    $sql = str_replace('{{ADMIN_USERNAME}}', $adminUsername, $sql);
-                    $sql = str_replace('{{ADMIN_EMAIL}}', $adminEmail, $sql);
-                }
+                // Replace admin credentials
+                $passwordHash = password_hash($adminPassword, PASSWORD_BCRYPT);
+                $sql = str_replace('{{ADMIN_PASSWORD_HASH}}', $passwordHash, $sql);
+                $sql = str_replace('{{ADMIN_USERNAME}}', $adminUsername, $sql);
+                $sql = str_replace('{{ADMIN_EMAIL}}', $adminEmail, $sql);
                 
-                // Execute SQL - use a more robust method for complex SQL files
+                // Execute the entire consolidated schema at once
+                // This is safe because MySQL can handle multiple statements with CREATE TABLE IF NOT EXISTS
                 try {
-                    // For complex migration files, execute the entire SQL at once
-                    // This handles multi-line statements, comments, and complex syntax properly
                     $pdo->exec($sql);
+                    $this->logger->info("Consolidated schema executed successfully");
+                    $results[] = '000_initial_schema_v1.1.0.sql';
                 } catch (\PDOException $e) {
-                    // If that fails, try the statement-by-statement approach as fallback
+                    $this->logger->error("Consolidated schema execution failed: " . $e->getMessage());
+                    // Fallback to statement-by-statement parsing
                     $statements = $this->parseSqlStatements($sql);
+                    $successCount = 0;
                     foreach ($statements as $statement) {
                         if (!empty(trim($statement))) {
                             try {
                                 $pdo->exec($statement);
+                                $successCount++;
                             } catch (\PDOException $e2) {
-                                // Ignore duplicate/already exists errors
+                                // Ignore duplicate/already exists errors - these are expected with IF NOT EXISTS
                                 if (strpos($e2->getMessage(), 'Duplicate') === false && 
                                     strpos($e2->getMessage(), 'already exists') === false &&
                                     strpos($e2->getMessage(), 'Table') === false) {
+                                    $this->logger->error("Statement failed: " . $statement . " - Error: " . $e2->getMessage());
                                     throw $e2;
                                 }
                             }
                         }
                     }
+                    $this->logger->info("Consolidated schema executed with fallback method - $successCount statements successful");
+                    $results[] = '000_initial_schema_v1.1.0.sql';
                 }
+            } else {
+                // For incremental updates, create migrations table and execute migrations normally
+                $this->logger->debug("Incremental update - ensuring migrations table exists");
                 
-                // Mark as executed
-                $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (?) ON DUPLICATE KEY UPDATE migration=migration");
-                $stmt->execute([$migration]);
+                // Ensure migrations table exists for tracking
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS migrations (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        migration VARCHAR(255) NOT NULL UNIQUE,
+                        executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_migration (migration)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                ");
                 
-                $results[] = $migration;
-            }
-            
-            // If using consolidated schema, mark all individual migrations as executed too
-            if (in_array('000_initial_schema_v1.1.0.sql', $migrations)) {
-                $allMigrations = [
-                    '001_create_tables.sql',
-                    '002_create_users_table.sql',
-                    '003_add_whois_fields.sql',
-                    '004_create_tld_registry_table.sql',
-                    '005_update_tld_import_logs.sql',
-                    '006_add_complete_workflow_import_type.sql',
-                    '007_add_app_and_email_settings.sql',
-                    '008_add_notes_to_domains.sql',
-                    '009_add_authentication_features.sql',
-                    '010_add_app_version_setting.sql',
-                    '011_create_sessions_table.sql',
-                    '012_link_remember_tokens_to_sessions.sql',
-                    '013_create_user_notifications_table.sql',
-                    '014_add_captcha_settings.sql',
-                    '015_create_error_logs_table.sql',
-                    '016_add_tags_to_domains.sql',
-                    '017_add_two_factor_authentication.sql',
-                    '018_add_user_isolation.sql',
-                ];
-                
-                $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (?) ON DUPLICATE KEY UPDATE migration=migration");
-                foreach ($allMigrations as $individualMigration) {
-                    $stmt->execute([$individualMigration]);
+                foreach ($migrations as $migration) {
+                    $file = __DIR__ . '/../../database/migrations/' . $migration;
+                    if (!file_exists($file)) continue;
+                    
+                    $sql = file_get_contents($file);
+                    
+                    // Execute SQL - use robust method
+                    try {
+                        $pdo->exec($sql);
+                    } catch (\PDOException $e) {
+                        // If that fails, try the statement-by-statement approach as fallback
+                        $statements = $this->parseSqlStatements($sql);
+                        foreach ($statements as $statement) {
+                            if (!empty(trim($statement))) {
+                                try {
+                                    $pdo->exec($statement);
+                                } catch (\PDOException $e2) {
+                                    // Ignore duplicate/already exists errors
+                                    if (strpos($e2->getMessage(), 'Duplicate') === false && 
+                                        strpos($e2->getMessage(), 'already exists') === false &&
+                                        strpos($e2->getMessage(), 'Table') === false) {
+                                        throw $e2;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Mark as executed
+                    $stmt = $pdo->prepare("INSERT INTO migrations (migration) VALUES (?) ON DUPLICATE KEY UPDATE migration=migration");
+                    $stmt->execute([$migration]);
+                    
+                    $results[] = $migration;
                 }
             }
             
             // Update admin user to ensure role and verified status (in case migration already had defaults)
             $stmt = $pdo->prepare("UPDATE users SET role = 'admin', email_verified = 1 WHERE username = ?");
             $stmt->execute([$adminUsername]);
+            $this->logger->info("Admin user configured", ['username' => $adminUsername]);
             
             // Generate encryption key if not exists
             if (empty($_ENV['APP_ENCRYPTION_KEY'])) {
                 $this->generateEncryptionKey();
+                $this->logger->info("Encryption key generated");
             }
             
             // Create .installed flag file
             $installedFile = __DIR__ . '/../../.installed';
             file_put_contents($installedFile, date('Y-m-d H:i:s'));
+            $this->logger->info("Installation flag file created");
             
             // Create welcome notification for admin
             try {
@@ -381,19 +427,27 @@ class InstallerController extends Controller
                 if ($adminUser) {
                     $notificationService = new \App\Services\NotificationService();
                     $notificationService->notifyWelcome($adminUser['id'], $adminUsername);
+                    $this->logger->info("Welcome notification created", ['user_id' => $adminUser['id']]);
                 }
             } catch (\Exception $e) {
                 // Don't fail install if notification fails
-                error_log("Failed to create welcome notification: " . $e->getMessage());
+                $this->logger->error("Failed to create welcome notification: " . $e->getMessage());
             }
             
             // Redirect to complete page
             $_SESSION['install_complete'] = true;
             $_SESSION['admin_username'] = $adminUsername;
             $_SESSION['admin_password'] = $adminPassword;
+            
+            $this->logger->info("Installation completed successfully");
             $this->redirect('/install/complete');
             
         } catch (\Exception $e) {
+            $this->logger->error("Installation failed: " . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             $_SESSION['error'] = 'Installation failed: ' . $e->getMessage();
             $this->redirect('/install');
         }
@@ -433,23 +487,40 @@ class InstallerController extends Controller
             $migrations = $this->getPendingMigrations();
             $executed = [];
             
+            // Ensure migrations table exists for tracking
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS migrations (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    migration VARCHAR(255) NOT NULL UNIQUE,
+                    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_migration (migration)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+            
             foreach ($migrations as $migration) {
                 $file = __DIR__ . '/../../database/migrations/' . $migration;
                 if (!file_exists($file)) continue;
                 
                 $sql = file_get_contents($file);
                 
-                // Execute SQL
-                $statements = array_filter(array_map('trim', explode(';', $sql)));
-                foreach ($statements as $statement) {
-                    if (!empty($statement)) {
-                        try {
-                            $pdo->exec($statement);
-                        } catch (\PDOException $e) {
-                            // Ignore duplicate/already exists errors
-                            if (strpos($e->getMessage(), 'Duplicate') === false && 
-                                strpos($e->getMessage(), 'already exists') === false) {
-                                throw $e;
+                // Execute SQL - use same robust method as install()
+                try {
+                    // For complex migration files, execute the entire SQL at once
+                    $pdo->exec($sql);
+                } catch (\PDOException $e) {
+                    // If that fails, try the statement-by-statement approach as fallback
+                    $statements = $this->parseSqlStatements($sql);
+                    foreach ($statements as $statement) {
+                        if (!empty(trim($statement))) {
+                            try {
+                                $pdo->exec($statement);
+                            } catch (\PDOException $e2) {
+                                // Ignore duplicate/already exists errors
+                                if (strpos($e2->getMessage(), 'Duplicate') === false && 
+                                    strpos($e2->getMessage(), 'already exists') === false &&
+                                    strpos($e2->getMessage(), 'Table') === false) {
+                                    throw $e2;
+                                }
                             }
                         }
                     }
@@ -466,10 +537,16 @@ class InstallerController extends Controller
             $installedFile = __DIR__ . '/../../.installed';
             if (!file_exists($installedFile)) {
                 file_put_contents($installedFile, date('Y-m-d H:i:s'));
+                $this->logger->info("Installation flag file created");
             }
             
             // Notify admins about upgrade (if migrations were executed)
             if (!empty($executed)) {
+                $this->logger->info("Migrations executed", [
+                    'count' => count($executed),
+                    'migrations' => $executed
+                ]);
+                
                 try {
                     $settingModel = new \App\Models\Setting();
                     $currentVersion = $settingModel->getAppVersion();
@@ -489,14 +566,20 @@ class InstallerController extends Controller
                     $notificationService->notifyAdminsUpgrade($fromVersion, $toVersion, count($executed));
                 } catch (\Exception $e) {
                     // Don't fail upgrade if notification fails
-                    error_log("Failed to create upgrade notification: " . $e->getMessage());
+                    $this->logger->error("Failed to create upgrade notification: " . $e->getMessage());
                 }
             }
             
             $_SESSION['success'] = count($executed) . ' migration(s) executed successfully';
+            $this->logger->info("Update completed successfully", ['migrations_executed' => count($executed)]);
             $this->redirect('/');
             
         } catch (\Exception $e) {
+            $this->logger->error("Update failed: " . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             $_SESSION['error'] = 'Update failed: ' . $e->getMessage();
             $this->redirect('/install/update');
         }
