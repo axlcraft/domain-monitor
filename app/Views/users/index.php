@@ -258,16 +258,16 @@ $pagination = $pagination ?? [
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex items-center justify-end space-x-2">
-                                <a href="/users/edit?id=<?= $user['id'] ?>" class="text-blue-600 hover:text-blue-800" title="Edit">
+                                <a href="/users/<?= $user['id'] ?>/edit" class="text-blue-600 hover:text-blue-800" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <?php if ($user['id'] != \Core\Auth::id()): ?>
-                                    <a href="/users/toggle-status?id=<?= $user['id'] ?>" 
+                                    <a href="/users/<?= $user['id'] ?>/toggle-status" 
                                        class="text-orange-600 hover:text-orange-800" 
                                        title="<?= $user['is_active'] ? 'Deactivate' : 'Activate' ?>">
                                         <i class="fas fa-<?= $user['is_active'] ? 'user-slash' : 'user-check' ?>"></i>
                                     </a>
-                                    <a href="/users/delete?id=<?= $user['id'] ?>" 
+                                    <a href="/users/<?= $user['id'] ?>/delete" 
                                        class="text-red-600 hover:text-red-800" 
                                        title="Delete"
                                        onclick="return confirm('Are you sure you want to delete this user?')">

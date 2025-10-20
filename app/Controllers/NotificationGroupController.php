@@ -17,6 +17,22 @@ class NotificationGroupController extends Controller
         $this->channelModel = new NotificationChannel();
     }
 
+    /**
+     * Check group access based on isolation mode
+     */
+    private function checkGroupAccess(int $id): ?array
+    {
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
+        if ($isolationMode === 'isolated') {
+            return $this->groupModel->getWithDetails($id, $userId);
+        } else {
+            return $this->groupModel->getWithDetails($id);
+        }
+    }
+
     public function index()
     {
         // Get current user and isolation mode
@@ -114,7 +130,7 @@ class NotificationGroupController extends Controller
             ]);
 
             $_SESSION['success'] = "Group '$name' created successfully";
-            $this->redirect("/groups/edit?id=$id");
+            $this->redirect("/groups/$id/edit");
         } catch (\Exception $e) {
             // Log the error using the ErrorHandler service
             $errorHandler = new \App\Services\ErrorHandler();
@@ -125,10 +141,10 @@ class NotificationGroupController extends Controller
         }
     }
 
-    public function edit()
+    public function edit($params = [])
     {
-        $id = (int)($_GET['id'] ?? 0);
-        $group = $this->groupModel->getWithDetails($id);
+        $id = $params['id'] ?? 0;
+        $group = $this->checkGroupAccess($id);
 
         if (!$group) {
             $_SESSION['error'] = 'Group not found';
@@ -142,7 +158,7 @@ class NotificationGroupController extends Controller
         ]);
     }
 
-    public function update()
+    public function update($params = [])
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/groups');
@@ -152,13 +168,21 @@ class NotificationGroupController extends Controller
         // CSRF Protection
         $this->verifyCsrf('/groups');
 
-        $id = (int)$_POST['id'];
+        $id = $params['id'] ?? 0;
+        $group = $this->checkGroupAccess($id);
+        
+        if (!$group) {
+            $_SESSION['error'] = 'Group not found';
+            $this->redirect('/groups');
+            return;
+        }
+        
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
 
         if (empty($name)) {
             $_SESSION['error'] = 'Group name is required';
-            $this->redirect("/groups/edit?id=$id");
+            $this->redirect("/groups/$id/edit");
             return;
         }
 
@@ -166,14 +190,14 @@ class NotificationGroupController extends Controller
         $nameError = \App\Helpers\InputValidator::validateLength($name, 255, 'Group name');
         if ($nameError) {
             $_SESSION['error'] = $nameError;
-            $this->redirect("/groups/edit?id=$id");
+            $this->redirect("/groups/$id/edit");
             return;
         }
 
         $descError = \App\Helpers\InputValidator::validateLength($description, 1000, 'Description');
         if ($descError) {
             $_SESSION['error'] = $descError;
-            $this->redirect("/groups/edit?id=$id");
+            $this->redirect("/groups/$id/edit");
             return;
         }
 
@@ -192,21 +216,21 @@ class NotificationGroupController extends Controller
             ]);
 
             $_SESSION['success'] = 'Group updated successfully';
-            $this->redirect("/groups/edit?id=$id");
+            $this->redirect("/groups/$id/edit");
         } catch (\Exception $e) {
             // Log the error using the ErrorHandler service
             $errorHandler = new \App\Services\ErrorHandler();
             $errorHandler->handleException($e);
             
             $_SESSION['error'] = 'Failed to update notification group. Please try again.';
-            $this->redirect("/groups/edit?id=$id");
+            $this->redirect("/groups/$id/edit");
         }
     }
 
-    public function delete()
+    public function delete($params = [])
     {
-        $id = (int)($_GET['id'] ?? 0);
-        $group = $this->groupModel->find($id);
+        $id = $params['id'] ?? 0;
+        $group = $this->checkGroupAccess($id);
 
         if (!$group) {
             $_SESSION['error'] = 'Group not found';
@@ -236,7 +260,7 @@ class NotificationGroupController extends Controller
         }
     }
 
-    public function addChannel()
+    public function addChannel($params = [])
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/groups');
@@ -246,13 +270,22 @@ class NotificationGroupController extends Controller
         // CSRF Protection
         $this->verifyCsrf('/groups');
 
-        $groupId = (int)$_POST['group_id'];
+        $groupId = $params['group_id'] ?? 0;
+        
+        // Check group access
+        $group = $this->checkGroupAccess($groupId);
+        if (!$group) {
+            $_SESSION['error'] = 'Group not found';
+            $this->redirect('/groups');
+            return;
+        }
+        
         $channelType = $_POST['channel_type'] ?? '';
 
         // Validate channel type
         if (empty($channelType)) {
             $_SESSION['error'] = 'Please select a channel type';
-            $this->redirect("/groups/edit?id=$groupId");
+            $this->redirect("/groups/$groupId/edit");
             return;
         }
 
@@ -275,59 +308,75 @@ class NotificationGroupController extends Controller
             }
             
             $_SESSION['error'] = "Invalid channel configuration: Missing {$missingField}";
-            $this->redirect("/groups/edit?id=$groupId");
+            $this->redirect("/groups/$groupId/edit");
             return;
         }
 
         try {
             $this->channelModel->createChannel($groupId, $channelType, $config);
             $_SESSION['success'] = 'Channel added successfully';
-            $this->redirect("/groups/edit?id=$groupId");
+            $this->redirect("/groups/$groupId/edit");
         } catch (\Exception $e) {
             // Log the error using the ErrorHandler service
             $errorHandler = new \App\Services\ErrorHandler();
             $errorHandler->handleException($e);
             
             $_SESSION['error'] = 'Failed to add notification channel. Please try again.';
-            $this->redirect("/groups/edit?id=$groupId");
+            $this->redirect("/groups/$groupId/edit");
         }
     }
 
-    public function deleteChannel()
+    public function deleteChannel($params = [])
     {
-        $id = (int)($_GET['id'] ?? 0);
-        $groupId = (int)($_GET['group_id'] ?? 0);
+        $id = $params['id'] ?? 0;
+        $groupId = $params['group_id'] ?? 0;
+
+        // Check group access
+        $group = $this->checkGroupAccess($groupId);
+        if (!$group) {
+            $_SESSION['error'] = 'Group not found';
+            $this->redirect('/groups');
+            return;
+        }
 
         try {
             $this->channelModel->delete($id);
             $_SESSION['success'] = 'Channel deleted successfully';
-            $this->redirect("/groups/edit?id=$groupId");
+            $this->redirect("/groups/$groupId/edit");
         } catch (\Exception $e) {
             // Log the error using the ErrorHandler service
             $errorHandler = new \App\Services\ErrorHandler();
             $errorHandler->handleException($e);
             
             $_SESSION['error'] = 'Failed to delete notification channel. Please try again.';
-            $this->redirect("/groups/edit?id=$groupId");
+            $this->redirect("/groups/$groupId/edit");
         }
     }
 
-    public function toggleChannel()
+    public function toggleChannel($params = [])
     {
-        $id = (int)($_GET['id'] ?? 0);
-        $groupId = (int)($_GET['group_id'] ?? 0);
+        $id = $params['id'] ?? 0;
+        $groupId = $params['group_id'] ?? 0;
+
+        // Check group access
+        $group = $this->checkGroupAccess($groupId);
+        if (!$group) {
+            $_SESSION['error'] = 'Group not found';
+            $this->redirect('/groups');
+            return;
+        }
 
         try {
             $this->channelModel->toggleActive($id);
             $_SESSION['success'] = 'Channel status updated';
-            $this->redirect("/groups/edit?id=$groupId");
+            $this->redirect("/groups/$groupId/edit");
         } catch (\Exception $e) {
             // Log the error using the ErrorHandler service
             $errorHandler = new \App\Services\ErrorHandler();
             $errorHandler->handleException($e);
             
             $_SESSION['error'] = 'Failed to update channel status. Please try again.';
-            $this->redirect("/groups/edit?id=$groupId");
+            $this->redirect("/groups/$groupId/edit");
         }
     }
 
@@ -355,7 +404,7 @@ class NotificationGroupController extends Controller
             } else {
                 $_SESSION['error'] = 'Invalid channel configuration for testing';
                 $groupId = $_POST['group_id'] ?? 0;
-                $this->redirect($groupId ? "/groups/edit?id=$groupId" : '/groups');
+                $this->redirect($groupId ? "/groups/$groupId/edit" : '/groups');
                 return;
             }
         }
@@ -404,7 +453,7 @@ class NotificationGroupController extends Controller
         // Only redirect if not AJAX
         if (!$isAjax) {
             $groupId = $_POST['group_id'] ?? 0;
-            $this->redirect("/groups/edit?id=$groupId");
+            $this->redirect("/groups/$groupId/edit");
         }
     }
 
@@ -520,13 +569,27 @@ class NotificationGroupController extends Controller
             return;
         }
 
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+
         $deletedCount = 0;
         $errors = [];
 
         foreach ($groupIds as $groupId) {
             try {
-                $this->groupModel->deleteWithRelations((int)$groupId);
-                $deletedCount++;
+                // Check group access based on isolation mode
+                if ($isolationMode === 'isolated') {
+                    $group = $this->groupModel->getWithDetails((int)$groupId, $userId);
+                } else {
+                    $group = $this->groupModel->getWithDetails((int)$groupId);
+                }
+                
+                if ($group) {
+                    $this->groupModel->deleteWithRelations((int)$groupId);
+                    $deletedCount++;
+                }
             } catch (\Exception $e) {
                 // Log individual errors but continue processing
                 $errorHandler = new \App\Services\ErrorHandler();

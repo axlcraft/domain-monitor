@@ -98,8 +98,13 @@ class SearchController extends Controller
             exit;
         }
 
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
         // Search existing domains (limit to 5 for quick results)
-        $results = $this->domainModel->searchSuggestions($query, 5);
+        $results = $this->domainModel->searchSuggestions($query, 5, $isolationMode === 'isolated' ? $userId : null);
 
         // Calculate days left for each domain
         foreach ($results as &$domain) {

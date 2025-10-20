@@ -110,7 +110,7 @@ ob_start();
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex items-center justify-end space-x-2">
-                                    <a href="/groups/edit?id=<?= $group['id'] ?>" class="text-blue-600 hover:text-blue-800" title="Manage">
+                                    <a href="/groups/<?= $group['id'] ?>/edit" class="text-blue-600 hover:text-blue-800" title="Manage">
                                         <i class="fas fa-cog"></i>
                                     </a>
                                     <?php if (\Core\Auth::isAdmin()): ?>
@@ -120,7 +120,7 @@ ob_start();
                                             <i class="fas fa-exchange-alt"></i>
                                         </button>
                                     <?php endif; ?>
-                                    <a href="/groups/delete?id=<?= $group['id'] ?>" 
+                                    <a href="/groups/<?= $group['id'] ?>/delete" 
                                        class="text-red-600 hover:text-red-800" 
                                        title="Delete"
                                        onclick="return confirm('Are you sure? Domains will be unassigned from this group.')">
@@ -162,10 +162,10 @@ ob_start();
                     </div>
                     
                     <div class="flex space-x-2">
-                        <a href="/groups/edit?id=<?= $group['id'] ?>" class="flex-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded text-center text-sm hover:bg-blue-100 transition-colors">
+                        <a href="/groups/<?= $group['id'] ?>/edit" class="flex-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded text-center text-sm hover:bg-blue-100 transition-colors">
                             <i class="fas fa-cog mr-1"></i> Manage
                         </a>
-                        <a href="/groups/delete?id=<?= $group['id'] ?>" 
+                        <a href="/groups/<?= $group['id'] ?>/delete" 
                            class="flex-1 px-3 py-1.5 bg-red-50 text-red-600 rounded text-center text-sm hover:bg-red-100 transition-colors"
                            onclick="return confirm('Are you sure? Domains will be unassigned from this group.')">
                             <i class="fas fa-trash mr-1"></i> Delete

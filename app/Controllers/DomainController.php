@@ -20,6 +20,22 @@ class DomainController extends Controller
         $this->whoisService = new WhoisService();
     }
 
+    /**
+     * Check domain access based on isolation mode
+     */
+    private function checkDomainAccess(int $id): ?array
+    {
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
+        if ($isolationMode === 'isolated') {
+            return $this->domainModel->findWithIsolation($id, $userId);
+        } else {
+            return $this->domainModel->find($id);
+        }
+    }
+
     public function index()
     {
         // Get current user and isolation mode
@@ -221,7 +237,7 @@ class DomainController extends Controller
     public function edit($params = [])
     {
         $id = $params['id'] ?? 0;
-        $domain = $this->domainModel->find($id);
+        $domain = $this->checkDomainAccess($id);
 
         if (!$domain) {
             $_SESSION['error'] = 'Domain not found';
@@ -258,7 +274,7 @@ class DomainController extends Controller
         $this->verifyCsrf('/domains');
 
         $id = (int)($params['id'] ?? 0);
-        $domain = $this->domainModel->find($id);
+        $domain = $this->checkDomainAccess($id);
         
         if (!$domain) {
             $_SESSION['error'] = 'Domain not found';
@@ -269,7 +285,6 @@ class DomainController extends Controller
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
         $isActive = isset($_POST['is_active']) ? 1 : 0;
         $tagsInput = trim($_POST['tags'] ?? '');
-        $userId = \Core\Auth::id();
         
         // Validate tags
         $tagValidation = \App\Helpers\InputValidator::validateTags($tagsInput);
@@ -350,7 +365,7 @@ class DomainController extends Controller
     public function refresh($params = [])
     {
         $id = $params['id'] ?? 0;
-        $domain = $this->domainModel->find($id);
+        $domain = $this->checkDomainAccess($id);
 
         if (!$domain) {
             $_SESSION['error'] = 'Domain not found';
@@ -402,7 +417,7 @@ class DomainController extends Controller
     public function delete($params = [])
     {
         $id = $params['id'] ?? 0;
-        $domain = $this->domainModel->find($id);
+        $domain = $this->checkDomainAccess($id);
 
         if (!$domain) {
             $_SESSION['error'] = 'Domain not found';
@@ -418,7 +433,18 @@ class DomainController extends Controller
     public function show($params = [])
     {
         $id = $params['id'] ?? 0;
-        $domain = $this->domainModel->getWithChannels($id);
+        
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
+        // Check domain access based on isolation mode
+        if ($isolationMode === 'isolated') {
+            $domain = $this->domainModel->getWithChannels($id, $userId);
+        } else {
+            $domain = $this->domainModel->getWithChannels($id);
+        }
 
         if (!$domain) {
             $_SESSION['error'] = 'Domain not found';
@@ -618,11 +644,21 @@ class DomainController extends Controller
             return;
         }
 
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+
         $refreshed = 0;
         $failed = 0;
 
         foreach ($domainIds as $id) {
-            $domain = $this->domainModel->find($id);
+            // Check domain access based on isolation mode
+            if ($isolationMode === 'isolated') {
+                $domain = $this->domainModel->findWithIsolation($id, $userId);
+            } else {
+                $domain = $this->domainModel->find($id);
+            }
             if (!$domain) continue;
 
             $whoisData = $this->whoisService->getDomainInfo($domain['domain_name']);
@@ -770,9 +806,21 @@ class DomainController extends Controller
             return;
         }
 
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+
         $updated = 0;
         foreach ($domainIds as $id) {
-            if ($this->domainModel->update($id, ['is_active' => $isActive])) {
+            // Check domain access based on isolation mode
+            if ($isolationMode === 'isolated') {
+                $domain = $this->domainModel->findWithIsolation($id, $userId);
+            } else {
+                $domain = $this->domainModel->find($id);
+            }
+            
+            if ($domain && $this->domainModel->update($id, ['is_active' => $isActive])) {
                 $updated++;
             }
         }
@@ -793,7 +841,7 @@ class DomainController extends Controller
         $this->verifyCsrf('/domains');
 
         $id = (int)($params['id'] ?? 0);
-        $domain = $this->domainModel->find($id);
+        $domain = $this->checkDomainAccess($id);
         
         if (!$domain) {
             $_SESSION['error'] = 'Domain not found';
@@ -845,9 +893,19 @@ class DomainController extends Controller
             return;
         }
 
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+
         $updated = 0;
         foreach ($domainIds as $id) {
-            $domain = $this->domainModel->find($id);
+            // Check domain access based on isolation mode
+            if ($isolationMode === 'isolated') {
+                $domain = $this->domainModel->findWithIsolation($id, $userId);
+            } else {
+                $domain = $this->domainModel->find($id);
+            }
             if (!$domain) continue;
 
             // Get existing tags
@@ -886,9 +944,21 @@ class DomainController extends Controller
             return;
         }
 
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+
         $updated = 0;
         foreach ($domainIds as $id) {
-            if ($this->domainModel->update($id, ['tags' => ''])) {
+            // Check domain access based on isolation mode
+            if ($isolationMode === 'isolated') {
+                $domain = $this->domainModel->findWithIsolation($id, $userId);
+            } else {
+                $domain = $this->domainModel->find($id);
+            }
+            
+            if ($domain && $this->domainModel->update($id, ['tags' => ''])) {
                 $updated++;
             }
         }

@@ -194,9 +194,9 @@ class UserController extends Controller
     /**
      * Show edit user form
      */
-    public function edit()
+    public function edit($params = [])
     {
-        $userId = (int)($_GET['id'] ?? 0);
+        $userId = $params['id'] ?? 0;
         $user = $this->userModel->find($userId);
 
         if (!$user) {
@@ -214,7 +214,7 @@ class UserController extends Controller
     /**
      * Update user
      */
-    public function update()
+    public function update($params = [])
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/users');
@@ -224,7 +224,7 @@ class UserController extends Controller
         // CSRF Protection
         $this->verifyCsrf('/users');
 
-        $userId = (int)($_POST['id'] ?? 0);
+        $userId = $params['id'] ?? 0;
         $user = $this->userModel->find($userId);
 
         if (!$user) {
@@ -242,13 +242,13 @@ class UserController extends Controller
         // Validation
         if (empty($email) || empty($fullName)) {
             $_SESSION['error'] = 'Email and full name are required';
-            $this->redirect('/users/edit?id=' . $userId);
+            $this->redirect("/users/$userId/edit");
             return;
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $_SESSION['error'] = 'Invalid email address';
-            $this->redirect('/users/edit?id=' . $userId);
+            $this->redirect("/users/$userId/edit");
             return;
         }
 
@@ -256,7 +256,7 @@ class UserController extends Controller
         $nameError = \App\Helpers\InputValidator::validateLength($fullName, 255, 'Full name');
         if ($nameError) {
             $_SESSION['error'] = $nameError;
-            $this->redirect('/users/edit?id=' . $userId);
+            $this->redirect("/users/$userId/edit");
             return;
         }
 
@@ -264,7 +264,7 @@ class UserController extends Controller
         $existingUsers = $this->userModel->where('email', $email);
         if (!empty($existingUsers) && $existingUsers[0]['id'] != $userId) {
             $_SESSION['error'] = 'Email already in use by another user';
-            $this->redirect('/users/edit?id=' . $userId);
+            $this->redirect("/users/$userId/edit");
             return;
         }
 
@@ -282,7 +282,7 @@ class UserController extends Controller
             if (!empty($password)) {
                 if (strlen($password) < 8) {
                     $_SESSION['error'] = 'Password must be at least 8 characters';
-                    $this->redirect('/users/edit?id=' . $userId);
+                    $this->redirect("/users/$userId/edit");
                     return;
                 }
                 $this->userModel->changePassword($userId, $password);
@@ -293,16 +293,16 @@ class UserController extends Controller
 
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Failed to update user: ' . $e->getMessage();
-            $this->redirect('/users/edit?id=' . $userId);
+            $this->redirect("/users/$userId/edit");
         }
     }
 
     /**
      * Delete user
      */
-    public function delete()
+    public function delete($params = [])
     {
-        $userId = (int)($_GET['id'] ?? 0);
+        $userId = $params['id'] ?? 0;
         $user = $this->userModel->find($userId);
 
         if (!$user) {
@@ -342,9 +342,9 @@ class UserController extends Controller
     /**
      * Toggle user active status
      */
-    public function toggleStatus()
+    public function toggleStatus($params = [])
     {
-        $userId = (int)($_GET['id'] ?? 0);
+        $userId = $params['id'] ?? 0;
         $user = $this->userModel->find($userId);
 
         if (!$user) {

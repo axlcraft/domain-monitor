@@ -63,7 +63,10 @@ class NotificationGroup extends Model
         // Get domains (filtered by user if needed)
         $domainModel = new Domain();
         if ($userId) {
-            $group['domains'] = $domainModel->where('notification_group_id', $id, $userId);
+            $sql = "SELECT * FROM domains WHERE notification_group_id = ? AND user_id = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$id, $userId]);
+            $group['domains'] = $stmt->fetchAll();
         } else {
             $group['domains'] = $domainModel->where('notification_group_id', $id);
         }

@@ -84,17 +84,17 @@ $router->post('/domains/{id}/delete', [DomainController::class, 'delete']);
 $router->get('/groups', [NotificationGroupController::class, 'index']);
 $router->get('/groups/create', [NotificationGroupController::class, 'create']);
 $router->post('/groups/store', [NotificationGroupController::class, 'store']);
-$router->get('/groups/edit', [NotificationGroupController::class, 'edit']);
-$router->post('/groups/update', [NotificationGroupController::class, 'update']);
-$router->get('/groups/delete', [NotificationGroupController::class, 'delete']);
+$router->get('/groups/{id}/edit', [NotificationGroupController::class, 'edit']);
+$router->post('/groups/{id}/update', [NotificationGroupController::class, 'update']);
+$router->post('/groups/{id}/delete', [NotificationGroupController::class, 'delete']);
 $router->post('/groups/bulk-delete', [NotificationGroupController::class, 'bulkDelete']);
 $router->post('/groups/transfer', [NotificationGroupController::class, 'transfer']);
 $router->post('/groups/bulk-transfer', [NotificationGroupController::class, 'bulkTransfer']);
 
 // Notification Channels
-$router->post('/channels/add', [NotificationGroupController::class, 'addChannel']);
-$router->get('/channels/delete', [NotificationGroupController::class, 'deleteChannel']);
-$router->get('/channels/toggle', [NotificationGroupController::class, 'toggleChannel']);
+$router->post('/groups/{group_id}/channels', [NotificationGroupController::class, 'addChannel']);
+$router->post('/groups/{group_id}/channels/{id}/delete', [NotificationGroupController::class, 'deleteChannel']);
+$router->post('/groups/{group_id}/channels/{id}/toggle', [NotificationGroupController::class, 'toggleChannel']);
 $router->post('/channels/test', [NotificationGroupController::class, 'testChannel']);
 
 // TLD Registry
@@ -155,10 +155,10 @@ $router->get('/api/notifications/recent', [NotificationController::class, 'getRe
 $router->get('/users', [UserController::class, 'index']);
 $router->get('/users/create', [UserController::class, 'create']);
 $router->post('/users/store', [UserController::class, 'store']);
-$router->get('/users/edit', [UserController::class, 'edit']);
-$router->post('/users/update', [UserController::class, 'update']);
-$router->get('/users/delete', [UserController::class, 'delete']);
-$router->get('/users/toggle-status', [UserController::class, 'toggleStatus']);
+$router->get('/users/{id}/edit', [UserController::class, 'edit']);
+$router->post('/users/{id}/update', [UserController::class, 'update']);
+$router->post('/users/{id}/delete', [UserController::class, 'delete']);
+$router->post('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
 $router->post('/users/bulk-toggle-status', [UserController::class, 'bulkToggleStatus']);
 $router->post('/users/bulk-delete', [UserController::class, 'bulkDelete']);
 

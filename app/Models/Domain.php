@@ -91,15 +91,22 @@ class Domain extends Model
     /**
      * Get domain with notification channels
      */
-    public function getWithChannels(int $id): ?array
+    public function getWithChannels(int $id, ?int $userId = null): ?array
     {
         $sql = "SELECT d.*, ng.name as group_name, ng.id as group_id
                 FROM domains d 
                 LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id 
                 WHERE d.id = ?";
+        
+        $params = [$id];
+        
+        if ($userId) {
+            $sql .= " AND d.user_id = ?";
+            $params[] = $userId;
+        }
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([$id]);
+        $stmt->execute($params);
         $domain = $stmt->fetch();
 
         if (!$domain) {
@@ -115,6 +122,25 @@ class Domain extends Model
         }
 
         return $domain;
+    }
+
+    /**
+     * Find domain by ID with user isolation support
+     */
+    public function findWithIsolation(int $id, ?int $userId = null): ?array
+    {
+        $sql = "SELECT * FROM domains WHERE id = ?";
+        $params = [$id];
+        
+        if ($userId) {
+            $sql .= " AND user_id = ?";
+            $params[] = $userId;
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        return $result ?: null;
     }
 
     /**
@@ -362,19 +388,26 @@ class Domain extends Model
     /**
      * Search domains for suggestions (quick search)
      */
-    public function searchSuggestions(string $query, int $limit = 5): array
+    public function searchSuggestions(string $query, int $limit = 5, ?int $userId = null): array
     {
         $sql = "SELECT d.id, d.domain_name, d.registrar, d.expiration_date, d.status, ng.name as group_name 
                 FROM domains d 
                 LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id 
-                WHERE d.domain_name LIKE ? 
-                   OR d.registrar LIKE ?
-                ORDER BY d.domain_name ASC
-                LIMIT ?";
+                WHERE (d.domain_name LIKE ? 
+                   OR d.registrar LIKE ?)";
+        
+        $params = ['%' . $query . '%', '%' . $query . '%'];
+        
+        if ($userId) {
+            $sql .= " AND d.user_id = ?";
+            $params[] = $userId;
+        }
+        
+        $sql .= " ORDER BY d.domain_name ASC LIMIT ?";
+        $params[] = $limit;
 
-        $searchTerm = '%' . $query . '%';
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([$searchTerm, $searchTerm, $limit]);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 

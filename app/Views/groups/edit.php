@@ -17,9 +17,8 @@ ob_start();
         </div>
         
         <div class="p-6">
-            <form method="POST" action="/groups/update" class="space-y-5">
+            <form method="POST" action="/groups/<?= $group['id'] ?>/update" class="space-y-5">
                 <?= csrf_field() ?>
-                <input type="hidden" name="id" value="<?= $group['id'] ?>">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <!-- Group Name -->
@@ -112,12 +111,12 @@ ob_start();
                                     <i class="fas fa-paper-plane mr-1"></i>
                                     Test
                                 </button>
-                                <a href="/channels/toggle?id=<?= $channel['id'] ?>&group_id=<?= $group['id'] ?>" 
+                                <a href="/groups/<?= $group['id'] ?>/channels/<?= $channel['id'] ?>/toggle" 
                                    class="flex-1 px-3 py-2 bg-yellow-50 text-yellow-700 rounded text-center text-sm hover:bg-yellow-100 transition-colors duration-150">
                                     <i class="fas fa-<?= $channel['is_active'] ? 'pause' : 'play' ?> mr-1"></i>
                                     <?= $channel['is_active'] ? 'Disable' : 'Enable' ?>
                                 </a>
-                                <a href="/channels/delete?id=<?= $channel['id'] ?>&group_id=<?= $group['id'] ?>" 
+                                <a href="/groups/<?= $group['id'] ?>/channels/<?= $channel['id'] ?>/delete" 
                                    class="flex-1 px-3 py-2 bg-red-50 text-red-700 rounded text-center text-sm hover:bg-red-100 transition-colors duration-150"
                                    onclick="return confirm('Delete this channel?')">
                                     <i class="fas fa-trash mr-1"></i>
@@ -136,9 +135,8 @@ ob_start();
                     Add New Channel
                 </h3>
 
-                <form method="POST" action="/channels/add" id="channelForm" class="space-y-5">
+                <form method="POST" action="/groups/<?= $group['id'] ?>/channels" id="channelForm" class="space-y-5">
                     <?= csrf_field() ?>
-                    <input type="hidden" name="group_id" value="<?= $group['id'] ?>">
 
                     <!-- Channel Type -->
                     <div>
@@ -388,7 +386,7 @@ function toggleChannelFields() {
 }
 
 // Form validation before submit
-const addChannelForm = document.querySelector('form[action="/channels/add"]');
+const addChannelForm = document.querySelector('form[action="/groups/<?= $group['id'] ?>/channels"]');
 if (addChannelForm) {
     addChannelForm.addEventListener('submit', function(e) {
     const channelType = document.getElementById('channel_type').value;
