@@ -33,7 +33,7 @@ class NotificationGroupController extends Controller
 
         // Get users for transfer functionality (admin only)
         $users = [];
-        if (\Core\Auth::user()['role'] === 'admin') {
+        if (\Core\Auth::isAdmin()) {
             $userModel = new \App\Models\User();
             $users = $userModel->all();
         }

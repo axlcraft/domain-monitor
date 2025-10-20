@@ -37,7 +37,7 @@ ob_start();
         <div class="flex items-center gap-4">
             <span id="selected-count" class="text-sm font-medium text-blue-900"></span>
             
-            <?php if (\Core\Auth::user()['role'] === 'admin'): ?>
+            <?php if (\Core\Auth::isAdmin()): ?>
                 <button type="button" onclick="bulkTransfer()" class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium">
                     <i class="fas fa-exchange-alt mr-2"></i>
                     Transfer Selected
@@ -113,7 +113,7 @@ ob_start();
                                     <a href="/groups/edit?id=<?= $group['id'] ?>" class="text-blue-600 hover:text-blue-800" title="Manage">
                                         <i class="fas fa-cog"></i>
                                     </a>
-                                    <?php if (\Core\Auth::user()['role'] === 'admin'): ?>
+                                    <?php if (\Core\Auth::isAdmin()): ?>
                                         <button onclick="transferGroup(<?= $group['id'] ?>, '<?= htmlspecialchars($group['name']) ?>')" 
                                                 class="text-green-600 hover:text-green-800" 
                                                 title="Transfer Group">

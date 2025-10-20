@@ -132,6 +132,13 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                 Refresh Selected
             </button>
             
+            <?php if (\Core\Auth::isAdmin()): ?>
+                <button type="button" onclick="bulkTransfer()" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+                    <i class="fas fa-exchange-alt mr-2"></i>
+                    Transfer Selected
+                </button>
+            <?php endif; ?>
+            
             <div class="relative inline-block">
                 <button type="button" onclick="toggleAssignTagsDropdown()" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors font-medium">
                     <i class="fas fa-tags mr-2"></i>
@@ -723,6 +730,62 @@ function bulkRemoveAllTags() {
     
     document.body.appendChild(form);
     form.submit();
+}
+
+// Bulk transfer domains
+function bulkTransfer() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        alert('Please select at least one domain');
+        return;
+    }
+    
+    // Get list of users for transfer
+    const users = <?= json_encode($users ?? []) ?>;
+    if (users.length === 0) {
+        alert('No users available for transfer');
+        return;
+    }
+    
+    // Create user selection options
+    let userOptions = users.map(user => 
+        `<option value="${user.id}">${user.username} (${user.full_name || user.email})</option>`
+    ).join('');
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
+    modal.innerHTML = `
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Transfer ${ids.length} Domain(s)</h3>
+                <p class="text-sm text-gray-500 mb-4">Select the user to transfer the selected domains to:</p>
+                
+                <form method="POST" action="/domains/bulk-transfer">
+                    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                    ${ids.map(id => `<input type="hidden" name="domain_ids[]" value="${id}">`).join('')}
+                    
+                    <div class="mb-4">
+                        <label for="target_user_id" class="block text-sm font-medium text-gray-700 mb-2">Transfer to User:</label>
+                        <select name="target_user_id" id="target_user_id" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select a user...</option>
+                            ${userOptions}
+                        </select>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                            Transfer Domains
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
 }
 
 // Update bulk assign form with selected IDs

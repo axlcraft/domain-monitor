@@ -64,10 +64,18 @@ class DomainController extends Controller
         // Format domains for display
         $formattedDomains = \App\Helpers\DomainHelper::formatMultiple($result['domains']);
 
+        // Get users for transfer functionality (admin only)
+        $users = [];
+        if (\Core\Auth::isAdmin()) {
+            $userModel = new \App\Models\User();
+            $users = $userModel->all();
+        }
+
         $this->view('domains/index', [
             'domains' => $formattedDomains,
             'groups' => $groups,
             'allTags' => $allTags,
+            'users' => $users,
             'filters' => [
                 'search' => $search,
                 'status' => $status,
