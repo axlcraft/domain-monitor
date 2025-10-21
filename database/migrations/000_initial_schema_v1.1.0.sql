@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS user_notifications (
 CREATE TABLE IF NOT EXISTS notification_channels (
     id INT AUTO_INCREMENT PRIMARY KEY,
     notification_group_id INT NOT NULL,
-    channel_type ENUM('email', 'telegram', 'discord', 'slack') NOT NULL,
+    channel_type ENUM('email', 'telegram', 'discord', 'slack', 'webhook') NOT NULL,
     channel_config JSON NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
