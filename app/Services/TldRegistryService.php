@@ -14,60 +14,19 @@ class TldRegistryService
     private TldRegistry $tldModel;
     private TldImportLog $importLogModel;
     private Logger $logger;
+
     // IANA URLs
     private const IANA_RDAP_URL = 'https://data.iana.org/rdap/dns.json';
     private const IANA_TLD_BASE_URL = 'https://www.iana.org/domains/root/db/';
     private const IANA_TLD_LIST_URL = 'https://data.iana.org/TLD/tlds-alpha-by-domain.txt';
     private const IANA_RDAP_DOMAIN_URL = 'https://rdap.iana.org/domain/';
 
-    /**
-     * Log HTTP request and response details for debugging
-     */
-    private function logHttpRequest(string $method, string $url, array $headers, int $statusCode, array $responseHeaders, int $contentLength, float $requestTime): void
-    {
-        $acceptEncoding = $headers['Accept-Encoding'] ?? 'not-set';
-        $contentEncoding = $responseHeaders['content-encoding'] ?? 'none';
-        $contentType = $responseHeaders['content-type'] ?? 'unknown';
-        
-        $logData = [
-            'method' => $method,
-            'url' => $url,
-            'request_accept_encoding' => $acceptEncoding,
-            'response_status' => $statusCode,
-            'response_content_encoding' => $contentEncoding,
-            'response_content_type' => $contentType,
-            'response_content_length' => $contentLength,
-            'request_time_seconds' => round($requestTime, 3),
-            'compression_used' => $contentEncoding !== 'none' ? $contentEncoding : 'none'
-        ];
-        
-        if ($statusCode >= 200 && $statusCode < 300) {
-            $this->logger->info("HTTP request successful", $logData);
-        } else {
-            $this->logger->warning("HTTP request failed", $logData);
-        }
-    }
-
     public function __construct()
     {
-        $acceptEncoding = 'gzip, deflate';
-        
-        $this->tldModel = new TldRegistry();
-        $this->importLogModel = new TldImportLog();
-        $this->logger = new Logger('tld_import');
-        
-        $this->logger->debug("Creating main HTTP client", [
-            'accept_encoding' => $acceptEncoding
-        ]);
-        
         $this->httpClient = new Client([
             'timeout' => 15, // Reduced for faster processing
             'connect_timeout' => 5, // Reduced for faster processing
             'verify' => true, // Enable SSL verification
-            'curl' => [
-                CURLOPT_HTTP_CONTENT_DECODING => 0, // Disable automatic content decoding
-                CURLOPT_ACCEPT_ENCODING => 'gzip,deflate' // Explicitly set supported encodings
-            ],
             'allow_redirects' => [
                 'max' => 5,
                 'strict' => false,
@@ -78,7 +37,7 @@ class TldRegistryService
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => $acceptEncoding,
+                'Accept-Encoding' => 'gzip, deflate',
                 'DNT' => '1',
                 'Connection' => 'keep-alive',
                 'Upgrade-Insecure-Requests' => '1',
@@ -86,19 +45,11 @@ class TldRegistryService
                 'Sec-Fetch-Mode' => 'navigate',
                 'Sec-Fetch-Site' => 'none',
                 'Cache-Control' => 'max-age=0'
-            ],
-            'on_stats' => function ($stats) {
-                $this->logHttpRequest(
-                    $stats->getRequest()->getMethod(),
-                    (string) $stats->getRequest()->getUri(),
-                    $stats->getRequest()->getHeaders(),
-                    $stats->getResponse()->getStatusCode(),
-                    $stats->getResponse()->getHeaders(),
-                    $stats->getResponse()->getBody()->getSize() ?? 0,
-                    $stats->getTransferTime()
-                );
-            }
+            ]
         ]);
+        $this->tldModel = new TldRegistry();
+        $this->importLogModel = new TldImportLog();
+        $this->logger = new Logger('tld_import');
     }
 
     /**
@@ -106,20 +57,10 @@ class TldRegistryService
      */
     private function getJsonClient(): Client
     {
-        $acceptEncoding = 'gzip, deflate';
-        
-        $this->logger->debug("Creating JSON HTTP client", [
-            'accept_encoding' => $acceptEncoding
-        ]);
-        
         return new Client([
             'timeout' => 15, // Reduced for faster processing
             'connect_timeout' => 5, // Reduced for faster processing
             'verify' => true,
-            'curl' => [
-                CURLOPT_HTTP_CONTENT_DECODING => 0, // Disable automatic content decoding
-                CURLOPT_ACCEPT_ENCODING => 'gzip,deflate' // Explicitly set supported encodings
-            ],
             'allow_redirects' => [
                 'max' => 3,
                 'strict' => true,
@@ -130,7 +71,7 @@ class TldRegistryService
                 'User-Agent' => 'DomainMonitor/1.0 (TLD Registry Bot; compatible with IANA RDAP)',
                 'Accept' => 'application/json, application/rdap+json, */*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => $acceptEncoding,
+                'Accept-Encoding' => 'gzip, deflate',  // Removed 'br' (brotli) - not supported on CloudLinux 8
                 'Connection' => 'keep-alive',
                 'Cache-Control' => 'no-cache'
             ],
@@ -139,18 +80,7 @@ class TldRegistryService
                 'max' => 2, // Reduced retries for speed
                 'delay' => 500, // 0.5 second delay between retries (reduced)
                 'multiplier' => 1.5
-            ],
-            'on_stats' => function ($stats) {
-                $this->logHttpRequest(
-                    $stats->getRequest()->getMethod(),
-                    (string) $stats->getRequest()->getUri(),
-                    $stats->getRequest()->getHeaders(),
-                    $stats->getResponse()->getStatusCode(),
-                    $stats->getResponse()->getHeaders(),
-                    $stats->getResponse()->getBody()->getSize() ?? 0,
-                    $stats->getTransferTime()
-                );
-            }
+            ]
         ]);
     }
 
@@ -159,20 +89,10 @@ class TldRegistryService
      */
     private function getHtmlClient(): Client
     {
-        $acceptEncoding = 'gzip, deflate';
-        
-        $this->logger->debug("Creating HTML HTTP client", [
-            'accept_encoding' => $acceptEncoding
-        ]);
-        
         return new Client([
             'timeout' => 8, // Further reduced for faster processing
             'connect_timeout' => 3, // Further reduced for faster processing
             'verify' => true,
-            'curl' => [
-                CURLOPT_HTTP_CONTENT_DECODING => 0, // Disable automatic content decoding
-                CURLOPT_ACCEPT_ENCODING => 'gzip,deflate' // Explicitly set supported encodings
-            ],
             'allow_redirects' => [
                 'max' => 3, // Reduced redirects
                 'strict' => false,
@@ -183,7 +103,7 @@ class TldRegistryService
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
-                'Accept-Encoding' => $acceptEncoding,
+                'Accept-Encoding' => 'gzip, deflate',  // Removed 'br' (brotli) - not supported on CloudLinux 8
                 'DNT' => '1',
                 'Connection' => 'keep-alive',
                 'Upgrade-Insecure-Requests' => '1',
@@ -197,18 +117,7 @@ class TldRegistryService
                 'max' => 0, // No retries for HTML to avoid timeouts
                 'delay' => 0,
                 'multiplier' => 1
-            ],
-            'on_stats' => function ($stats) {
-                $this->logHttpRequest(
-                    $stats->getRequest()->getMethod(),
-                    (string) $stats->getRequest()->getUri(),
-                    $stats->getRequest()->getHeaders(),
-                    $stats->getResponse()->getStatusCode(),
-                    $stats->getResponse()->getHeaders(),
-                    $stats->getResponse()->getBody()->getSize() ?? 0,
-                    $stats->getTransferTime()
-                );
-            }
+            ]
         ]);
     }
 
