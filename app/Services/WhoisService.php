@@ -328,9 +328,14 @@ class WhoisService
         curl_close($ch);
         
         // Handle 404 responses as domain not found
-        if ($httpCode === 404 && $response) {
-            $data = json_decode($response, true);
-            if ($data && isset($data['errorCode']) && $data['errorCode'] == 404) {
+        if ($httpCode === 404) {
+            $data = null;
+            if ($response) {
+                $data = json_decode($response, true);
+            }
+            
+            // Handle both JSON 404 responses and plain 404 responses
+            if (($data && isset($data['errorCode']) && $data['errorCode'] == 404) || !$data) {
                 // Return domain not found response
                 $rdapHost = parse_url($rdapBaseUrl, PHP_URL_HOST);
                 return [
