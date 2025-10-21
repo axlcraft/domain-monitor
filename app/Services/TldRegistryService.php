@@ -315,7 +315,7 @@ class TldRegistryService
             $this->importLogModel->completeImport($logId, $stats);
             
         } catch (\Exception $e) {
-            $this->importLogModel->completeImport($logId, $stats, $e->getMessage());
+            $this->importLogModel->completeImport($logId, $stats, 'failed', $e->getMessage());
             throw $e;
         }
 
@@ -385,7 +385,7 @@ class TldRegistryService
             $this->importLogModel->completeImport($logId, $stats);
             
         } catch (\Exception $e) {
-            $this->importLogModel->completeImport($logId, $stats, $e->getMessage());
+            $this->importLogModel->completeImport($logId, $stats, 'failed', $e->getMessage());
             throw $e;
         }
 
@@ -435,7 +435,7 @@ class TldRegistryService
             $this->importLogModel->completeImport($logId, $stats);
             
         } catch (\Exception $e) {
-            $this->importLogModel->completeImport($logId, $stats, $e->getMessage());
+            $this->importLogModel->completeImport($logId, $stats, 'failed', $e->getMessage());
             throw $e;
         }
 
@@ -1982,7 +1982,7 @@ class TldRegistryService
             $this->importLogModel->completeImport($logId, $stats);
             
         } catch (\Exception $e) {
-            $this->importLogModel->completeImport($logId, $stats, $e->getMessage());
+            $this->importLogModel->completeImport($logId, $stats, 'failed', $e->getMessage());
             throw $e;
         }
 
