@@ -54,6 +54,7 @@ class WhoisService
             if ($rdapUrl) {
                 $rdapData = $this->queryRDAPGeneric($domain, $rdapUrl);
                 if ($rdapData) {
+                    error_log("RDAP Success for $domain - Status: " . json_encode($rdapData['status'] ?? []) . " | Registrar: " . ($rdapData['registrar'] ?? 'null'));
                     // If RDAP succeeded but is missing expiration date, try WHOIS as fallback
                     // But only if the domain is not already marked as available
                     $isAvailable = false;
@@ -320,12 +321,22 @@ class WhoisService
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Accept: application/rdap+json'
+            'Accept: application/rdap+json, application/json, */*',
+            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        
+        // Debug logging for RDAP requests
+        error_log("RDAP Request: $rdapUrl | HTTP: $httpCode | Response Length: " . strlen($response));
+        if ($httpCode === 200 && $response) {
+            $data = json_decode($response, true);
+            if ($data) {
+                error_log("RDAP Success - Domain: $domain | Status: " . json_encode($data['status'] ?? []) . " | Entities: " . count($data['entities'] ?? []));
+            }
+        }
         
         // Handle 404 responses as domain not found
         if ($httpCode === 404) {
@@ -355,6 +366,30 @@ class WhoisService
                         'nameServers' => [],
                     ]
                 ];
+            } elseif ($data && isset($data['status']) && is_array($data['status'])) {
+                // Handle HTTP 404 with valid JSON response containing "free" status (like hosteroid.nl)
+                foreach ($data['status'] as $status) {
+                    if (stripos($status, 'free') !== false) {
+                        $rdapHost = parse_url($rdapBaseUrl, PHP_URL_HOST);
+                        return [
+                            'domain' => $domain,
+                            'registrar' => 'Not Registered',
+                            'registrar_url' => null,
+                            'expiration_date' => null,
+                            'updated_date' => null,
+                            'creation_date' => null,
+                            'abuse_email' => null,
+                            'nameservers' => [],
+                            'status' => ['AVAILABLE'],
+                            'owner' => 'Unknown',
+                            'whois_server' => $rdapHost . ' (RDAP)',
+                            'raw_data' => [
+                                'states' => ['AVAILABLE'],
+                                'nameServers' => [],
+                            ]
+                        ];
+                    }
+                }
             }
         }
         

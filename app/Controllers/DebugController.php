@@ -123,7 +123,10 @@ class DebugController extends Controller
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/rdap+json']);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept: application/rdap+json, application/json, */*',
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            ]);
             
             $rdapResponse = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -131,7 +134,18 @@ class DebugController extends Controller
             $curlInfo = curl_getinfo($ch);
             curl_close($ch);
             
-            if ($httpCode === 200 && $rdapResponse) {
+            // Debug: Log the actual cURL request details
+            $logger->debug('RDAP cURL request details', [
+                'url' => $fullRdapUrl,
+                'http_code' => $httpCode,
+                'curl_error' => $curlError,
+                'response_length' => strlen($rdapResponse),
+                'total_time' => $curlInfo['total_time'] ?? 'unknown',
+                'primary_ip' => $curlInfo['primary_ip'] ?? 'unknown',
+                'response_preview' => substr($rdapResponse, 0, 200) . (strlen($rdapResponse) > 200 ? '...' : '')
+            ]);
+            
+            if (($httpCode === 200 || $httpCode === 404) && $rdapResponse) {
                 // Pretty print JSON
                 $rdapData = json_decode($rdapResponse, true);
                 
@@ -174,6 +188,29 @@ class DebugController extends Controller
                             break;
                         }
                     }
+                } elseif ($httpCode === 404 && $rdapData) {
+                    // Handle HTTP 404 with valid JSON response (like hosteroid.nl)
+                    $rdapSucceeded = true;
+                    $response .= "\n=== RDAP QUERY SUCCESS (HTTP 404 with JSON) ===\n\n";
+                    $response .= "RDAP URL: {$fullRdapUrl}\n";
+                    $response .= "HTTP Status: {$httpCode}\n";
+                    $response .= "Note: HTTP 404 but received valid JSON response\n\n";
+                    
+                    // Check if it contains "free" status
+                    if (isset($rdapData['status']) && is_array($rdapData['status'])) {
+                        foreach ($rdapData['status'] as $status) {
+                            if (stripos($status, 'free') !== false) {
+                                $response .= "✓ Domain is AVAILABLE (not registered)\n\n";
+                                $parsedData[] = ['key' => 'Status', 'value' => 'AVAILABLE'];
+                                $parsedData[] = ['key' => 'Registrar', 'value' => 'Not Registered'];
+                                $isDomainAvailable = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    $response .= "--- RDAP JSON RESPONSE ---\n\n";
+                    $response .= json_encode($rdapData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                 }
                 
                 if (!$isDomainAvailable) {
@@ -319,8 +356,25 @@ class DebugController extends Controller
             }
         }
         
-        // Get parsed info using WhoisService
+        // Get parsed info using WhoisService (this will use the actual logic with WHOIS fallback)
         $info = $whoisService->getDomainInfo($domain);
+
+        // If we got info from WhoisService but debug tool didn't show RDAP success, 
+        // it means WhoisService used WHOIS fallback for expiration date
+        $whoisFallbackUsed = false;
+        if ($info && !$rdapSucceeded) {
+            $whoisFallbackUsed = true;
+        } elseif ($info && $rdapSucceeded && empty($info['expiration_date'])) {
+            // RDAP succeeded but no expiration date, WhoisService should have tried WHOIS fallback
+            $whoisFallbackUsed = true;
+        }
+
+        // Add note about WHOIS fallback if it was used
+        if ($whoisFallbackUsed) {
+            $response .= "\n\n=== WHOIS FALLBACK USED BY WHOISSERVICE ===\n\n";
+            $response .= "Note: The WhoisService automatically used WHOIS fallback to get missing data (like expiration dates).\n";
+            $response .= "This is the actual data that will be saved to the database.\n\n";
+        }
 
         // Log debug results
         $logger->info('WHOIS debug completed', [
@@ -328,7 +382,7 @@ class DebugController extends Controller
             'tld' => $tld,
             'server' => $server,
             'rdap_succeeded' => $rdapSucceeded,
-            'whois_fallback_used' => !$rdapSucceeded,
+            'whois_fallback_used' => $whoisFallbackUsed,
             'parsed_status' => $info['status'] ?? 'unknown',
             'parsed_registrar' => $info['registrar'] ?? 'unknown',
             'parsed_expiration' => $info['expiration_date'] ?? 'unknown',
