@@ -495,7 +495,7 @@ class WhoisService
         
         // Check if domain is not found/available
         $whoisDataLower = strtolower($whoisData);
-        if (preg_match('/not found|no match|no entries found|no data found|domain not found|no such domain|not registered|available for registration/i', $whoisDataLower)) {
+        if (preg_match('/not found|no match|no entries found|no data found|domain not found|no such domain|not registered|available for registration|does not exist|queried object does not exist/i', $whoisDataLower)) {
             $data['status'][] = 'AVAILABLE';
             $data['registrar'] = 'Not Registered';
             return $data;
