@@ -373,10 +373,25 @@ class DomainController extends Controller
             return;
         }
 
+        // Log domain refresh start
+        $logger = new \App\Services\Logger();
+        $logger->info('Domain refresh started', [
+            'domain_id' => $id,
+            'domain_name' => $domain['domain_name'],
+            'user_id' => \Core\Auth::id(),
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+        ]);
+
         // Get fresh WHOIS information
         $whoisData = $this->whoisService->getDomainInfo($domain['domain_name']);
 
         if (!$whoisData) {
+            $logger->error('Domain refresh failed - WHOIS data not retrieved', [
+                'domain_id' => $id,
+                'domain_name' => $domain['domain_name'],
+                'user_id' => \Core\Auth::id()
+            ]);
+            
             $_SESSION['error'] = 'Could not retrieve WHOIS information';
             // Check if we came from view page
             $referer = $_SERVER['HTTP_REFERER'] ?? '';
@@ -399,6 +414,16 @@ class DomainController extends Controller
             'last_checked' => date('Y-m-d H:i:s'),
             'status' => $status,
             'whois_data' => json_encode($whoisData)
+        ]);
+
+        // Log successful domain refresh
+        $logger->info('Domain refresh completed successfully', [
+            'domain_id' => $id,
+            'domain_name' => $domain['domain_name'],
+            'new_status' => $status,
+            'registrar' => $whoisData['registrar'],
+            'expiration_date' => $whoisData['expiration_date'],
+            'user_id' => \Core\Auth::id()
         ]);
 
         $_SESSION['success'] = 'Domain information refreshed';
@@ -649,6 +674,15 @@ class DomainController extends Controller
         $settingModel = new \App\Models\Setting();
         $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
 
+        // Log bulk refresh start
+        $logger = new \App\Services\Logger();
+        $logger->info('Bulk domain refresh started', [
+            'user_id' => $userId,
+            'domain_count' => count($domainIds),
+            'isolation_mode' => $isolationMode,
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+        ]);
+
         $refreshed = 0;
         $failed = 0;
 
@@ -664,6 +698,11 @@ class DomainController extends Controller
             $whoisData = $this->whoisService->getDomainInfo($domain['domain_name']);
 
             if (!$whoisData) {
+                $logger->warning('Bulk refresh failed for domain - WHOIS data not retrieved', [
+                    'domain_id' => $id,
+                    'domain_name' => $domain['domain_name'] ?? 'unknown',
+                    'user_id' => $userId
+                ]);
                 $failed++;
                 continue;
             }
@@ -683,6 +722,15 @@ class DomainController extends Controller
 
             $refreshed++;
         }
+
+        // Log bulk refresh completion
+        $logger->info('Bulk domain refresh completed', [
+            'user_id' => $userId,
+            'total_domains' => count($domainIds),
+            'refreshed' => $refreshed,
+            'failed' => $failed,
+            'success_rate' => count($domainIds) > 0 ? round(($refreshed / count($domainIds)) * 100, 2) . '%' : '0%'
+        ]);
 
         $_SESSION['success'] = "Refreshed $refreshed domain(s)" . ($failed > 0 ? ", $failed failed" : '');
         $this->redirect('/domains');

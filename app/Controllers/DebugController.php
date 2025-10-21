@@ -22,6 +22,15 @@ class DebugController extends Controller
             return;
         }
 
+        // Log debug tool usage
+        $logger = new \App\Services\Logger('debug');
+        $logger->info('WHOIS debug tool accessed', [
+            'domain' => $domain,
+            'user_id' => \Core\Auth::id(),
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
+        ]);
+
         // Get TLD
         $parts = explode('.', $domain);
         $tld = $parts[count($parts) - 1];
@@ -312,6 +321,19 @@ class DebugController extends Controller
         
         // Get parsed info using WhoisService
         $info = $whoisService->getDomainInfo($domain);
+
+        // Log debug results
+        $logger->info('WHOIS debug completed', [
+            'domain' => $domain,
+            'tld' => $tld,
+            'server' => $server,
+            'rdap_succeeded' => $rdapSucceeded,
+            'whois_fallback_used' => !$rdapSucceeded,
+            'parsed_status' => $info['status'] ?? 'unknown',
+            'parsed_registrar' => $info['registrar'] ?? 'unknown',
+            'parsed_expiration' => $info['expiration_date'] ?? 'unknown',
+            'user_id' => \Core\Auth::id()
+        ]);
 
         $this->view('debug/whois', [
             'domain' => $domain,
