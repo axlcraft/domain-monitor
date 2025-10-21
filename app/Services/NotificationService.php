@@ -6,6 +6,7 @@ use App\Services\Channels\EmailChannel;
 use App\Services\Channels\TelegramChannel;
 use App\Services\Channels\DiscordChannel;
 use App\Services\Channels\SlackChannel;
+use App\Services\Channels\MattermostChannel;
 use App\Services\Channels\WebhookChannel;
 
 class NotificationService
@@ -19,6 +20,7 @@ class NotificationService
             'telegram' => new TelegramChannel(),
             'discord' => new DiscordChannel(),
             'slack' => new SlackChannel(),
+            'mattermost' => new MattermostChannel(),
             'webhook' => new WebhookChannel(),
         ];
     }

@@ -463,7 +463,9 @@ class NotificationGroupController extends Controller
             'email' => 'Email',
             'telegram' => 'Telegram',
             'discord' => 'Discord',
-            'slack' => 'Slack'
+            'slack' => 'Slack',
+            'mattermost' => 'Mattermost',
+            'webhook' => 'Webhook'
         ];
 
         $channelName = $channelNames[$channelType] ?? ucfirst($channelType);
@@ -528,6 +530,17 @@ class NotificationGroupController extends Controller
                 }
                 // Validate Slack webhook URL format
                 if (!str_contains($webhookUrl, 'hooks.slack.com/services/')) {
+                    return null;
+                }
+                return ['webhook_url' => $webhookUrl];
+
+            case 'mattermost':
+                $webhookUrl = trim($data['mattermost_webhook_url'] ?? '');
+                if (empty($webhookUrl) || !filter_var($webhookUrl, FILTER_VALIDATE_URL)) {
+                    return null;
+                }
+                // Validate Mattermost webhook URL format
+                if (!str_contains($webhookUrl, '/hooks/')) {
                     return null;
                 }
                 return ['webhook_url' => $webhookUrl];

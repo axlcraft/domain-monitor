@@ -77,9 +77,9 @@ ob_start();
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     <?php foreach ($group['channels'] as $channel): 
                         $config = json_decode($channel['channel_config'], true);
-                        $icons = ['email' => 'fa-envelope', 'telegram' => 'fa-telegram', 'discord' => 'fa-discord', 'slack' => 'fa-slack', 'webhook' => 'fa-link'];
-                        $iconClasses = ['email' => 'fas', 'telegram' => 'fab', 'discord' => 'fab', 'slack' => 'fab', 'webhook' => 'fas'];
-                        $colors = ['email' => 'blue', 'telegram' => 'blue', 'discord' => 'indigo', 'slack' => 'teal', 'webhook' => 'purple'];
+                        $icons = ['email' => 'fa-envelope', 'telegram' => 'fa-telegram', 'discord' => 'fa-discord', 'slack' => 'fa-slack', 'mattermost' => 'fa-comments', 'webhook' => 'fa-link'];
+                        $iconClasses = ['email' => 'fas', 'telegram' => 'fab', 'discord' => 'fab', 'slack' => 'fab', 'mattermost' => 'fab', 'webhook' => 'fas'];
+                        $colors = ['email' => 'blue', 'telegram' => 'blue', 'discord' => 'indigo', 'slack' => 'teal', 'mattermost' => 'green', 'webhook' => 'purple'];
                         $icon = $icons[$channel['channel_type']] ?? 'fa-bell';
                         $iconClass = $iconClasses[$channel['channel_type']] ?? 'fas';
                         $color = $colors[$channel['channel_type']] ?? 'gray';
@@ -157,6 +157,7 @@ ob_start();
                             <option value="telegram">Telegram</option>
                             <option value="discord">Discord</option>
                             <option value="slack">Slack</option>
+                            <option value="mattermost">Mattermost</option>
                             <option value="webhook">Webhook (Custom)</option>
                         </select>
                     </div>
@@ -238,6 +239,24 @@ ob_start();
                                    autocomplete="off">
                             <p class="mt-1.5 text-xs text-gray-500">
                                 Create in Slack App Settings → Incoming Webhooks
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Mattermost Fields -->
+                    <div id="mattermost_fields" class="hidden space-y-4">
+                        <div>
+                            <label for="mattermost_webhook" class="block text-sm font-medium text-gray-700 mb-1.5">
+                                Webhook URL
+                            </label>
+                            <input type="text" 
+                                   id="mattermost_webhook" 
+                                   name="mattermost_webhook_url" 
+                                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm font-mono" 
+                                   placeholder="https://your-mattermost.com/hooks/..."
+                                   autocomplete="off">
+                            <p class="mt-1.5 text-xs text-gray-500">
+                                Create in Mattermost → Integrations → Incoming Webhooks
                             </p>
                         </div>
                     </div>
@@ -338,6 +357,7 @@ function toggleChannelFields() {
     const chatIdField = document.getElementById('chat_id');
     const discordWebhook = document.getElementById('discord_webhook');
     const slackWebhook = document.getElementById('slack_webhook');
+    const mattermostWebhook = document.getElementById('mattermost_webhook');
     const genericWebhook = document.getElementById('generic_webhook_url');
     
     // Remove required from all
@@ -346,6 +366,7 @@ function toggleChannelFields() {
     chatIdField.removeAttribute('required');
     discordWebhook.removeAttribute('required');
     slackWebhook.removeAttribute('required');
+    if (mattermostWebhook) mattermostWebhook.removeAttribute('required');
     if (genericWebhook) genericWebhook.removeAttribute('required');
     
     // Hide all fields
@@ -353,6 +374,7 @@ function toggleChannelFields() {
     document.getElementById('telegram_fields').classList.add('hidden');
     document.getElementById('discord_fields').classList.add('hidden');
     document.getElementById('slack_fields').classList.add('hidden');
+    document.getElementById('mattermost_fields').classList.add('hidden');
     document.getElementById('webhook_fields').classList.add('hidden');
     
     // Hide test button by default
@@ -378,6 +400,12 @@ function toggleChannelFields() {
             case 'slack':
                 slackWebhook.setAttribute('required', 'required');
                 slackWebhook.focus();
+                break;
+            case 'mattermost':
+                if (mattermostWebhook) {
+                    mattermostWebhook.setAttribute('required', 'required');
+                    mattermostWebhook.focus();
+                }
                 break;
             case 'webhook':
                 if (genericWebhook) {
@@ -430,6 +458,17 @@ if (addChannelForm) {
             e.preventDefault();
             alert('Please enter the Slack webhook URL');
             document.getElementById('slack_webhook').focus();
+            return false;
+        }
+    }
+
+    // Validate Mattermost webhook
+    if (channelType === 'mattermost') {
+        const webhookUrl = document.getElementById('mattermost_webhook').value.trim();
+        if (!webhookUrl) {
+            e.preventDefault();
+            alert('Please enter the Mattermost webhook URL');
+            document.getElementById('mattermost_webhook').focus();
             return false;
         }
     }
@@ -517,6 +556,13 @@ function testChannel(channelType, existingConfig = null) {
                     errorMessage = 'Please enter a Slack webhook URL';
                 }
                 break;
+            case 'mattermost':
+                const mattermostWebhook = document.getElementById('mattermost_webhook').value.trim();
+                if (!mattermostWebhook) {
+                    isValid = false;
+                    errorMessage = 'Please enter a Mattermost webhook URL';
+                }
+                break;
             case 'webhook':
                 const genericWebhook = document.getElementById('generic_webhook_url').value.trim();
                 if (!genericWebhook) {
@@ -570,6 +616,9 @@ function testChannel(channelType, existingConfig = null) {
             case 'slack':
                 formData.append('slack_webhook_url', existingConfig.webhook_url);
                 break;
+            case 'mattermost':
+                formData.append('mattermost_webhook_url', existingConfig.webhook_url);
+                break;
             case 'webhook':
                 formData.append('webhook_url', existingConfig.webhook_url);
                 break;
@@ -589,6 +638,9 @@ function testChannel(channelType, existingConfig = null) {
                 break;
             case 'slack':
                 formData.append('slack_webhook_url', document.getElementById('slack_webhook').value);
+                break;
+            case 'mattermost':
+                formData.append('mattermost_webhook_url', document.getElementById('mattermost_webhook').value);
                 break;
             case 'webhook':
                 formData.append('webhook_url', document.getElementById('generic_webhook_url').value);
