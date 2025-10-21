@@ -217,7 +217,7 @@ class TldRegistryService
                     }
                 } catch (\Exception $e) {
                     $stats['failed_tlds']++;
-                    error_log("Failed to process TLD $tld: " . $e->getMessage());
+                    $this->logger->error("Failed to process TLD $tld: " . $e->getMessage());
                 }
             }
 
@@ -286,7 +286,7 @@ class TldRegistryService
                         }
                     } catch (\Exception $e) {
                         $stats['failed_tlds']++;
-                        error_log("Failed to process TLD $tld: " . $e->getMessage());
+                        $this->logger->error("Failed to process TLD $tld: " . $e->getMessage());
                     }
                 }
             }
@@ -332,7 +332,7 @@ class TldRegistryService
                     }
                 } catch (\Exception $e) {
                     $stats['failed_tlds']++;
-                    error_log("Failed to fetch WHOIS data for TLD {$tld['tld']}: " . $e->getMessage());
+                    $this->logger->error("Failed to fetch WHOIS data for TLD {$tld['tld']}: " . $e->getMessage());
                 }
                 
                 // Add delay between requests to be respectful to IANA servers
@@ -470,7 +470,7 @@ class TldRegistryService
             }
             
         } catch (\Exception $e) {
-            error_log("Failed to fetch RDAP registry URL for TLD $tld: " . $e->getMessage());
+            $this->logger->error("Failed to fetch RDAP registry URL for TLD $tld: " . $e->getMessage());
         }
 
         return null;
@@ -1293,7 +1293,7 @@ class TldRegistryService
                 }
             } catch (\Exception $e) {
                 $stats['failed_tlds']++;
-                error_log("Failed to fetch registry URL for TLD {$tld['tld']}: " . $e->getMessage());
+                $this->logger->error("Failed to fetch registry URL for TLD {$tld['tld']}: " . $e->getMessage());
             }
             
             // Add small delay
@@ -1384,7 +1384,7 @@ class TldRegistryService
             $response = $jsonClient->get($rdapUrl);
             
             if ($response->getStatusCode() !== 200) {
-                error_log("Failed to fetch RDAP data for TLD $tld: HTTP " . $response->getStatusCode());
+                $this->logger->error("Failed to fetch RDAP data for TLD $tld: HTTP " . $response->getStatusCode());
                 return null;
             }
             
@@ -1392,14 +1392,14 @@ class TldRegistryService
             
             // Check if response is HTML instead of JSON (common when servers are down)
             if (strpos($responseBody, '<html') !== false || strpos($responseBody, '<!DOCTYPE') !== false) {
-                error_log("Received HTML instead of JSON for TLD $tld - server may be down");
+                $this->logger->warning("Received HTML instead of JSON for TLD $tld - server may be down");
                 return null;
             }
             
             $data = json_decode($responseBody, true);
             
             if (!$data) {
-                error_log("Invalid JSON response for TLD $tld: " . substr($responseBody, 0, 200));
+                $this->logger->error("Invalid JSON response for TLD $tld: " . substr($responseBody, 0, 200));
                 return null;
             }
 
@@ -1465,7 +1465,7 @@ class TldRegistryService
             return $result;
 
         } catch (\Exception $e) {
-            error_log("Failed to fetch RDAP data for TLD $tld: " . $e->getMessage());
+            $this->logger->error("Failed to fetch RDAP data for TLD $tld: " . $e->getMessage());
         }
 
         return null;
@@ -1484,14 +1484,14 @@ class TldRegistryService
             $response = $htmlClient->get($url);
             
             if ($response->getStatusCode() !== 200) {
-                error_log("HTML fetch failed for TLD $tld: HTTP " . $response->getStatusCode());
+                $this->logger->error("HTML fetch failed for TLD $tld: HTTP " . $response->getStatusCode());
                 return null;
             }
             
             $html = $response->getBody()->getContents();
             
             if (empty($html) || strlen($html) < 100) {
-                error_log("HTML content too short for TLD $tld: " . strlen($html) . " bytes");
+                $this->logger->warning("HTML content too short for TLD $tld: " . strlen($html) . " bytes");
                 return null;
             }
 
@@ -1519,7 +1519,7 @@ class TldRegistryService
             return !empty($result) ? $result : null;
 
         } catch (\Exception $e) {
-            error_log("Failed to fetch HTML data for TLD $tld: " . $e->getMessage());
+            $this->logger->error("Failed to fetch HTML data for TLD $tld: " . $e->getMessage());
         }
 
         return null;
@@ -1879,7 +1879,7 @@ class TldRegistryService
                     }
                 } catch (\Exception $e) {
                     $stats['failed_tlds']++;
-                    error_log("Failed to fetch WHOIS data for TLD $tld: " . $e->getMessage());
+                    $this->logger->error("Failed to fetch WHOIS data for TLD $tld: " . $e->getMessage());
                 }
                 
                 // Add delay between requests to be respectful to IANA servers
