@@ -111,17 +111,23 @@ ob_start();
                                     <i class="fas fa-paper-plane mr-1"></i>
                                     Test
                                 </button>
-                                <a href="/groups/<?= $group['id'] ?>/channels/<?= $channel['id'] ?>/toggle" 
-                                   class="flex-1 px-3 py-2 bg-yellow-50 text-yellow-700 rounded text-center text-sm hover:bg-yellow-100 transition-colors duration-150">
-                                    <i class="fas fa-<?= $channel['is_active'] ? 'pause' : 'play' ?> mr-1"></i>
-                                    <?= $channel['is_active'] ? 'Disable' : 'Enable' ?>
-                                </a>
-                                <a href="/groups/<?= $group['id'] ?>/channels/<?= $channel['id'] ?>/delete" 
-                                   class="flex-1 px-3 py-2 bg-red-50 text-red-700 rounded text-center text-sm hover:bg-red-100 transition-colors duration-150"
-                                   onclick="return confirm('Delete this channel?')">
-                                    <i class="fas fa-trash mr-1"></i>
-                                    Delete
-                                </a>
+                                <form method="POST" action="/groups/<?= $group['id'] ?>/channels/<?= $channel['id'] ?>/toggle" class="flex-1">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" 
+                                            class="w-full px-3 py-2 bg-yellow-50 text-yellow-700 rounded text-center text-sm hover:bg-yellow-100 transition-colors duration-150">
+                                        <i class="fas fa-<?= $channel['is_active'] ? 'pause' : 'play' ?> mr-1"></i>
+                                        <?= $channel['is_active'] ? 'Disable' : 'Enable' ?>
+                                    </button>
+                                </form>
+                                <form method="POST" action="/groups/<?= $group['id'] ?>/channels/<?= $channel['id'] ?>/delete" class="flex-1">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" 
+                                            class="w-full px-3 py-2 bg-red-50 text-red-700 rounded text-center text-sm hover:bg-red-100 transition-colors duration-150"
+                                            onclick="return confirm('Delete this channel?')">
+                                        <i class="fas fa-trash mr-1"></i>
+                                        Delete
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -137,6 +143,7 @@ ob_start();
 
                 <form method="POST" action="/groups/<?= $group['id'] ?>/channels" id="channelForm" class="space-y-5">
                     <?= csrf_field() ?>
+                    <input type="hidden" name="group_id" value="<?= $group['id'] ?>">
 
                     <!-- Channel Type -->
                     <div>
@@ -533,8 +540,13 @@ function testChannel(channelType, existingConfig = null) {
     const formData = new FormData();
     formData.append('channel_type', channelType);
     
-    // Add group ID
-    const groupId = document.querySelector('input[name="group_id"]').value;
+    // Add group ID from URL or form
+    let groupId = document.querySelector('input[name="group_id"]')?.value;
+    if (!groupId) {
+        // Extract group ID from URL if not in form
+        const urlParts = window.location.pathname.split('/');
+        groupId = urlParts[urlParts.indexOf('groups') + 1];
+    }
     formData.append('group_id', groupId);
     
     // Add CSRF token
@@ -557,6 +569,9 @@ function testChannel(channelType, existingConfig = null) {
                 break;
             case 'slack':
                 formData.append('slack_webhook_url', existingConfig.webhook_url);
+                break;
+            case 'webhook':
+                formData.append('webhook_url', existingConfig.webhook_url);
                 break;
         }
     } else {
