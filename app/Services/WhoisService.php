@@ -392,10 +392,12 @@ class WhoisService
                     // Get registrar name from vCard
                     if (isset($entity['vcardArray'][1])) {
                         foreach ($entity['vcardArray'][1] as $vcardField) {
-                            if ($vcardField[0] === 'fn') {
-                                $info['registrar'] = $vcardField[3];
-                            } elseif ($vcardField[0] === 'url') {
-                                $info['registrar_url'] = $vcardField[3];
+                            if (is_array($vcardField) && count($vcardField) >= 4) {
+                                if ($vcardField[0] === 'fn') {
+                                    $info['registrar'] = $vcardField[3];
+                                } elseif ($vcardField[0] === 'url') {
+                                    $info['registrar_url'] = $vcardField[3];
+                                }
                             }
                         }
                     }
@@ -406,8 +408,10 @@ class WhoisService
                             if (in_array('abuse', $subEntity['roles'] ?? [])) {
                                 if (isset($subEntity['vcardArray'][1])) {
                                     foreach ($subEntity['vcardArray'][1] as $vcardField) {
-                                        if ($vcardField[0] === 'email') {
-                                            $info['abuse_email'] = $vcardField[3];
+                                        if (is_array($vcardField) && count($vcardField) >= 4) {
+                                            if ($vcardField[0] === 'email') {
+                                                $info['abuse_email'] = $vcardField[3];
+                                            }
                                         }
                                     }
                                 }
