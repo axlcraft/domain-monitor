@@ -55,7 +55,18 @@ class WhoisService
                 $rdapData = $this->queryRDAPGeneric($domain, $rdapUrl);
                 if ($rdapData) {
                     // If RDAP succeeded but is missing expiration date, try WHOIS as fallback
-                    if (empty($rdapData['expiration_date']) && $whoisServer) {
+                    // But only if the domain is not already marked as available
+                    $isAvailable = false;
+                    if (isset($rdapData['status']) && is_array($rdapData['status'])) {
+                        foreach ($rdapData['status'] as $status) {
+                            if (stripos($status, 'AVAILABLE') !== false) {
+                                $isAvailable = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (empty($rdapData['expiration_date']) && !$isAvailable && $whoisServer) {
                         $whoisData = $this->queryWhois($domain, $whoisServer);
                         if ($whoisData) {
                             // Check if we got a referral to another WHOIS server
