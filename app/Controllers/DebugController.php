@@ -126,7 +126,8 @@ class DebugController extends Controller
                 // Pretty print JSON
                 $rdapData = json_decode($rdapResponse, true);
                 
-                // Check if RDAP returned an error in the JSON
+                // Check if RDAP returned an error in the JSON or if domain is available
+                $isDomainAvailable = false;
                 if ($rdapData && isset($rdapData['errorCode'])) {
                     $rdapSucceeded = true; // HTTP succeeded, but domain not found
                     $response .= "\n=== RDAP QUERY SUCCESS (Domain Not Found) ===\n\n";
@@ -140,11 +141,33 @@ class DebugController extends Controller
                         $response .= "✓ Domain is AVAILABLE (not registered)\n\n";
                         $parsedData[] = ['key' => 'Status', 'value' => 'AVAILABLE'];
                         $parsedData[] = ['key' => 'Registrar', 'value' => 'Not Registered'];
+                        $isDomainAvailable = true;
                     }
                     
                     $response .= "--- RDAP JSON RESPONSE ---\n\n";
                     $response .= json_encode($rdapData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-                } else {
+                } elseif ($rdapData && isset($rdapData['status']) && is_array($rdapData['status'])) {
+                    // Check if domain status indicates it's available
+                    foreach ($rdapData['status'] as $status) {
+                        if (stripos($status, 'free') !== false || stripos($status, 'available') !== false) {
+                            $rdapSucceeded = true;
+                            $response .= "\n=== RDAP QUERY SUCCESS (Domain Available) ===\n\n";
+                            $response .= "RDAP URL: {$fullRdapUrl}\n";
+                            $response .= "HTTP Status: {$httpCode}\n";
+                            $response .= "Domain Status: " . implode(', ', $rdapData['status']) . "\n\n";
+                            $response .= "✓ Domain is AVAILABLE (not registered)\n\n";
+                            $parsedData[] = ['key' => 'Status', 'value' => 'AVAILABLE'];
+                            $parsedData[] = ['key' => 'Registrar', 'value' => 'Not Registered'];
+                            $isDomainAvailable = true;
+                            
+                            $response .= "--- RDAP JSON RESPONSE ---\n\n";
+                            $response .= json_encode($rdapData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                            break;
+                        }
+                    }
+                }
+                
+                if (!$isDomainAvailable) {
                     $rdapSucceeded = true;
                     $response .= "\n=== RDAP QUERY SUCCESS ===\n\n";
                     $response .= "RDAP URL: {$fullRdapUrl}\n";

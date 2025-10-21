@@ -417,6 +417,14 @@ class WhoisService
         // Parse status
         if (isset($rdapData['status']) && is_array($rdapData['status'])) {
             $info['status'] = $rdapData['status'];
+            
+            // Convert "free" status to "AVAILABLE" for consistency
+            $info['status'] = array_map(function($status) {
+                if (stripos($status, 'free') !== false) {
+                    return 'AVAILABLE';
+                }
+                return $status;
+            }, $info['status']);
         }
         
         // Parse entities (registrar, abuse contact)
