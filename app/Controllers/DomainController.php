@@ -285,6 +285,7 @@ class DomainController extends Controller
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
         $isActive = isset($_POST['is_active']) ? 1 : 0;
         $tagsInput = trim($_POST['tags'] ?? '');
+        $manualExpirationDate = !empty($_POST['manual_expiration_date']) ? $_POST['manual_expiration_date'] : null;
         
         // Validate tags
         $tagValidation = \App\Helpers\InputValidator::validateTags($tagsInput);
@@ -317,7 +318,8 @@ class DomainController extends Controller
         $this->domainModel->update($id, [
             'notification_group_id' => $groupId,
             'tags' => $tags,
-            'is_active' => $isActive
+            'is_active' => $isActive,
+            'expiration_date' => $manualExpirationDate
         ]);
 
         // Send notification if monitoring status changed and has notification group
@@ -403,12 +405,15 @@ class DomainController extends Controller
             return;
         }
 
-        $status = $this->whoisService->getDomainStatus($whoisData['expiration_date'], $whoisData['status'] ?? []);
+        // Use WHOIS expiration date if available, otherwise preserve manual expiration date
+        $expirationDate = $whoisData['expiration_date'] ?? $domain['expiration_date'];
+        
+        $status = $this->whoisService->getDomainStatus($expirationDate, $whoisData['status'] ?? []);
 
         $this->domainModel->update($id, [
             'registrar' => $whoisData['registrar'],
             'registrar_url' => $whoisData['registrar_url'] ?? null,
-            'expiration_date' => $whoisData['expiration_date'],
+            'expiration_date' => $expirationDate,
             'updated_date' => $whoisData['updated_date'] ?? null,
             'abuse_email' => $whoisData['abuse_email'] ?? null,
             'last_checked' => date('Y-m-d H:i:s'),
@@ -707,12 +712,15 @@ class DomainController extends Controller
                 continue;
             }
 
-            $status = $this->whoisService->getDomainStatus($whoisData['expiration_date'], $whoisData['status'] ?? []);
+            // Use WHOIS expiration date if available, otherwise preserve manual expiration date
+            $expirationDate = $whoisData['expiration_date'] ?? $domain['expiration_date'];
+            
+            $status = $this->whoisService->getDomainStatus($expirationDate, $whoisData['status'] ?? []);
 
             $this->domainModel->update($id, [
                 'registrar' => $whoisData['registrar'],
                 'registrar_url' => $whoisData['registrar_url'] ?? null,
-                'expiration_date' => $whoisData['expiration_date'],
+                'expiration_date' => $expirationDate,
                 'updated_date' => $whoisData['updated_date'] ?? null,
                 'abuse_email' => $whoisData['abuse_email'] ?? null,
                 'last_checked' => date('Y-m-d H:i:s'),

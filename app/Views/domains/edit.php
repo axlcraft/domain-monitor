@@ -119,6 +119,38 @@ ob_start();
                     </p>
                 </div>
 
+                <!-- Manual Expiration Date -->
+                <div>
+                    <label for="manual_expiration_date" class="block text-sm font-medium text-gray-700 mb-1.5">
+                        Manual Expiration Date
+                        <span class="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fas fa-calendar-alt absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="date" 
+                               id="manual_expiration_date" 
+                               name="manual_expiration_date" 
+                               value="<?= $domain['expiration_date'] ? date('Y-m-d', strtotime($domain['expiration_date'])) : '' ?>"
+                               class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm">
+                    </div>
+                    <p class="mt-1.5 text-xs text-gray-500">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Set a manual expiration date if WHOIS/RDAP doesn't provide one (e.g., for .nl domains). 
+                        This will be used for expiration notifications and status calculations.
+                    </p>
+                    <?php if ($domain['expiration_date']): ?>
+                        <p class="mt-1 text-xs text-green-600">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            Current expiration date: <?= date('M j, Y', strtotime($domain['expiration_date'])) ?>
+                        </p>
+                    <?php else: ?>
+                        <p class="mt-1 text-xs text-amber-600">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            No expiration date available from WHOIS/RDAP. Consider setting a manual date.
+                        </p>
+                    <?php endif; ?>
+                </div>
+
                 <!-- Active Monitoring -->
                 <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <label class="flex items-center cursor-pointer">

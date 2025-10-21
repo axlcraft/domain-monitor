@@ -359,7 +359,14 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <?php if (!empty($domain['expiration_date'])): ?>
                                     <div class="text-sm">
-                                        <div class="font-medium text-gray-900"><?= date('M d, Y', strtotime($domain['expiration_date'])) ?></div>
+                                        <div class="font-medium text-gray-900 flex items-center">
+                                            <?= date('M d, Y', strtotime($domain['expiration_date'])) ?>
+                                            <?php if ($domain['isManualExpiration']): ?>
+                                                <span class="ml-1 inline-flex items-center px-1 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800" title="Manual expiration date">
+                                                    <i class="fas fa-edit" style="font-size: 8px;"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                         <div class="text-xs <?= $expiryClass ?>">
                                             <?= $daysLeft ?> days
                                         </div>

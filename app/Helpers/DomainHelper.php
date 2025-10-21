@@ -30,7 +30,36 @@ class DomainHelper
         // Determine expiry color for labels
         $domain['expiryColor'] = self::getExpiryColor($domain['daysLeft']);
         
+        // Check if expiration date is manual (not from WHOIS/RDAP)
+        $domain['isManualExpiration'] = self::isManualExpiration($domain);
+        
         return $domain;
+    }
+    
+    /**
+     * Check if expiration date is manually set (not from WHOIS/RDAP)
+     */
+    private static function isManualExpiration(array $domain): bool
+    {
+        // If no expiration date, it's not manual
+        if (empty($domain['expiration_date'])) {
+            return false;
+        }
+        
+        // Parse WHOIS data to check if it contains expiration date
+        $whoisData = json_decode($domain['whois_data'] ?? '{}', true);
+        
+        // If WHOIS data doesn't have expiration date, it's likely manual
+        if (empty($whoisData['expiration_date'])) {
+            return true;
+        }
+        
+        // If WHOIS expiration date is different from stored expiration date, it's manual
+        if ($whoisData['expiration_date'] !== $domain['expiration_date']) {
+            return true;
+        }
+        
+        return false;
     }
     
     /**

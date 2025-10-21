@@ -154,7 +154,15 @@ ob_start();
                                 <i class="fas fa-exclamation-triangle text-white text-xs"></i>
                             </div>
                             <div>
-                                <p class="text-xs text-gray-600 font-medium">Expiration</p>
+                                <p class="text-xs text-gray-600 font-medium">
+                                    Expiration
+                                    <?php if ($domain['isManualExpiration']): ?>
+                                        <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                            <i class="fas fa-edit mr-1" style="font-size: 8px;"></i>
+                                            Manual
+                                        </span>
+                                    <?php endif; ?>
+                                </p>
                                 <p class="text-xs font-semibold text-gray-900"><?= date('M j, Y', strtotime($domain['expiration_date'])) ?></p>
                             </div>
                         </div>
