@@ -54,6 +54,27 @@ class WhoisService
             if ($rdapUrl) {
                 $rdapData = $this->queryRDAPGeneric($domain, $rdapUrl);
                 if ($rdapData) {
+                    // If RDAP succeeded but is missing expiration date, try WHOIS as fallback
+                    if (empty($rdapData['expiration_date']) && $whoisServer) {
+                        $whoisData = $this->queryWhois($domain, $whoisServer);
+                        if ($whoisData) {
+                            // Check if we got a referral to another WHOIS server
+                            $referralServer = $this->extractReferralServer($whoisData);
+                            if ($referralServer && $referralServer !== $whoisServer) {
+                                $whoisData = $this->queryWhois($domain, $referralServer);
+                            }
+                            
+                            if ($whoisData) {
+                                // Parse WHOIS data to get expiration date
+                                $whoisInfo = $this->parseWhoisData($domain, $whoisData, $referralServer ?? $whoisServer);
+                                
+                                // Merge expiration date from WHOIS into RDAP data
+                                if (!empty($whoisInfo['expiration_date'])) {
+                                    $rdapData['expiration_date'] = $whoisInfo['expiration_date'];
+                                }
+                            }
+                        }
+                    }
                     return $rdapData;
                 }
                 // If RDAP failed, fall through to WHOIS
@@ -694,6 +715,14 @@ class WhoisService
         // Also check if expiration date is null and no status indicates it's registered
         if ($expirationDate === null && empty($statusArray)) {
             return 'available';
+        }
+
+        // If domain has "active" status but no expiration date, consider it active
+        // This handles TLDs like .nl that don't provide expiration dates
+        foreach ($statusArray as $status) {
+            if (stripos($status, 'active') !== false) {
+                return 'active';
+            }
         }
 
         $days = $this->daysUntilExpiration($expirationDate);
