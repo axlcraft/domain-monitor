@@ -14,73 +14,11 @@ class TldRegistryService
     private TldRegistry $tldModel;
     private TldImportLog $importLogModel;
     private Logger $logger;
-    private static ?bool $brotliSupported = null;
-
     // IANA URLs
     private const IANA_RDAP_URL = 'https://data.iana.org/rdap/dns.json';
     private const IANA_TLD_BASE_URL = 'https://www.iana.org/domains/root/db/';
     private const IANA_TLD_LIST_URL = 'https://data.iana.org/TLD/tlds-alpha-by-domain.txt';
     private const IANA_RDAP_DOMAIN_URL = 'https://rdap.iana.org/domain/';
-
-    /**
-     * Check if Brotli compression is supported by the system
-     */
-    private static function isBrotliSupported(): bool
-    {
-        static $supported = null;
-        if ($supported !== null) return $supported;
-        
-        $logger = new Logger('tld_import');
-        $detectionResults = [];
-        
-        // Check for brotli extension
-        $brotliExtension = extension_loaded('brotli');
-        $detectionResults['brotli_extension'] = $brotliExtension;
-        
-        // Check for brotli function
-        $brotliFunction = function_exists('brotli_compress');
-        $detectionResults['brotli_function'] = $brotliFunction;
-        
-        if ($brotliExtension || $brotliFunction) {
-            $logger->info("Brotli support detected", $detectionResults);
-            return $supported = true;
-        }
-        
-        // Check curl support for brotli
-        try {
-            $curlInfo = curl_version();
-            $curlVersion = $curlInfo['version'] ?? 'unknown';
-            $curlEncoding = $curlInfo['encoding'] ?? 'unknown';
-            $curlFeatures = $curlInfo['features'] ?? 0;
-            
-            $detectionResults['curl_version'] = $curlVersion;
-            $detectionResults['curl_encoding'] = $curlEncoding;
-            $detectionResults['curl_features_raw'] = $curlFeatures;
-            
-            // Method 1: Check encoding field
-            $encodingSupportsBrotli = stripos($curlEncoding, 'br') !== false;
-            $detectionResults['curl_encoding_check'] = $encodingSupportsBrotli;
-            
-            // Method 2: Check features bitmask (CURL_VERSION_BROTLI = 8388608)
-            $featuresSupportsBrotli = ($curlFeatures & 8388608) !== 0;
-            $detectionResults['curl_features_check'] = $featuresSupportsBrotli;
-            
-            // Method 3: Check if curl version is recent enough (brotli support added in 7.57.0)
-            $versionSupportsBrotli = version_compare($curlVersion, '7.57.0', '>=');
-            $detectionResults['curl_version_check'] = $versionSupportsBrotli;
-            
-            if ($encodingSupportsBrotli || $featuresSupportsBrotli || $versionSupportsBrotli) {
-                $detectionResults['final_decision'] = 'supported';
-                $logger->info("Brotli support detected via cURL", $detectionResults);
-                return $supported = true;
-            }
-        } catch (\Exception $e) {
-            $detectionResults['curl_error'] = $e->getMessage();
-        }
-        
-        $logger->info("Brotli support NOT detected - using gzip/deflate fallback", $detectionResults);
-        return $supported = false;
-    }
 
     /**
      * Log HTTP request and response details for debugging
@@ -100,7 +38,6 @@ class TldRegistryService
             'response_content_type' => $contentType,
             'response_content_length' => $contentLength,
             'request_time_seconds' => round($requestTime, 3),
-            'brotli_supported' => self::isBrotliSupported(),
             'compression_used' => $contentEncoding !== 'none' ? $contentEncoding : 'none'
         ];
         
@@ -113,21 +50,24 @@ class TldRegistryService
 
     public function __construct()
     {
-        $acceptEncoding = self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate';
+        $acceptEncoding = 'gzip, deflate';
         
         $this->tldModel = new TldRegistry();
         $this->importLogModel = new TldImportLog();
         $this->logger = new Logger('tld_import');
         
         $this->logger->debug("Creating main HTTP client", [
-            'accept_encoding' => $acceptEncoding,
-            'brotli_supported' => self::isBrotliSupported()
+            'accept_encoding' => $acceptEncoding
         ]);
         
         $this->httpClient = new Client([
             'timeout' => 15, // Reduced for faster processing
             'connect_timeout' => 5, // Reduced for faster processing
             'verify' => true, // Enable SSL verification
+            'curl' => [
+                CURLOPT_HTTP_CONTENT_DECODING => 0, // Disable automatic content decoding
+                CURLOPT_ACCEPT_ENCODING => 'gzip,deflate' // Explicitly set supported encodings
+            ],
             'allow_redirects' => [
                 'max' => 5,
                 'strict' => false,
@@ -166,17 +106,20 @@ class TldRegistryService
      */
     private function getJsonClient(): Client
     {
-        $acceptEncoding = self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate';
+        $acceptEncoding = 'gzip, deflate';
         
         $this->logger->debug("Creating JSON HTTP client", [
-            'accept_encoding' => $acceptEncoding,
-            'brotli_supported' => self::isBrotliSupported()
+            'accept_encoding' => $acceptEncoding
         ]);
         
         return new Client([
             'timeout' => 15, // Reduced for faster processing
             'connect_timeout' => 5, // Reduced for faster processing
             'verify' => true,
+            'curl' => [
+                CURLOPT_HTTP_CONTENT_DECODING => 0, // Disable automatic content decoding
+                CURLOPT_ACCEPT_ENCODING => 'gzip,deflate' // Explicitly set supported encodings
+            ],
             'allow_redirects' => [
                 'max' => 3,
                 'strict' => true,
@@ -216,17 +159,20 @@ class TldRegistryService
      */
     private function getHtmlClient(): Client
     {
-        $acceptEncoding = self::isBrotliSupported() ? 'gzip, deflate, br' : 'gzip, deflate';
+        $acceptEncoding = 'gzip, deflate';
         
         $this->logger->debug("Creating HTML HTTP client", [
-            'accept_encoding' => $acceptEncoding,
-            'brotli_supported' => self::isBrotliSupported()
+            'accept_encoding' => $acceptEncoding
         ]);
         
         return new Client([
             'timeout' => 8, // Further reduced for faster processing
             'connect_timeout' => 3, // Further reduced for faster processing
             'verify' => true,
+            'curl' => [
+                CURLOPT_HTTP_CONTENT_DECODING => 0, // Disable automatic content decoding
+                CURLOPT_ACCEPT_ENCODING => 'gzip,deflate' // Explicitly set supported encodings
+            ],
             'allow_redirects' => [
                 'max' => 3, // Reduced redirects
                 'strict' => false,
