@@ -1,0 +1,50 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile
+    container_name: domain-monitor-web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./app:/var/www/html:Z
+      - ./.docker/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro,Z
+    environment:
+      APACHE_DOCUMENT_ROOT: /var/www/html/public
+      TZ: ${TZ:-UTC}
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:latest
+    container_name: domain-monitor-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_DATABASE}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      TZ: ${TZ:-UTC}
+    command: [
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_unicode_ci"
+    ]
+    volumes:
+      - dbdata:/var/lib/mysql
+
+  pma:
+    image: phpmyadmin:latest
+    container_name: domain-monitor-pma
+    restart: unless-stopped
+    environment:
+      PMA_HOST: domain-monitor-mariadb
+      UPLOAD_LIMIT: 256M
+      TZ: ${TZ:-UTC}
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+
+volumes:
+  dbdata:
+

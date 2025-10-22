@@ -1,0 +1,50 @@
+ ===
+.env
+.env.docker
+*.env.bak*
+*.env.backup*
+app/.env
+
+# === LOGS ===
+app/logs/
+*.log
+
+# === COMPOSER ===
+app/vendor/
+app/composer.lock
+
+# === DOCKER / BUILD ARTIFACTS ===
+dbdata/
+.docker/*.pid
+.docker/*.sock
+.docker/.cache/
+*.pid
+*.sock
+
+# === TEMPORARY FILES ===
+*.tmp
+*.swp
+*.bak
+*.orig
+
+# === OS / EDITOR ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.code-workspace
+
+# === BACKUPS ===
+*.bak.*
+*.tar
+*.zip
+
+# === GIT IGNORES REPO CLONED APP (OPTIONAL) ===
+# If you keep domain-monitor-docker in its own Git repo and want to ignore app/
+# uncomment this line:
+# app/
+
+# === SYSTEM / MISC ===
+node_modules/
+coverage/
+
