@@ -282,6 +282,8 @@ class DomainController extends Controller
             return;
         }
 
+        $userId = \Core\Auth::id();
+
         $groupId = !empty($_POST['notification_group_id']) ? (int)$_POST['notification_group_id'] : null;
         $isActive = isset($_POST['is_active']) ? 1 : 0;
         $tagsInput = trim($_POST['tags'] ?? '');
