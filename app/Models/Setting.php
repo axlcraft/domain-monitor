@@ -3,10 +3,18 @@
 namespace App\Models;
 
 use Core\Model;
+use App\Services\Logger;
 
 class Setting extends Model
 {
     protected static string $table = 'settings';
+    private Logger $logger;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->logger = new Logger('settings');
+    }
 
     /**
      * Get setting by key
@@ -146,7 +154,9 @@ class Setting extends Model
             } catch (\Exception $e) {
                 // If decryption fails, it might be plaintext (migration scenario)
                 // Try to use as-is but log the issue
-                error_log("Failed to decrypt mail_password: " . $e->getMessage());
+                $this->logger->warning("Failed to decrypt mail_password", [
+                    'error' => $e->getMessage()
+                ]);
                 $decryptedPassword = $encryptedPassword;
             }
         }
@@ -190,7 +200,9 @@ class Setting extends Model
                     $encryption = new \Core\Encryption();
                     $value = $encryption->encrypt($value);
                 } catch (\Exception $e) {
-                    error_log("Failed to encrypt mail_password: " . $e->getMessage());
+                    $this->logger->error("Failed to encrypt mail_password", [
+                        'error' => $e->getMessage()
+                    ]);
                     return false;
                 }
             }
@@ -217,7 +229,9 @@ class Setting extends Model
                 $decryptedSecret = $encryption->decrypt($encryptedSecret);
             } catch (\Exception $e) {
                 // If decryption fails, it might be plaintext (migration scenario)
-                error_log("Failed to decrypt captcha_secret_key: " . $e->getMessage());
+                $this->logger->warning("Failed to decrypt captcha_secret_key", [
+                    'error' => $e->getMessage()
+                ]);
                 $decryptedSecret = $encryptedSecret;
             }
         }
@@ -243,7 +257,9 @@ class Setting extends Model
                 $encryption = new \Core\Encryption();
                 $settings['captcha_secret_key'] = $encryption->encrypt($settings['captcha_secret_key']);
             } catch (\Exception $e) {
-                error_log("Failed to encrypt captcha_secret_key: " . $e->getMessage());
+                $this->logger->error("Failed to encrypt captcha_secret_key", [
+                    'error' => $e->getMessage()
+                ]);
                 return false;
             }
         }
