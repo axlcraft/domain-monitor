@@ -70,30 +70,17 @@ ob_start();
                         Type any custom tag (letters, numbers, hyphens). Press <kbd class="px-1 py-0.5 bg-gray-200 rounded text-xs">Enter</kbd> or <kbd class="px-1 py-0.5 bg-gray-200 rounded text-xs">,</kbd> to add.
                     </p>
                     
-                    <!-- Suggested Tags -->
+                    <!-- Available Tags -->
                     <div class="mt-2">
-                        <p class="text-xs text-gray-600 mb-1.5">💡 Suggestions:</p>
+                        <p class="text-xs text-gray-600 mb-1.5">💡 Available Tags:</p>
                         <div class="flex flex-wrap gap-1.5">
-                            <button type="button" onclick="addTag('production')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-green-50 text-green-700 border-green-200 hover:bg-green-100 transition-colors">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Production
-                            </button>
-                            <button type="button" onclick="addTag('staging')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 transition-colors">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Staging
-                            </button>
-                            <button type="button" onclick="addTag('development')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Development
-                            </button>
-                            <button type="button" onclick="addTag('client')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 transition-colors">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Client
-                            </button>
-                            <button type="button" onclick="addTag('personal')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 transition-colors">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Personal
-                            </button>
+                            <?php foreach ($availableTags as $tag): ?>
+                                <button type="button" onclick="addTag('<?= htmlspecialchars($tag['name']) ?>')" 
+                                        class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border <?= htmlspecialchars($tag['color']) ?> hover:opacity-80 transition-colors">
+                                    <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
+                                    <?= htmlspecialchars($tag['name']) ?>
+                                </button>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
@@ -172,7 +159,7 @@ ob_start();
                         <i class="fas fa-save mr-2"></i>
                         Update Domain
                     </button>
-                    <a href="/domains/<?= $domain['id'] ?>" 
+                    <a href="<?= htmlspecialchars($referrer ?? '/domains/' . $domain['id']) ?>" 
                        class="inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm">
                         <i class="fas fa-times mr-2"></i>
                         Cancel
@@ -213,14 +200,12 @@ ob_start();
 const existingTags = '<?= htmlspecialchars($domain['tags'] ?? '') ?>';
 let tags = existingTags ? existingTags.split(',').map(t => t.trim().toLowerCase()).filter(t => t) : [];
 
-const tagColors = {
-    'production': 'bg-green-100 text-green-700 border-green-300',
-    'staging': 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    'development': 'bg-blue-100 text-blue-700 border-blue-300',
-    'client': 'bg-purple-100 text-purple-700 border-purple-300',
-    'personal': 'bg-orange-100 text-orange-700 border-orange-300',
-    'archived': 'bg-gray-100 text-gray-700 border-gray-300'
-};
+// Available tags with their colors from the database
+const availableTags = <?= json_encode($availableTags) ?>;
+const tagColors = {};
+availableTags.forEach(tag => {
+    tagColors[tag.name] = tag.color;
+});
 
 function addTag(tagName) {
     tagName = tagName.trim().toLowerCase();

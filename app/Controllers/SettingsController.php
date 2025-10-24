@@ -533,7 +533,7 @@ class SettingsController extends Controller
                     return;
                 }
 
-                $_SESSION['success'] = "Isolation mode enabled. {$migrationResult['domains_assigned']} domains and {$migrationResult['groups_assigned']} groups assigned to admin.";
+                $_SESSION['success'] = "Isolation mode enabled. {$migrationResult['domains_assigned']} domains, {$migrationResult['groups_assigned']} groups, and {$migrationResult['tags_assigned']} tags assigned to admin.";
             } else {
                 // Switching back to shared mode
                 $this->settingModel->setValue('user_isolation_mode', 'shared');
@@ -572,6 +572,10 @@ class SettingsController extends Controller
             $groupModel = new \App\Models\NotificationGroup();
             $groupCount = $groupModel->assignUnassignedGroupsToUser($adminId);
             
+            // Assign all tags to admin
+            $tagModel = new \App\Models\Tag();
+            $tagCount = $tagModel->assignUnassignedTagsToUser($adminId);
+            
             // Set isolation mode
             $this->settingModel->setValue('user_isolation_mode', 'isolated');
             
@@ -579,7 +583,8 @@ class SettingsController extends Controller
                 'success' => true,
                 'admin_id' => $adminId,
                 'domains_assigned' => $domainCount,
-                'groups_assigned' => $groupCount
+                'groups_assigned' => $groupCount,
+                'tags_assigned' => $tagCount
             ];
             
         } catch (\Exception $e) {

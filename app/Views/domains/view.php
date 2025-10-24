@@ -40,17 +40,18 @@ ob_start();
         <!-- Tags Display -->
         <?php
         $tags = !empty($domain['tags']) ? explode(',', $domain['tags']) : [];
-        $tagColors = [
-            'production' => 'bg-green-100 text-green-700 border-green-200',
-            'staging' => 'bg-yellow-100 text-yellow-700 border-yellow-200',
-            'development' => 'bg-blue-100 text-blue-700 border-blue-200',
-            'client' => 'bg-purple-100 text-purple-700 border-purple-200',
-            'personal' => 'bg-orange-100 text-orange-700 border-orange-200',
-            'archived' => 'bg-gray-100 text-gray-600 border-gray-200'
-        ];
-        foreach ($tags as $tag):
+        $tagColors = !empty($domain['tag_colors']) ? explode('|', $domain['tag_colors']) : [];
+        
+        // Create a mapping of tag names to their colors
+        $tagColorMap = [];
+        foreach ($availableTags as $availableTag) {
+            $tagColorMap[$availableTag['name']] = $availableTag['color'];
+        }
+        
+        foreach ($tags as $index => $tag):
             $tag = trim($tag);
-            $colorClass = $tagColors[$tag] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+            // Use the color from the database if available, otherwise use the stored color, otherwise default
+            $colorClass = $tagColorMap[$tag] ?? (isset($tagColors[$index]) ? $tagColors[$index] : 'bg-gray-100 text-gray-700 border-gray-200');
         ?>
             <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border <?= $colorClass ?>">
                 <i class="fas fa-tag mr-1.5" style="font-size: 10px;"></i>
@@ -66,7 +67,7 @@ ob_start();
                 Refresh
             </button>
         </form>
-        <a href="/domains/<?= $domain['id'] ?>/edit" class="inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors font-medium min-w-[80px] h-[32px]">
+        <a href="/domains/<?= $domain['id'] ?>/edit?from=/domains/<?= $domain['id'] ?>" class="inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors font-medium min-w-[80px] h-[32px]">
             <i class="fas fa-edit mr-1.5"></i>
             Edit
         </a>
@@ -307,7 +308,7 @@ ob_start();
                     <p class="text-xs text-gray-600 mt-0.5">Won't receive notifications</p>
                 </div>
             </div>
-            <a href="/domains/<?= $domain['id'] ?>/edit" class="block w-full text-center px-3 py-1.5 bg-orange-500 text-white text-xs rounded-lg hover:bg-orange-600 transition-colors font-medium">
+            <a href="/domains/<?= $domain['id'] ?>/edit?from=/domains/<?= $domain['id'] ?>" class="block w-full text-center px-3 py-1.5 bg-orange-500 text-white text-xs rounded-lg hover:bg-orange-600 transition-colors font-medium">
                 <i class="fas fa-plus mr-1"></i>
                 Assign Group
             </a>

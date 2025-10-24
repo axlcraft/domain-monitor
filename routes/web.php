@@ -16,6 +16,7 @@ use App\Controllers\InstallerController;
 use App\Controllers\NotificationController;
 use App\Controllers\ErrorLogController;
 use App\Controllers\TwoFactorController;
+use App\Controllers\TagController;
 
 $router = Application::$router;
 
@@ -70,6 +71,9 @@ $router->post('/domains/bulk-assign-group', [DomainController::class, 'bulkAssig
 $router->post('/domains/bulk-toggle-status', [DomainController::class, 'bulkToggleStatus']);
 $router->post('/domains/bulk-add-tags', [DomainController::class, 'bulkAddTags']);
 $router->post('/domains/bulk-remove-tags', [DomainController::class, 'bulkRemoveTags']);
+$router->post('/domains/bulk-remove-specific-tag', [DomainController::class, 'bulkRemoveSpecificTag']);
+$router->post('/domains/bulk-assign-existing-tag', [DomainController::class, 'bulkAssignExistingTag']);
+$router->post('/domains/get-tags-for-domains', [DomainController::class, 'getTagsForDomains']);
 $router->post('/domains/transfer', [DomainController::class, 'transfer']);
 $router->post('/domains/bulk-transfer', [DomainController::class, 'bulkTransfer']);
 $router->post('/domains/store', [DomainController::class, 'store']);
@@ -170,4 +174,15 @@ $router->post('/errors/{id}/unresolve', [ErrorLogController::class, 'markUnresol
 $router->post('/errors/{id}/delete', [ErrorLogController::class, 'delete']);
 $router->post('/errors/bulk-delete', [ErrorLogController::class, 'bulkDelete']);
 $router->post('/errors/clear-resolved', [ErrorLogController::class, 'clearResolved']);
+
+// Tag Management
+$router->get('/tags', [TagController::class, 'index']);
+$router->post('/tags/create', [TagController::class, 'create']);
+$router->post('/tags/update', [TagController::class, 'update']);
+$router->post('/tags/delete', [TagController::class, 'delete']);
+$router->post('/tags/bulk-delete', [TagController::class, 'bulkDelete']);
+$router->get('/tags/{id}', [TagController::class, 'show']);
+$router->post('/tags/bulk-add-to-domains', [TagController::class, 'bulkAddToDomains']);
+$router->post('/tags/bulk-remove-from-domains', [TagController::class, 'bulkRemoveFromDomains']);
+
 

@@ -37,6 +37,11 @@
                     <span class="ml-auto text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-400">View</span>
                     <?php endif; ?>
                 </a>
+                
+                <a href="/tags" class="sidebar-link flex items-center px-3 py-2 rounded-md text-gray-400 hover:bg-gray-800 hover:text-white transition-colors duration-150 <?= strpos($_SERVER['REQUEST_URI'], '/tags') !== false ? 'bg-primary text-white' : '' ?>">
+                    <i class="fas fa-tags text-xs mr-3 w-4"></i>
+                    <span class="text-sm">Tag Management</span>
+                </a>
             </div>
 
             <!-- Tools Section -->

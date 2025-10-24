@@ -21,16 +21,20 @@ class Domain extends Model
      */
     public function getAllWithGroups(?int $userId = null): array
     {
-        $sql = "SELECT d.*, ng.name as group_name 
+        $sql = "SELECT d.*, ng.name as group_name,
+                       GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ',') as tags,
+                       GROUP_CONCAT(t.color ORDER BY t.name SEPARATOR '|') as tag_colors
                 FROM domains d 
-                LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id";
+                LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id
+                LEFT JOIN domain_tags dt ON d.id = dt.domain_id
+                LEFT JOIN tags t ON dt.tag_id = t.id";
         
         if ($userId) {
-            $sql .= " WHERE d.user_id = ? ORDER BY d.status DESC, d.expiration_date ASC";
+            $sql .= " WHERE d.user_id = ? AND (t.user_id = ? OR t.user_id IS NULL) GROUP BY d.id ORDER BY d.status DESC, d.expiration_date ASC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId]);
+            $stmt->execute([$userId, $userId]);
         } else {
-            $sql .= " ORDER BY d.status DESC, d.expiration_date ASC";
+            $sql .= " GROUP BY d.id ORDER BY d.status DESC, d.expiration_date ASC";
             $stmt = $this->db->query($sql);
         }
         
@@ -301,12 +305,24 @@ class Domain extends Model
 
         // Apply tag filter
         if (!empty($filters['tag'])) {
-            $domains = array_filter($domains, function($domain) use ($filters) {
-                if (empty($domain['tags'])) {
-                    return false;
-                }
-                $domainTags = array_map('trim', explode(',', $domain['tags']));
-                return in_array($filters['tag'], $domainTags);
+            // Get domain IDs that have the specified tag
+            $tagSql = "SELECT DISTINCT dt.domain_id 
+                       FROM domain_tags dt 
+                       JOIN tags t ON dt.tag_id = t.id 
+                       WHERE t.name = ?";
+            $tagParams = [$filters['tag']];
+            
+            if ($userId) {
+                $tagSql .= " AND dt.domain_id IN (SELECT id FROM domains WHERE user_id = ?)";
+                $tagParams[] = $userId;
+            }
+            
+            $tagStmt = $this->db->prepare($tagSql);
+            $tagStmt->execute($tagParams);
+            $taggedDomainIds = array_column($tagStmt->fetchAll(), 'domain_id');
+            
+            $domains = array_filter($domains, function($domain) use ($taggedDomainIds) {
+                return in_array($domain['id'], $taggedDomainIds);
             });
         }
 
@@ -348,30 +364,54 @@ class Domain extends Model
      */
     public function getAllTags(?int $userId = null): array
     {
-        $sql = "SELECT DISTINCT tags FROM domains WHERE tags IS NOT NULL AND tags != ''";
+        $sql = "SELECT DISTINCT t.name 
+                FROM tags t
+                JOIN domain_tags dt ON t.id = dt.tag_id
+                JOIN domains d ON d.id = dt.domain_id";
         $params = [];
         
         if ($userId) {
-            $sql .= " AND user_id = ?";
+            $sql .= " WHERE d.user_id = ? AND (t.user_id = ? OR t.user_id IS NULL)";
+            $params[] = $userId;
             $params[] = $userId;
         }
+        
+        $sql .= " ORDER BY t.name";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         $results = $stmt->fetchAll();
         
-        $allTags = [];
-        foreach ($results as $row) {
-            if (!empty($row['tags'])) {
-                $tags = array_map('trim', explode(',', $row['tags']));
-                $allTags = array_merge($allTags, $tags);
-            }
+        return array_column($results, 'name');
+    }
+
+    /**
+     * Get tags that are assigned to specific domains
+     */
+    public function getTagsForDomains(array $domainIds, ?int $userId = null): array
+    {
+        if (empty($domainIds)) {
+            return [];
+        }
+
+        $placeholders = str_repeat('?,', count($domainIds) - 1) . '?';
+        $sql = "SELECT DISTINCT t.id, t.name, t.color
+                FROM tags t
+                JOIN domain_tags dt ON t.id = dt.tag_id
+                WHERE dt.domain_id IN ($placeholders)";
+        
+        $params = $domainIds;
+        
+        if ($userId) {
+            $sql .= " AND (t.user_id = ? OR t.user_id IS NULL)";
+            $params[] = $userId;
         }
         
-        // Return unique, sorted tags
-        $allTags = array_unique($allTags);
-        sort($allTags);
-        return $allTags;
+        $sql .= " ORDER BY t.name";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 
 
@@ -470,6 +510,48 @@ class Domain extends Model
         $stmt->execute($params);
         
         return $stmt->rowCount();
+    }
+
+    /**
+     * Get a single domain with tags and groups
+     */
+    public function getWithTagsAndGroups(int $id, ?int $userId = null): ?array
+    {
+        $sql = "SELECT d.*, ng.name as group_name, ng.id as group_id,
+                       GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ',') as tags,
+                       GROUP_CONCAT(t.color ORDER BY t.name SEPARATOR '|') as tag_colors
+                FROM domains d 
+                LEFT JOIN notification_groups ng ON d.notification_group_id = ng.id 
+                LEFT JOIN domain_tags dt ON d.id = dt.domain_id
+                LEFT JOIN tags t ON dt.tag_id = t.id AND (t.user_id = ? OR t.user_id IS NULL)
+                WHERE d.id = ?";
+        
+        $params = [$userId, $id];
+        
+        if ($userId) {
+            $sql .= " AND d.user_id = ?";
+            $params[] = $userId;
+        }
+        
+        $sql .= " GROUP BY d.id";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $domain = $stmt->fetch();
+
+        if (!$domain) {
+            return null;
+        }
+
+        // Get notification channels for this domain's group
+        if ($domain['group_id']) {
+            $channelModel = new NotificationChannel();
+            $domain['channels'] = $channelModel->getByGroupId($domain['group_id']);
+        } else {
+            $domain['channels'] = [];
+        }
+
+        return $domain;
     }
 }
 

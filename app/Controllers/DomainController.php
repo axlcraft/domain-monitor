@@ -77,6 +77,14 @@ class DomainController extends Controller
             $allTags = $this->domainModel->getAllTags();
         }
         
+        // Get available tags for bulk operations
+        $tagModel = new \App\Models\Tag();
+        if ($isolationMode === 'isolated') {
+            $availableTags = $tagModel->getAllWithUsage($userId);
+        } else {
+            $availableTags = $tagModel->getAllWithUsage();
+        }
+        
         // Format domains for display
         $formattedDomains = \App\Helpers\DomainHelper::formatMultiple($result['domains']);
 
@@ -91,6 +99,7 @@ class DomainController extends Controller
             'domains' => $formattedDomains,
             'groups' => $groups,
             'allTags' => $allTags,
+            'availableTags' => $availableTags,
             'users' => $users,
             'filters' => [
                 'search' => $search,
@@ -117,9 +126,18 @@ class DomainController extends Controller
         } else {
             $groups = $this->groupModel->getAllWithChannelCount();
         }
+        
+        // Get available tags for the new tag system
+        $tagModel = new \App\Models\Tag();
+        if ($isolationMode === 'isolated') {
+            $availableTags = $tagModel->getAllWithUsage($userId);
+        } else {
+            $availableTags = $tagModel->getAllWithUsage();
+        }
 
         $this->view('domains/create', [
             'groups' => $groups,
+            'availableTags' => $availableTags,
             'title' => 'Add Domain'
         ]);
     }
@@ -237,7 +255,18 @@ class DomainController extends Controller
     public function edit($params = [])
     {
         $id = $params['id'] ?? 0;
-        $domain = $this->checkDomainAccess($id);
+        
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+        
+        // Get domain with tags and groups
+        if ($isolationMode === 'isolated') {
+            $domain = $this->domainModel->getWithTagsAndGroups($id, $userId);
+        } else {
+            $domain = $this->domainModel->getWithTagsAndGroups($id);
+        }
 
         if (!$domain) {
             $_SESSION['error'] = 'Domain not found';
@@ -246,19 +275,28 @@ class DomainController extends Controller
         }
 
         // Get groups based on isolation mode
-        $userId = \Core\Auth::id();
-        $settingModel = new \App\Models\Setting();
-        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
-        
         if ($isolationMode === 'isolated') {
             $groups = $this->groupModel->getAllWithChannelCount($userId);
         } else {
             $groups = $this->groupModel->getAllWithChannelCount();
         }
+        
+        // Get available tags for the new tag system
+        $tagModel = new \App\Models\Tag();
+        if ($isolationMode === 'isolated') {
+            $availableTags = $tagModel->getAllWithUsage($userId);
+        } else {
+            $availableTags = $tagModel->getAllWithUsage();
+        }
 
+        // Get referrer for cancel button
+        $referrer = $_GET['from'] ?? '/domains/' . $domain['id'];
+        
         $this->view('domains/edit', [
             'domain' => $domain,
             'groups' => $groups,
+            'availableTags' => $availableTags,
+            'referrer' => $referrer,
             'title' => 'Edit Domain'
         ]);
     }
@@ -319,7 +357,6 @@ class DomainController extends Controller
 
         $this->domainModel->update($id, [
             'notification_group_id' => $groupId,
-            'tags' => $tags,
             'is_active' => $isActive,
             'expiration_date' => $manualExpirationDate
         ]);
@@ -360,6 +397,16 @@ class DomainController extends Controller
                 
                 $notificationService->sendToGroup($groupId, $subject, $message);
             }
+        }
+
+        // Handle tags using the new tag system
+        if (!empty($tags)) {
+            $tagModel = new \App\Models\Tag();
+            $tagModel->updateDomainTags($id, $tags, $userId);
+        } else {
+            // Remove all tags from domain
+            $tagModel = new \App\Models\Tag();
+            $tagModel->removeAllFromDomain($id);
         }
 
         $_SESSION['success'] = 'Domain updated successfully';
@@ -471,11 +518,11 @@ class DomainController extends Controller
         $settingModel = new \App\Models\Setting();
         $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
         
-        // Check domain access based on isolation mode
+        // Get domain with tags and groups
         if ($isolationMode === 'isolated') {
-            $domain = $this->domainModel->getWithChannels($id, $userId);
+            $domain = $this->domainModel->getWithTagsAndGroups($id, $userId);
         } else {
-            $domain = $this->domainModel->getWithChannels($id);
+            $domain = $this->domainModel->getWithTagsAndGroups($id);
         }
 
         if (!$domain) {
@@ -502,10 +549,19 @@ class DomainController extends Controller
         if (!empty($domain['channels'])) {
             $formattedDomain['activeChannelCount'] = \App\Helpers\DomainHelper::getActiveChannelCount($domain['channels']);
         }
+        
+        // Get available tags for the new tag system
+        $tagModel = new \App\Models\Tag();
+        if ($isolationMode === 'isolated') {
+            $availableTags = $tagModel->getAllWithUsage($userId);
+        } else {
+            $availableTags = $tagModel->getAllWithUsage();
+        }
 
         $this->view('domains/view', [
             'domain' => $formattedDomain,
             'logs' => $logs,
+            'availableTags' => $availableTags,
             'title' => $domain['domain_name']
         ]);
     }
@@ -524,8 +580,17 @@ class DomainController extends Controller
                 $groups = $this->groupModel->getAllWithChannelCount();
             }
             
+            // Get available tags for the new tag system
+            $tagModel = new \App\Models\Tag();
+            if ($isolationMode === 'isolated') {
+                $availableTags = $tagModel->getAllWithUsage($userId);
+            } else {
+                $availableTags = $tagModel->getAllWithUsage();
+            }
+            
             $this->view('domains/bulk-add', [
                 'groups' => $groups,
+                'availableTags' => $availableTags,
                 'title' => 'Bulk Add Domains'
             ]);
             return;
@@ -1007,6 +1072,7 @@ class DomainController extends Controller
         $settingModel = new \App\Models\Setting();
         $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
 
+        $tagModel = new \App\Models\Tag();
         $updated = 0;
         foreach ($domainIds as $id) {
             // Check domain access based on isolation mode
@@ -1016,12 +1082,118 @@ class DomainController extends Controller
                 $domain = $this->domainModel->find($id);
             }
             
-            if ($domain && $this->domainModel->update($id, ['tags' => ''])) {
+            if ($domain && $tagModel->removeAllFromDomain($id)) {
                 $updated++;
             }
         }
 
         $_SESSION['success'] = "Tags removed from $updated domain(s)";
+        $this->redirect('/domains');
+    }
+
+    /**
+     * Bulk remove specific tag from domains
+     */
+    public function bulkRemoveSpecificTag()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/domains');
+            return;
+        }
+
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
+
+        $domainIds = $_POST['domain_ids'] ?? [];
+        $tagId = (int)($_POST['tag_id'] ?? 0);
+
+        if (empty($domainIds) || !$tagId) {
+            $_SESSION['error'] = 'Invalid request';
+            $this->redirect('/domains');
+            return;
+        }
+
+        $tagModel = new \App\Models\Tag();
+        $tag = $tagModel->find($tagId);
+        if (!$tag) {
+            $_SESSION['error'] = 'Tag not found';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+
+        $removed = 0;
+        foreach ($domainIds as $domainId) {
+            // Check domain access based on isolation mode
+            if ($isolationMode === 'isolated') {
+                $domain = $this->domainModel->findWithIsolation($domainId, $userId);
+            } else {
+                $domain = $this->domainModel->find($domainId);
+            }
+            
+            if ($domain && $tagModel->removeFromDomain($domainId, $tagId)) {
+                $removed++;
+            }
+        }
+
+        $_SESSION['success'] = "Tag '{$tag['name']}' removed from $removed domain(s)";
+        $this->redirect('/domains');
+    }
+
+    /**
+     * Bulk assign existing tag to domains
+     */
+    public function bulkAssignExistingTag()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/domains');
+            return;
+        }
+
+        // CSRF Protection
+        $this->verifyCsrf('/domains');
+
+        $domainIds = $_POST['domain_ids'] ?? [];
+        $tagId = (int)($_POST['tag_id'] ?? 0);
+
+        if (empty($domainIds) || !$tagId) {
+            $_SESSION['error'] = 'Invalid request';
+            $this->redirect('/domains');
+            return;
+        }
+
+        $tagModel = new \App\Models\Tag();
+        $tag = $tagModel->find($tagId);
+        if (!$tag) {
+            $_SESSION['error'] = 'Tag not found';
+            $this->redirect('/domains');
+            return;
+        }
+
+        // Get current user and isolation mode
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+
+        $added = 0;
+        foreach ($domainIds as $domainId) {
+            // Check domain access based on isolation mode
+            if ($isolationMode === 'isolated') {
+                $domain = $this->domainModel->findWithIsolation($domainId, $userId);
+            } else {
+                $domain = $this->domainModel->find($domainId);
+            }
+            
+            if ($domain && $tagModel->addToDomain($domainId, $tagId)) {
+                $added++;
+            }
+        }
+
+        $_SESSION['success'] = "Tag '{$tag['name']}' added to $added domain(s)";
         $this->redirect('/domains');
     }
 
@@ -1124,6 +1296,35 @@ class DomainController extends Controller
 
         $_SESSION['success'] = "$transferred domain(s) transferred to {$targetUser['username']}";
         $this->redirect('/domains');
+    }
+
+    /**
+     * Get tags for specific domains (API endpoint)
+     */
+    public function getTagsForDomains()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['error' => 'Method not allowed'], 405);
+            return;
+        }
+
+        // Get JSON input
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!isset($input['domain_ids']) || !is_array($input['domain_ids'])) {
+            $this->json(['error' => 'Invalid domain IDs'], 400);
+            return;
+        }
+
+        $domainIds = array_map('intval', $input['domain_ids']);
+        $userId = \Core\Auth::id();
+        $settingModel = new \App\Models\Setting();
+        $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
+
+        // Get tags that are assigned to the specified domains
+        $tags = $this->domainModel->getTagsForDomains($domainIds, $isolationMode === 'isolated' ? $userId : null);
+        
+        $this->json(['tags' => $tags]);
     }
 }
 

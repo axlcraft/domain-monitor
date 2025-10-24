@@ -147,34 +147,47 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                 </button>
                 <div id="assign-tags-dropdown" class="hidden absolute left-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                     <div class="p-3">
-                        <label class="block text-xs font-medium text-gray-700 mb-2">Add Tags to Selected Domains</label>
-                        <div class="flex flex-wrap gap-1.5 mb-3">
-                            <button type="button" onclick="bulkAddTag('production')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-green-50 text-green-700 border-green-200 hover:bg-green-100">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Production
-                            </button>
-                            <button type="button" onclick="bulkAddTag('staging')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Staging
-                            </button>
-                            <button type="button" onclick="bulkAddTag('development')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Development
-                            </button>
-                            <button type="button" onclick="bulkAddTag('client')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Client
-                            </button>
-                            <button type="button" onclick="bulkAddTag('personal')" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100">
-                                <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
-                                Personal
-                            </button>
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-xs font-medium text-gray-700">Tag Management</label>
+                            <a href="/tags" class="text-xs text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-cog mr-1"></i>
+                                Manage Tags
+                            </a>
                         </div>
-                        <div class="border-t border-gray-200 pt-2">
-                            <button type="button" onclick="bulkRemoveAllTags()" class="w-full px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 font-medium">
-                                <i class="fas fa-times mr-1"></i>
-                                Remove All Tags
-                            </button>
+                        
+                        <!-- Add Tags Section -->
+                        <div class="mb-4">
+                            <label class="block text-xs font-medium text-gray-700 mb-2">Add Tags to Selected Domains</label>
+                            <div class="flex flex-wrap gap-1.5 mb-3">
+                                <?php foreach ($availableTags as $tag): ?>
+                                    <button type="button" onclick="bulkAssignExistingTag(<?= $tag['id'] ?>, '<?= htmlspecialchars($tag['name']) ?>')" 
+                                            class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border <?= htmlspecialchars($tag['color']) ?> hover:opacity-80">
+                                        <i class="fas fa-plus mr-1" style="font-size: 8px;"></i>
+                                        <?= htmlspecialchars($tag['name']) ?>
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="border-t border-gray-200 pt-2">
+                                <button type="button" onclick="openTagSelector()" class="w-full px-3 py-1.5 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 font-medium">
+                                    <i class="fas fa-plus mr-1"></i>
+                                    Add Custom Tag
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Remove Tags Section -->
+                        <div class="border-t border-gray-200 pt-3">
+                            <label class="block text-xs font-medium text-gray-700 mb-2">Remove Tags from Selected Domains</label>
+                            <div class="space-y-2">
+                                <button type="button" onclick="bulkRemoveAllTags()" class="w-full px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 font-medium">
+                                    <i class="fas fa-times mr-1"></i>
+                                    Remove All Tags
+                                </button>
+                                <button type="button" onclick="openTagRemovalSelector()" class="w-full px-3 py-1.5 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 font-medium">
+                                    <i class="fas fa-minus mr-1"></i>
+                                    Remove Specific Tag
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="border-t border-gray-200 p-2">
@@ -320,19 +333,13 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                                         <a href="/domains/<?= $domain['id'] ?>" class="text-sm font-semibold text-gray-900 hover:text-primary"><?= htmlspecialchars($domain['domain_name']) ?></a>
                                         <div class="flex items-center gap-1.5 mt-1">
                                             <?php
-                                            // Display tags (temporary hardcoded for UI demo - will be dynamic later)
+                                            // Display tags using new tag system
                                             $tags = !empty($domain['tags']) ? explode(',', $domain['tags']) : [];
-                                            $tagColors = [
-                                                'production' => 'bg-green-100 text-green-700 border-green-200',
-                                                'staging' => 'bg-yellow-100 text-yellow-700 border-yellow-200',
-                                                'development' => 'bg-blue-100 text-blue-700 border-blue-200',
-                                                'client' => 'bg-purple-100 text-purple-700 border-purple-200',
-                                                'personal' => 'bg-orange-100 text-orange-700 border-orange-200',
-                                                'archived' => 'bg-gray-100 text-gray-600 border-gray-200'
-                                            ];
-                                            foreach ($tags as $tag):
+                                            $tagColors = !empty($domain['tag_colors']) ? explode('|', $domain['tag_colors']) : [];
+                                            
+                                            foreach ($tags as $index => $tag):
                                                 $tag = trim($tag);
-                                                $colorClass = $tagColors[$tag] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+                                                $colorClass = isset($tagColors[$index]) ? $tagColors[$index] : 'bg-gray-100 text-gray-700 border-gray-200';
                                             ?>
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border <?= $colorClass ?>">
                                                     <i class="fas fa-tag mr-1" style="font-size: 9px;"></i>
@@ -412,7 +419,7 @@ $currentFilters = $filters ?? ['search' => '', 'status' => '', 'group' => '', 's
                                             <i class="fas fa-sync-alt"></i>
                                         </button>
                                     </form>
-                                    <a href="/domains/<?= $domain['id'] ?>/edit" class="text-yellow-600 hover:text-yellow-800" title="Edit">
+                                    <a href="/domains/<?= $domain['id'] ?>/edit?from=/domains" class="text-yellow-600 hover:text-yellow-800" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <form method="POST" action="/domains/<?= $domain['id'] ?>/delete" class="inline" onsubmit="return confirm('Delete this domain?')">
@@ -829,6 +836,237 @@ document.addEventListener('click', function(event) {
         tagsDropdown?.classList.add('hidden');
     }
 });
+
+// Tags are now loaded server-side, no need for fetch()
+
+// Bulk assign existing tag to domains
+function bulkAssignExistingTag(tagId, tagName) {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        alert('Please select at least one domain');
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/domains/bulk-assign-existing-tag';
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '<?= csrf_token() ?>';
+    form.appendChild(csrfInput);
+    
+    // Add tag ID
+    const tagInput = document.createElement('input');
+    tagInput.type = 'hidden';
+    tagInput.name = 'tag_id';
+    tagInput.value = tagId;
+    form.appendChild(tagInput);
+    
+    // Add domain IDs
+    ids.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'domain_ids[]';
+        input.value = id;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Open tag selector modal for custom tags
+function openTagSelector() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        alert('Please select at least one domain');
+        return;
+    }
+    
+    // Create modal for tag selection
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50';
+    modal.innerHTML = `
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Add Custom Tag</h3>
+                </div>
+                <div class="px-6 py-4">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tag Name</label>
+                        <input type="text" id="custom-tag-name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter tag name">
+                        <p class="text-xs text-gray-500 mt-1">Use only letters, numbers, and hyphens</p>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+                    <button type="button" onclick="closeTagSelector()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="submitCustomTag()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                        Add Tag
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.getElementById('custom-tag-name').focus();
+}
+
+function closeTagSelector() {
+    const modal = document.querySelector('.fixed.inset-0.bg-gray-600');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function submitCustomTag() {
+    const tagName = document.getElementById('custom-tag-name').value.trim();
+    if (!tagName) {
+        alert('Please enter a tag name');
+        return;
+    }
+    
+    if (!/^[a-z0-9-]+$/.test(tagName)) {
+        alert('Invalid tag name format (use only letters, numbers, and hyphens)');
+        return;
+    }
+    
+    bulkAddTag(tagName);
+    closeTagSelector();
+}
+
+// Open tag removal selector
+function openTagRemovalSelector() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        alert('Please select at least one domain');
+        return;
+    }
+    
+    // Create modal for tag removal
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50';
+    modal.innerHTML = `
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Remove Specific Tag</h3>
+                </div>
+                <div class="px-6 py-4">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Select Tag to Remove</label>
+                        <select id="tag-to-remove" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Loading tags...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+                    <button type="button" onclick="closeTagRemovalSelector()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="submitTagRemoval()" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">
+                        Remove Tag
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Load tags for removal (only tags assigned to selected domains)
+    const select = document.getElementById('tag-to-remove');
+    select.innerHTML = '<option value="">Loading tags...</option>';
+    
+    // Fetch tags that are actually assigned to the selected domains
+    fetch('/domains/get-tags-for-domains', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            domain_ids: ids,
+            csrf_token: '<?= csrf_token() ?>'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        select.innerHTML = '<option value="">Select a tag to remove</option>';
+        if (data.tags && data.tags.length > 0) {
+            data.tags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag.id;
+                option.textContent = tag.name;
+                select.appendChild(option);
+            });
+        } else {
+            select.innerHTML = '<option value="">No tags found on selected domains</option>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading tags:', error);
+        select.innerHTML = '<option value="">Error loading tags</option>';
+    });
+}
+
+function closeTagRemovalSelector() {
+    const modal = document.querySelector('.fixed.inset-0.bg-gray-600');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function submitTagRemoval() {
+    const tagId = document.getElementById('tag-to-remove').value;
+    if (!tagId) {
+        alert('Please select a tag to remove');
+        return;
+    }
+    
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+        alert('Please select at least one domain');
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/domains/bulk-remove-specific-tag';
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '<?= csrf_token() ?>';
+    form.appendChild(csrfInput);
+    
+    // Add tag ID
+    const tagInput = document.createElement('input');
+    tagInput.type = 'hidden';
+    tagInput.name = 'tag_id';
+    tagInput.value = tagId;
+    form.appendChild(tagInput);
+    
+    // Add domain IDs
+    ids.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'domain_ids[]';
+        input.value = id;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Tags are loaded server-side, no need for DOMContentLoaded
 
 </script>
 
