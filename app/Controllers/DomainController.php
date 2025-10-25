@@ -222,7 +222,6 @@ class DomainController extends Controller
         $id = $this->domainModel->create([
             'domain_name' => $domainName,
             'notification_group_id' => $groupId,
-            'tags' => $tags,
             'registrar' => $whoisData['registrar'],
             'registrar_url' => $whoisData['registrar_url'] ?? null,
             'expiration_date' => $whoisData['expiration_date'],
@@ -234,6 +233,12 @@ class DomainController extends Controller
             'is_active' => 1,
             'user_id' => $userId
         ]);
+
+        // Handle tags using the new tag system
+        if (!empty($tags)) {
+            $tagModel = new \App\Models\Tag();
+            $tagModel->updateDomainTags($id, $tags, $userId);
+        }
 
         // Log domain creation
         $logger = new \App\Services\Logger();
@@ -675,10 +680,9 @@ class DomainController extends Controller
                 $availableCount++;
             }
 
-            $this->domainModel->create([
+            $domainId = $this->domainModel->create([
                 'domain_name' => $domainName,
                 'notification_group_id' => $groupId,
-                'tags' => $tags,
                 'registrar' => $whoisData['registrar'],
                 'registrar_url' => $whoisData['registrar_url'] ?? null,
                 'expiration_date' => $whoisData['expiration_date'],
@@ -690,6 +694,12 @@ class DomainController extends Controller
                 'is_active' => 1,
                 'user_id' => \Core\Auth::id()
             ]);
+
+            // Handle tags using the new tag system
+            if (!empty($tags) && $domainId) {
+                $tagModel = new \App\Models\Tag();
+                $tagModel->updateDomainTags($domainId, $tags, $userId);
+            }
 
             $added++;
         }
@@ -1021,6 +1031,28 @@ class DomainController extends Controller
         $settingModel = new \App\Models\Setting();
         $isolationMode = $settingModel->getValue('user_isolation_mode', 'shared');
 
+        // Initialize Tag model
+        $tagModel = new \App\Models\Tag();
+        
+        // Find or create the tag
+        $tag = $tagModel->findByName($tagToAdd, $userId);
+        if (!$tag) {
+            // Create new tag
+            $tagId = $tagModel->create([
+                'name' => $tagToAdd,
+                'color' => 'bg-gray-100 text-gray-700 border-gray-300',
+                'description' => '',
+                'user_id' => $userId
+            ]);
+            if (!$tagId) {
+                $_SESSION['error'] = 'Failed to create tag';
+                $this->redirect('/domains');
+                return;
+            }
+        } else {
+            $tagId = $tag['id'];
+        }
+
         $updated = 0;
         foreach ($domainIds as $id) {
             // Check domain access based on isolation mode
@@ -1031,17 +1063,9 @@ class DomainController extends Controller
             }
             if (!$domain) continue;
 
-            // Get existing tags
-            $existingTags = !empty($domain['tags']) ? explode(',', $domain['tags']) : [];
-            
-            // Add new tag if it doesn't exist
-            if (!in_array($tagToAdd, $existingTags)) {
-                $existingTags[] = $tagToAdd;
-                $newTags = implode(',', $existingTags);
-                
-                if ($this->domainModel->update($id, ['tags' => $newTags])) {
-                    $updated++;
-                }
+            // Add tag to domain using Tag model
+            if ($tagModel->addToDomain($id, $tagId)) {
+                $updated++;
             }
         }
 
