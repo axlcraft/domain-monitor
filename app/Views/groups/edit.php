@@ -78,7 +78,7 @@ ob_start();
                     <?php foreach ($group['channels'] as $channel): 
                         $config = json_decode($channel['channel_config'], true);
                         $icons = ['email' => 'fa-envelope', 'telegram' => 'fa-telegram', 'discord' => 'fa-discord', 'slack' => 'fa-slack', 'mattermost' => 'fa-comments', 'webhook' => 'fa-link'];
-                        $iconClasses = ['email' => 'fas', 'telegram' => 'fab', 'discord' => 'fab', 'slack' => 'fab', 'mattermost' => 'fab', 'webhook' => 'fas'];
+                        $iconClasses = ['email' => 'fas', 'telegram' => 'fab', 'discord' => 'fab', 'slack' => 'fab', 'mattermost' => 'fas', 'webhook' => 'fas'];
                         $colors = ['email' => 'blue', 'telegram' => 'blue', 'discord' => 'indigo', 'slack' => 'teal', 'mattermost' => 'green', 'webhook' => 'purple'];
                         $icon = $icons[$channel['channel_type']] ?? 'fa-bell';
                         $iconClass = $iconClasses[$channel['channel_type']] ?? 'fas';
@@ -87,7 +87,13 @@ ob_start();
                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow duration-200">
                             <div class="flex items-start justify-between mb-4">
                                 <div class="w-12 h-12 bg-<?= $color ?>-100 rounded-lg flex items-center justify-center">
-                                    <i class="<?= $iconClass ?> <?= $icon ?> text-<?= $color ?>-600 text-xl"></i>
+                                    <?php if ($channel['channel_type'] === 'mattermost'): ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 500 500" class="text-<?= $color ?>-600">
+                                            <path fill="currentColor" d="M 250.05,34.00 C 251.95,34.04 253.85,34.11 255.65,34.20 255.65,34.20 225.86,69.71 225.86,69.71 225.79,69.72 225.71,69.74 225.63,69.75 149.26,84.10 98.22,146.50 98.22,222.97 98.22,264.53 121.29,313.47 157.97,342.07 186.58,364.39 222.26,378.97 259.18,378.97 352.58,378.97 419.33,310.36 419.33,222.97 419.33,188.06 403.34,150.20 377.57,122.21 377.57,122.21 375.94,74.82 375.94,74.82 430.39,113.97 465.89,177.84 466.00,249.99 466.00,250.00 466.00,250.00 466.00,250.00 466.00,369.29 369.30,466.00 250.00,466.00 130.71,466.00 34.00,369.29 34.00,250.00 34.00,130.71 130.71,34.00 250.00,34.00 250.00,34.00 250.05,34.00 250.05,34.00 Z M 314.15,54.29 C 314.81,54.25 315.47,54.32 316.11,54.54 319.12,55.54 319.96,58.11 320.04,60.99 320.04,60.99 323.88,207.87 323.88,207.87 324.64,236.53 306.72,276.31 263.49,276.43 232.52,276.51 199.81,255.60 199.81,216.30 199.82,201.57 205.42,185.04 219.06,168.19 219.06,168.19 309.09,57.01 309.09,57.01 310.24,55.59 312.17,54.43 314.15,54.29 314.15,54.29 314.15,54.29 314.15,54.29 Z" />
+                                        </svg>
+                                    <?php else: ?>
+                                        <i class="<?= $iconClass ?> <?= $icon ?> text-<?= $color ?>-600 text-xl"></i>
+                                    <?php endif; ?>
                                 </div>
                                 <span class="px-3 py-1 rounded-full text-xs font-semibold <?= $channel['is_active'] ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600' ?>">
                                     <?= $channel['is_active'] ? 'Active' : 'Disabled' ?>
